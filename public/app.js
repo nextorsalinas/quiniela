@@ -1,0 +1,1521 @@
+// APPLICATION STATE
+let state = {
+  currentUser: null,
+  matches: [],
+  predictions: {}, // Key: matchId, Value: prediction string ('L', 'E', 'V')
+  leaderboard: [],
+  activeTab: 'predictions',
+  authTab: 'login'
+};
+
+// API BASE PATH
+const API_URL = '/api';
+
+// --- PWA LÓGICA DE INSTALACIÓN ---
+let deferredPrompt = null;
+
+// Helper para verificar si ya está instalado / modo standalone
+const isStandalone = () => {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
+
+// Helper para detectar iOS (Safari)
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+};
+
+// Registro del Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Service Worker registrado con éxito.', reg.scope))
+      .catch(err => console.error('Error al registrar el Service Worker:', err));
+  });
+}
+
+// Capturar evento de instalación
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Mostrar modal si no ha sido rechazado en esta sesión y no está instalado
+  const dismissed = sessionStorage.getItem('pwa_dismissed');
+  if (!dismissed && !isStandalone()) {
+    showPwaModal();
+  }
+});
+
+function showPwaModal() {
+  const modal = document.getElementById('pwa-install-modal');
+  if (!modal) return;
+
+  const dismissed = sessionStorage.getItem('pwa_dismissed');
+  if (dismissed || isStandalone()) return;
+
+  // Si es iOS, personalizamos el modal con instrucciones manuales
+  if (isIOS()) {
+    const titleEl = modal.querySelector('h3');
+    const descEl = modal.querySelector('p');
+    const buttonContainer = modal.querySelector('div[style*="display: flex; flex-direction: column; gap: 0.75rem"]');
+    
+    if (titleEl) titleEl.textContent = 'Instalar en tu iPhone/iPad';
+    if (descEl) {
+      descEl.innerHTML = `
+        Para instalar la Quiniela 2026 en tu dispositivo iOS:<br><br>
+        1. Presiona el botón de <strong>Compartir</strong> <i class="fa-solid fa-arrow-up-from-bracket" style="color: var(--gold);"></i> en la barra de Safari.<br>
+        2. Desplázate hacia abajo y selecciona <strong>Agregar a Inicio</strong> <i class="fa-regular fa-square-plus" style="color: var(--gold);"></i>.
+      `;
+      descEl.style.textAlign = 'left';
+    }
+    
+    if (buttonContainer) {
+      buttonContainer.innerHTML = `
+        <button class="btn btn-success" onclick="closePwaModal()" style="width: 100%; padding: 0.9rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+          ¡Entendido!
+        </button>
+      `;
+    }
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closePwaModal() {
+  const modal = document.getElementById('pwa-install-modal');
+  if (modal) modal.style.display = 'none';
+  sessionStorage.setItem('pwa_dismissed', 'true');
+}
+
+// INITIALIZATION
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if session exists in localStorage
+  const storedUser = localStorage.getItem('quiniela_user');
+  if (storedUser) {
+    try {
+      state.currentUser = JSON.parse(storedUser);
+      showAppDashboard();
+    } catch (e) {
+      localStorage.removeItem('quiniela_user');
+      showAuthScreen();
+    }
+  } else {
+    showAuthScreen();
+  }
+
+  // Mostrar modal de instalación de iOS de forma automática tras unos segundos
+  if (isIOS() && !isStandalone() && !sessionStorage.getItem('pwa_dismissed')) {
+    setTimeout(showPwaModal, 1500);
+  }
+
+  // Listener para el botón de instalar PWA (Android / Chrome)
+  const installBtn = document.getElementById('pwa-install-btn');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      closePwaModal();
+      if (!deferredPrompt) {
+        showToast("La aplicación ya está instalada o tu navegador no soporta instalación directa.", "info");
+        return;
+      }
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuario eligió instalar: ${outcome}`);
+      deferredPrompt = null;
+    });
+  }
+});
+
+// --- AUTH LÓGICA & VISTAS ---
+
+function showAuthScreen() {
+  document.getElementById('auth-section').style.display = 'flex';
+  document.getElementById('app-section').style.display = 'none';
+  switchAuthTab('login');
+}
+
+function showAppDashboard() {
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('app-section').style.display = 'flex';
+  
+  // Set UI user info
+  document.getElementById('user-display-name').textContent = state.currentUser.username;
+  document.getElementById('welcome-username').textContent = state.currentUser.username;
+  document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
+  
+  // Show admin tab/badge if admin
+  if (state.currentUser.isAdmin) {
+    document.getElementById('admin-badge').style.display = 'inline-flex';
+    document.getElementById('tab-admin').style.display = 'flex';
+  } else {
+    document.getElementById('admin-badge').style.display = 'none';
+    document.getElementById('tab-admin').style.display = 'none';
+  }
+
+  // Initial data fetch
+  switchTab('predictions');
+
+  // Notifications init
+  refreshUnreadNotificationCount();
+  if (notificationsInterval) clearInterval(notificationsInterval);
+  notificationsInterval = setInterval(refreshUnreadNotificationCount, 120000);
+}
+
+function switchAuthTab(tab) {
+  state.authTab = tab;
+  
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const loginBtn = document.getElementById('tab-login-btn');
+  const registerBtn = document.getElementById('tab-register-btn');
+
+  if (tab === 'login') {
+    loginForm.classList.add('active');
+    registerForm.classList.remove('active');
+    loginBtn.classList.add('active');
+    registerBtn.classList.remove('active');
+  } else {
+    loginForm.classList.remove('active');
+    registerForm.classList.add('active');
+    loginBtn.classList.remove('active');
+    registerBtn.classList.add('active');
+  }
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const usernameInput = document.getElementById('login-username').value;
+  const passwordInput = document.getElementById('login-password').value;
+
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameInput, password: passwordInput })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al iniciar sesión", "error");
+      return;
+    }
+
+    state.currentUser = data.user;
+    localStorage.setItem('quiniela_user', JSON.stringify(data.user));
+    showToast("¡Inicio de sesión exitoso!", "success");
+    showAppDashboard();
+    
+    // Clear inputs
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+  } catch (error) {
+    console.error("Login error:", error);
+    showToast("Error de conexión con el servidor", "error");
+  }
+}
+
+async function handleRegister(event) {
+  event.preventDefault();
+  const usernameInput = document.getElementById('reg-username').value;
+  const passwordInput = document.getElementById('reg-password').value;
+
+  try {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameInput, password: passwordInput })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al registrarse", "error");
+      return;
+    }
+
+    showToast("¡Cuenta creada! Por favor ingresa.", "success");
+    
+    // Switch to login tab and prefill username
+    switchAuthTab('login');
+    document.getElementById('login-username').value = usernameInput;
+    
+    // Clear login password and remove its placeholder to make it intuitive to type
+    const loginPass = document.getElementById('login-password');
+    loginPass.value = '';
+    loginPass.placeholder = '';
+    loginPass.focus();
+    
+    // Clear registration fields
+    document.getElementById('reg-username').value = '';
+    document.getElementById('reg-password').value = '';
+  } catch (error) {
+    console.error("Registration error:", error);
+    showToast("Error de conexión con el servidor", "error");
+  }
+}
+
+function handleLogout() {
+  if (notificationsInterval) {
+    clearInterval(notificationsInterval);
+    notificationsInterval = null;
+  }
+  localStorage.removeItem('quiniela_user');
+  state.currentUser = null;
+  state.matches = [];
+  state.predictions = {};
+  state.leaderboard = [];
+  showToast("Sesión cerrada", "info");
+  showAuthScreen();
+}
+
+// --- DASHBOARD ROUTING & TABS ---
+
+function switchTab(tabId) {
+  state.activeTab = tabId;
+  
+  // Update Tab buttons styling
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+
+  // Update views visibility
+  document.querySelectorAll('.tab-view').forEach(view => {
+    view.classList.remove('active');
+  });
+  document.getElementById(`view-${tabId}`).classList.add('active');
+
+  // Fetch data depending on tab
+  if (tabId === 'predictions') {
+    loadPredictionsDashboard();
+  } else if (tabId === 'leaderboard') {
+    loadLeaderboard();
+  } else if (tabId === 'admin') {
+    loadAdminDashboard();
+  }
+}
+
+// --- DATA FETCHING & UI RENDERING ---
+
+async function loadPredictionsDashboard() {
+  const grid = document.getElementById('matches-grid');
+  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tus pronósticos...</div>`;
+
+  try {
+    // 1. Fetch matches
+    const matchesRes = await fetch(`${API_URL}/matches`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    
+    if (matchesRes.status === 401) {
+      handleLogout();
+      return;
+    }
+    
+    state.matches = await matchesRes.json();
+
+    // 2. Fetch predictions
+    const predsRes = await fetch(`${API_URL}/predictions`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const predsData = await predsRes.json();
+    
+    // Map array to object state
+    state.predictions = {};
+    predsData.forEach(p => {
+      state.predictions[p.matchId] = p.prediction;
+    });
+
+    // 3. Update navbar user stats (points might have changed if admin set new results)
+    updateStatsBar();
+
+    // 4. Render matches
+    renderMatchesGrid();
+  } catch (error) {
+    console.error("Error loading dashboard data:", error);
+    showToast("Error de conexión al cargar datos", "error");
+  }
+}
+
+function updateStatsBar() {
+  // Update user score from backend data (we can find ourselves in the leaderboard later, or just fetch user details.
+  // To keep it simple, we fetch the leaderboard, locate ourselves, and update points!
+  fetch(`${API_URL}/leaderboard`, {
+    headers: { 'x-user-id': state.currentUser.id }
+  })
+  .then(res => res.json())
+  .then(leaderboard => {
+    state.leaderboard = leaderboard;
+    const me = leaderboard.find(u => u.id === state.currentUser.id);
+    if (me) {
+      state.currentUser.points = me.points;
+      document.getElementById('user-display-points').textContent = `${me.points} pts`;
+      localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+    }
+    // Render the leaderboard side and main tables
+    renderLeaderboardTables();
+  })
+  .catch(err => console.error("Error refreshing points:", err));
+
+  // Calculate prediction progress
+  const totalMatches = 72;
+  const predictedCount = Object.keys(state.predictions).length;
+  const percentage = Math.round((predictedCount / totalMatches) * 100);
+
+  // Update navbar mini-bar
+  document.getElementById('mini-progress-bar').style.width = `${percentage}%`;
+  document.getElementById('user-display-progress').textContent = `${predictedCount}/${totalMatches}`;
+
+  // Update big progress card
+  const fullText = document.getElementById('full-progress-text');
+  const fullBar = document.getElementById('full-progress-bar');
+  if (fullText && fullBar) {
+    fullText.textContent = `${percentage}% (${predictedCount} de ${totalMatches} partidos)`;
+    fullBar.style.width = `${percentage}%`;
+  }
+  refreshUnreadNotificationCount();
+}
+
+function renderMatchesGrid() {
+  const grid = document.getElementById('matches-grid');
+  const groupFilter = document.getElementById('group-filter').value;
+  const searchQuery = document.getElementById('search-filter').value.toLowerCase().trim();
+
+  // Filter matches
+  let filtered = state.matches;
+
+  if (groupFilter !== 'all') {
+    filtered = filtered.filter(m => m.group === groupFilter);
+  }
+
+  if (searchQuery !== '') {
+    filtered = filtered.filter(m => 
+      m.team1.toLowerCase().includes(searchQuery) || 
+      m.team2.toLowerCase().includes(searchQuery)
+    );
+  }
+
+  const totalMatches = 72;
+  const predictedCount = Object.keys(state.predictions).length;
+  const isFull = predictedCount === totalMatches;
+
+  // Toggle instructions visibility
+  const instructionElement = document.getElementById('predictions-instruction');
+  if (instructionElement) {
+    instructionElement.style.display = isFull ? 'none' : 'block';
+  }
+
+  let completedBannerHtml = '';
+  if (isFull) {
+    completedBannerHtml = `
+      <div class="quiniela-completed-banner glass-panel" style="grid-column: 1 / -1;">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>
+          <h4>¡Quiniela Completada!</h4>
+          <p>Has registrado tus 72 pronósticos. Tu quiniela está guardada y bloqueada para consultas.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = completedBannerHtml + `
+      <div class="glass-panel" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-text-muted);">
+        <i class="fa-solid fa-face-frown" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--gold);"></i>
+        <p>No se encontraron partidos para la búsqueda seleccionada.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Generate match card HTML
+  const matchesHtml = filtered.map(match => {
+    const userPrediction = state.predictions[match.id] || null;
+    const isCompleted = match.result !== null;
+
+    // Selected class names
+    const selLClass = userPrediction === 'L' ? 'selected-L' : '';
+    const selEClass = userPrediction === 'E' ? 'selected-E' : '';
+    const selVClass = userPrediction === 'V' ? 'selected-V' : '';
+
+    // Generate mock flag/abbreviation text
+    const flag1 = match.team1.substring(0, 3);
+    const flag2 = match.team2.substring(0, 3);
+
+    // Results Banner logic
+    let resultBannerHtml = '';
+    if (isCompleted) {
+      if (userPrediction === match.result) {
+        resultBannerHtml = `
+          <div class="real-result-banner correct">
+            <span><i class="fa-solid fa-circle-check"></i> ¡Acertaste el resultado!</span>
+            <span>+3 pts</span>
+          </div>
+        `;
+      } else if (userPrediction === null) {
+        resultBannerHtml = `
+          <div class="real-result-banner pending">
+            <span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico. Resultado: ${match.result}</span>
+            <span>0 pts</span>
+          </div>
+        `;
+      } else {
+        const transResult = match.result === 'L' ? 'Gana Local' : (match.result === 'E' ? 'Empate' : 'Gana Visitante');
+        resultBannerHtml = `
+          <div class="real-result-banner incorrect">
+            <span><i class="fa-solid fa-circle-xmark"></i> Fallaste. Resultado: ${transResult}</span>
+            <span>0 pts</span>
+          </div>
+        `;
+      }
+    } else {
+      resultBannerHtml = `
+        <div class="real-result-banner pending">
+          <span><i class="fa-solid fa-clock"></i> Partido por jugarse</span>
+          <span>Pendiente</span>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="match-card ${userPrediction ? 'completed' : ''}" id="match-card-${match.id}">
+        <div class="match-meta">
+          <span class="match-group">${match.group}</span>
+          <span class="match-date"><i class="fa-regular fa-calendar"></i> ${match.date}</span>
+        </div>
+
+        <div class="match-teams-layout">
+          <div class="team-row">
+            <div class="team-info">
+              <div class="team-flag-mock">${flag1}</div>
+              <span class="team-name">${match.team1}</span>
+            </div>
+            ${isCompleted && match.result === 'L' ? '<span class="badge badge-success">Ganador</span>' : ''}
+          </div>
+          
+          <span class="match-vs">vs</span>
+
+          <div class="team-row">
+            <div class="team-info">
+              <div class="team-flag-mock">${flag2}</div>
+              <span class="team-name">${match.team2}</span>
+            </div>
+            ${isCompleted && match.result === 'V' ? '<span class="badge badge-success">Ganador</span>' : ''}
+          </div>
+        </div>
+
+        <div class="match-options">
+          <button class="opt-btn ${selLClass}" onclick="savePrediction(${match.id}, 'L')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
+            L <span class="opt-team-name" title="${match.team1}">${match.team1}</span>
+          </button>
+          <button class="opt-btn ${selEClass}" onclick="savePrediction(${match.id}, 'E')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
+            E <span class="opt-team-name">Empate</span>
+          </button>
+          <button class="opt-btn ${selVClass}" onclick="savePrediction(${match.id}, 'V')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
+            V <span class="opt-team-name" title="${match.team2}">${match.team2}</span>
+          </button>
+        </div>
+
+        ${resultBannerHtml}
+      </div>
+    `;
+  }).join('');
+
+  grid.innerHTML = completedBannerHtml + matchesHtml;
+}
+
+function filterMatches() {
+  renderMatchesGrid();
+}
+
+// Save prediction immediately
+async function savePrediction(matchId, predictionValue) {
+  const currentPrediction = state.predictions[matchId];
+  if (currentPrediction !== undefined && currentPrediction !== null) {
+    showToast("Este partido ya cuenta con un pronóstico guardado.", "error");
+    return;
+  }
+
+  // Optimistic UI update
+  state.predictions[matchId] = predictionValue;
+  
+  // Re-render only that card's styling and disable buttons immediately
+  const card = document.getElementById(`match-card-${matchId}`);
+  if (card) {
+    const buttons = card.querySelectorAll('.opt-btn');
+    buttons.forEach(btn => {
+      btn.classList.remove('selected-L', 'selected-E', 'selected-V');
+      btn.disabled = true; // Disable immediately to lock it
+    });
+
+    card.classList.add('completed');
+    const targetBtnIndex = predictionValue === 'L' ? 0 : (predictionValue === 'E' ? 1 : 2);
+    buttons[targetBtnIndex].classList.add(`selected-${predictionValue}`);
+    
+    // Temporary animation kick
+    buttons[targetBtnIndex].style.transform = 'scale(0.95)';
+    setTimeout(() => buttons[targetBtnIndex].style.transform = '', 100);
+  }
+
+  // Update progress bars
+  updateStatsBar();
+
+  try {
+    const response = await fetch(`${API_URL}/predictions`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({
+        predictions: [{ matchId: matchId, prediction: predictionValue }]
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al guardar pronóstico", "error");
+      // Revert state on error
+      delete state.predictions[matchId];
+      renderMatchesGrid();
+      updateStatsBar();
+    } else {
+      showToast(`Partido #${matchId} guardado.`, "success");
+    }
+  } catch (error) {
+    console.error("Save prediction error:", error);
+    showToast("Error de red. No se guardó la predicción.", "error");
+    // Revert state
+    delete state.predictions[matchId];
+    renderMatchesGrid();
+    updateStatsBar();
+  }
+}
+
+// --- LEADERBOARD & COMPARISONS ---
+
+async function loadLeaderboard() {
+  const tbody = document.getElementById('leaderboard-body');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 3rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
+
+  try {
+    const response = await fetch(`${API_URL}/leaderboard`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    
+    state.leaderboard = await response.json();
+    
+    if (state.leaderboard.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay participantes registrados.</td></tr>`;
+      return;
+    }
+
+    renderLeaderboardTables();
+  } catch (error) {
+    console.error("Error loading leaderboard:", error);
+    showToast("Error al cargar la tabla de posiciones", "error");
+  }
+}
+
+// Render both main tab table and sidebar panel table
+function renderLeaderboardTables() {
+  const tbody = document.getElementById('leaderboard-body');
+  const sideTbody = document.getElementById('side-leaderboard-body');
+  
+  if (!state.leaderboard || state.leaderboard.length === 0) return;
+
+  // 1. Render main tab table (Detailed version)
+  if (tbody) {
+    tbody.innerHTML = state.leaderboard.map((player, index) => {
+      const position = index + 1;
+      let rankBadgeClass = 'rank-other';
+      if (position === 1) rankBadgeClass = 'rank-1';
+      else if (position === 2) rankBadgeClass = 'rank-2';
+      else if (position === 3) rankBadgeClass = 'rank-3';
+
+      const isMe = player.id === state.currentUser.id;
+      const canView = isMe || state.currentUser.isAdmin;
+      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
+      const rowClass = canView ? 'clickable' : '';
+      const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
+      const adminBadge = player.isAdmin ? '<span class="badge badge-error" style="font-size: 0.6rem; padding: 0.1rem 0.3rem; margin-left: 0.5rem;">Admin</span>' : '';
+
+      return `
+        <tr class="${rowClass}" style="${highlightRowStyle}" ${clickHandler}>
+          <td style="text-align: center;">
+            <div class="rank-badge ${rankBadgeClass}">${position}</div>
+          </td>
+          <td>
+            <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
+              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
+              <div>
+                <span class="player-name">${player.username} ${isMe ? '(Tú)' : ''}</span>
+                ${adminBadge}
+              </div>
+            </div>
+          </td>
+          <td style="text-align: center; font-family: var(--font-title); font-weight: 700; color: ${isMe ? 'var(--gold)' : 'inherit'}">
+            ${player.points} pts
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // 2. Render side sticky table (Compact version)
+  if (sideTbody) {
+    sideTbody.innerHTML = state.leaderboard.map((player, index) => {
+      const position = index + 1;
+      let rankBadgeClass = 'rank-other';
+      if (position === 1) rankBadgeClass = 'rank-1';
+      else if (position === 2) rankBadgeClass = 'rank-2';
+      else if (position === 3) rankBadgeClass = 'rank-3';
+
+      const isMe = player.id === state.currentUser.id;
+      const canView = isMe || state.currentUser.isAdmin;
+      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
+      const rowClass = canView ? 'clickable' : '';
+      const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
+
+      return `
+        <tr class="${rowClass}" style="${highlightRowStyle}" ${clickHandler}>
+          <td style="text-align: center;">
+            <div class="rank-badge ${rankBadgeClass}">${position}</div>
+          </td>
+          <td>
+            <div class="player-info-cell" style="gap: 0.4rem;">
+              <span class="player-name" style="font-weight: ${isMe ? '700' : '600'}; color: ${isMe ? 'var(--gold)' : 'inherit'};">
+                ${player.username} ${isMe ? '(Tú)' : ''}
+              </span>
+            </div>
+          </td>
+          <td style="text-align: center; font-family: var(--font-title); font-weight: 700; color: ${isMe ? 'var(--gold)' : 'inherit'}">
+            ${player.points} pts
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+// Open comparison details of user
+async function viewPlayerPredictions(targetUserId) {
+  // If target matches are empty, load matches first
+  if (state.matches.length === 0) {
+    const matchesRes = await fetch(`${API_URL}/matches`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    state.matches = await matchesRes.json();
+  }
+
+  const modal = document.getElementById('comparison-modal');
+  const modalTitle = document.getElementById('modal-user-title');
+  const modalSubtitle = document.getElementById('modal-user-subtitle');
+  const comparisonGrid = document.getElementById('modal-comparison-grid');
+
+  comparisonGrid.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando predicciones de jugador...</div>`;
+  modal.style.display = 'flex';
+
+  try {
+    const response = await fetch(`${API_URL}/predictions/user/${targetUserId}`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "No se pudieron obtener los pronósticos", "error");
+      closeComparisonModal();
+      return;
+    }
+
+    modalTitle.textContent = `Pronósticos de: ${data.username}`;
+    modalSubtitle.textContent = `Puntos acumulados: ${data.points} pts | Partidos pronosticados: ${Object.keys(data.predictions).length} de 72`;
+
+    comparisonGrid.innerHTML = state.matches.map(match => {
+      const bet = data.predictions[match.id] || null;
+      const real = match.result;
+      const isCompleted = real !== null;
+
+      let scoreClass = 'pts-pending';
+      let rowStatusClass = '';
+      let pointsText = 'Pendiente';
+
+      if (isCompleted) {
+        if (bet === real) {
+          scoreClass = 'pts-3';
+          rowStatusClass = 'correct';
+          pointsText = '+3 pts';
+        } else {
+          scoreClass = 'pts-0';
+          rowStatusClass = 'incorrect';
+          pointsText = '0 pts';
+        }
+      }
+
+      const betValClass = bet ? `val-${bet}` : 'val-none';
+      const realValClass = real ? `val-${real}` : 'val-none';
+
+      return `
+        <div class="comp-row ${rowStatusClass}">
+          <div class="comp-match-info">
+            <span class="comp-match-id">#${match.id}</span>
+            <div class="comp-teams">
+              <span class="comp-team-l">${match.team1}</span>
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); font-style: italic;">vs</span>
+              <span class="comp-team-v">${match.team2}</span>
+            </div>
+          </div>
+
+          <div class="comp-results-block">
+            <div class="comp-bet">
+              <span class="comp-label">Pronóstico</span>
+              <span class="comp-val ${betValClass}">${bet || '-'}</span>
+            </div>
+            <div class="comp-real">
+              <span class="comp-label">Resultado</span>
+              <span class="comp-val ${realValClass}">${real || '-'}</span>
+            </div>
+            <div class="comp-score-badge ${scoreClass}">
+              ${pointsText}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error("Error loading user predictions detail:", error);
+    showToast("Error de conexión al cargar pronósticos del jugador", "error");
+    closeComparisonModal();
+  }
+}
+
+function closeComparisonModal() {
+  document.getElementById('comparison-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside contents
+window.onclick = function(event) {
+  const modal = document.getElementById('comparison-modal');
+  const editModal = document.getElementById('edit-predictions-modal');
+  const pwaModal = document.getElementById('pwa-install-modal');
+  if (event.target === modal) {
+    closeComparisonModal();
+  } else if (event.target === editModal) {
+    closeEditPredictionsModal();
+  } else if (event.target === pwaModal) {
+    closePwaModal();
+  }
+};
+
+// --- ADMIN DASHBOARD ---
+
+async function loadAdminDashboard() {
+  const list = document.getElementById('admin-matches-list');
+  list.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos para administración...</div>`;
+
+  try {
+    const response = await fetch(`${API_URL}/matches`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    
+    state.matches = await response.json();
+    renderAdminMatchesList();
+
+    // Also load and render users
+    await loadAdminUsers();
+  } catch (error) {
+    console.error("Admin matches fetch error:", error);
+    showToast("Error de conexión al cargar partidos", "error");
+  }
+}
+
+async function loadAdminUsers() {
+  const tbody = document.getElementById('admin-users-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando usuarios...</td></tr>`;
+
+  try {
+    const response = await fetch(`${API_URL}/admin/users`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    
+    if (!response.ok) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--red);">Error al cargar usuarios.</td></tr>`;
+      return;
+    }
+
+    const users = await response.json();
+    
+    if (users.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay usuarios registrados.</td></tr>`;
+      return;
+    }
+
+    // Render users table
+    tbody.innerHTML = users.map(user => {
+      const isMe = user.id === state.currentUser.id;
+      const roleText = user.isAdmin ? '<span class="badge badge-error">Admin</span>' : '<span class="badge badge-success">Jugador</span>';
+      
+      // Delete button: disabled for oneself or other admins
+      const deleteBtnDisabled = (isMe || user.isAdmin) ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : '';
+      const deleteBtnTitle = isMe ? 'No puedes eliminarte a ti mismo' : (user.isAdmin ? 'No se pueden eliminar administradores' : 'Eliminar usuario');
+
+      return `
+        <tr>
+          <td>
+            <div class="player-info-cell" style="justify-content: flex-start; gap: 0.75rem;">
+              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}" style="font-size: 1.25rem;"></i>
+              <div style="text-align: left;">
+                <span class="player-name" style="display: block; font-weight: 600;">${user.username} ${isMe ? '(Tú)' : ''}</span>
+                <span class="player-email" style="display: block; font-size: 0.75rem; color: var(--color-text-muted);">${user.email || 'Sin correo'}</span>
+              </div>
+            </div>
+          </td>
+          <td style="text-align: center; font-family: var(--font-title); font-weight: 700; color: ${isMe ? 'var(--gold)' : 'inherit'}">
+            ${user.points || 0} pts
+          </td>
+          <td style="text-align: center;">
+            ${roleText}
+          </td>
+          <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+            <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
+              <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
+            </button>
+            <button class="btn btn-outline" onclick="deleteUser('${user.id}', '${user.username}')" ${deleteBtnDisabled} title="${deleteBtnTitle}" style="padding: 0.4rem 0.6rem; border-color: var(--red); color: var(--red); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
+              <i class="fa-solid fa-trash-can"></i> Eliminar
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error("Error loading admin users:", error);
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--red);">Error de red al cargar usuarios.</td></tr>`;
+  }
+}
+
+async function deleteUser(userId, username) {
+  const confirmation = confirm(`¿Estás seguro de que deseas eliminar al usuario "${username}"?\n\nEsta acción eliminará su cuenta, todos sus pronósticos y notificaciones de forma permanente. Esta acción no se puede deshacer.`);
+  if (!confirmation) return;
+
+  try {
+    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'x-user-id': state.currentUser.id
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al eliminar usuario", "error");
+      return;
+    }
+
+    showToast(`Usuario "${username}" eliminado exitosamente.`, "success");
+    
+    // Reload users list
+    loadAdminUsers();
+    
+    // Refresh leaderboard state
+    fetch(`${API_URL}/leaderboard`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    })
+    .then(res => res.json())
+    .then(leaderboard => {
+      state.leaderboard = leaderboard;
+      renderLeaderboardTables();
+    })
+    .catch(err => console.error("Error refreshing leaderboard after delete:", err));
+
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    showToast("Error de conexión al eliminar usuario", "error");
+  }
+}
+
+function renderAdminMatchesList() {
+  const list = document.getElementById('admin-matches-list');
+  const groupFilter = document.getElementById('admin-group-filter').value;
+
+  let filtered = state.matches;
+  if (groupFilter !== 'all') {
+    filtered = filtered.filter(m => m.group === groupFilter);
+  }
+
+  list.innerHTML = filtered.map(match => {
+    const actL = match.result === 'L' ? 'active-L' : '';
+    const actE = match.result === 'E' ? 'active-E' : '';
+    const actV = match.result === 'V' ? 'active-V' : '';
+
+    return `
+      <div class="admin-match-row">
+        <div class="admin-match-info">
+          <span class="admin-match-id">${match.id}</span>
+          <div class="admin-match-teams">
+            <span class="admin-team-l">${match.team1}</span>
+            <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">vs</span>
+            <span class="admin-team-v">${match.team2}</span>
+          </div>
+        </div>
+
+        <div class="admin-match-meta">
+          <span class="group-label">${match.group}</span>
+          <span>${match.date}</span>
+        </div>
+
+        <div class="admin-controls">
+          <div class="admin-result-buttons">
+            <button class="admin-opt-btn ${actL}" onclick="saveAdminResult(${match.id}, 'L')">L</button>
+            <button class="admin-opt-btn ${actE}" onclick="saveAdminResult(${match.id}, 'E')">E</button>
+            <button class="admin-opt-btn ${actV}" onclick="saveAdminResult(${match.id}, 'V')">V</button>
+          </div>
+          ${match.result !== null ? `
+            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterAdminMatches() {
+  renderAdminMatchesList();
+}
+
+async function saveAdminResult(matchId, resultValue) {
+  try {
+    const response = await fetch(`${API_URL}/admin/matches/result`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ matchId: matchId, result: resultValue })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al actualizar resultado real", "error");
+      return;
+    }
+
+    showToast(`Resultado del partido #${matchId} guardado. Puntos recalculados.`, "success");
+    
+    // Refresh admin list and state
+    loadAdminDashboard();
+  } catch (error) {
+    console.error("Admin save error:", error);
+    showToast("Error de conexión al guardar resultado", "error");
+  }
+}
+
+async function syncFifaScores() {
+  const syncBtn = document.getElementById('sync-fifa-btn');
+  if (!syncBtn) return;
+  const originalHtml = syncBtn.innerHTML;
+  
+  // Disable button and show spinner
+  syncBtn.disabled = true;
+  syncBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Sincronizando...`;
+  
+  try {
+    const response = await fetch(`${API_URL}/admin/matches/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al sincronizar resultados", "error");
+      return;
+    }
+
+    const { checked, updated } = data.stats;
+    showToast(`Sincronización terminada. Se revisaron ${checked} partidos y se actualizaron ${updated} nuevos resultados.`, "success");
+    
+    // Refresh admin list and state
+    loadAdminDashboard();
+  } catch (error) {
+    console.error("Sync error:", error);
+    showToast("Error de conexión al sincronizar con FIFA", "error");
+  } finally {
+    // Restore button state
+    syncBtn.disabled = false;
+    syncBtn.innerHTML = originalHtml;
+  }
+}
+
+async function sendBroadcastNotification() {
+  const broadcastBtn = document.getElementById('broadcast-btn');
+  if (!broadcastBtn) return;
+  const originalHtml = broadcastBtn.innerHTML;
+
+  const titleInput = document.getElementById('broadcast-title').value.trim();
+  const bodyInput = document.getElementById('broadcast-body').value.trim();
+
+  if (!titleInput || !bodyInput) {
+    showToast("Por favor, completa el título y el mensaje.", "error");
+    return;
+  }
+
+  broadcastBtn.disabled = true;
+  broadcastBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando...`;
+
+  try {
+    const response = await fetch(`${API_URL}/admin/notifications/broadcast`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ title: titleInput, body: bodyInput })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al enviar mensaje masivo", "error");
+      return;
+    }
+
+    const { inAppSent, pushSent } = data.stats;
+    showToast(`Mensaje enviado con éxito a ${inAppSent} usuarios (${pushSent} push en segundo plano).`, "success");
+    
+    // Clear message body
+    document.getElementById('broadcast-body').value = '';
+  } catch (error) {
+    console.error("Broadcast error:", error);
+    showToast("Error de conexión al enviar mensaje masivo", "error");
+  } finally {
+    broadcastBtn.disabled = false;
+    broadcastBtn.innerHTML = originalHtml;
+  }
+}
+
+// --- TOAST NOTIFICATIONS ENGINE ---
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  let icon = '<i class="fa-solid fa-circle-info"></i>';
+  if (type === 'success') icon = '<i class="fa-solid fa-circle-check" style="color: var(--emerald);"></i>';
+  if (type === 'error') icon = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--red);"></i>';
+
+  toast.innerHTML = `${icon} <span>${message}</span>`;
+  container.appendChild(toast);
+
+  // Auto remove toast
+  setTimeout(() => {
+    toast.style.animation = 'slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+
+// --- FLOATING BACK TO TOP BUTTON LOGIC ---
+
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('back-to-top-btn');
+  if (!btn) return;
+  if (window.scrollY > 400) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+});
+
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+// --- NOTIFICATIONS CLIENT LOGIC ---
+
+let notificationsInterval = null;
+
+function toggleNotificationsPanel() {
+  const modal = document.getElementById('notifications-modal');
+  if (!modal) return;
+  
+  if (modal.style.display === 'flex') {
+    modal.style.display = 'none';
+  } else {
+    modal.style.display = 'flex';
+    loadNotifications();
+    
+    // Check push support and display button accordingly
+    const enablePushBtn = document.getElementById('enable-push-btn');
+    if (enablePushBtn) {
+      if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'granted') {
+        enablePushBtn.style.display = 'block';
+      } else {
+        enablePushBtn.style.display = 'none';
+      }
+    }
+  }
+}
+
+async function refreshUnreadNotificationCount() {
+  if (!state.currentUser) return;
+  try {
+    const response = await fetch(`${API_URL}/notifications`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!response.ok) return;
+    const notifications = await response.json();
+    const unreadCount = notifications.filter(n => !n.read).length;
+    
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch (err) {
+    console.error("Error checking notification count:", err);
+  }
+}
+
+async function loadNotifications() {
+  const listEl = document.getElementById('notifications-list');
+  if (!listEl) return;
+  
+  listEl.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); padding: 1rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando notificaciones...</div>`;
+  
+  try {
+    const response = await fetch(`${API_URL}/notifications`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!response.ok) {
+      listEl.innerHTML = `<div style="text-align: center; color: var(--red); padding: 1rem;">Error al cargar notificaciones.</div>`;
+      return;
+    }
+    const notifications = await response.json();
+    
+    if (notifications.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; color: var(--color-text-muted); padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+          <i class="fa-regular fa-bell-slash" style="font-size: 2rem; color: var(--color-text-muted); opacity: 0.5;"></i>
+          <p style="font-size: 0.85rem; margin: 0; line-height: 1.4;">No tienes notificaciones todavía.</p>
+          <p style="font-size: 0.75rem; color: var(--color-text-muted); margin: 0; line-height: 1.3;">Cuando se publiquen los resultados oficiales de los partidos, recibirás aquí el resumen de tus puntos.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    listEl.innerHTML = notifications.map(n => {
+      const isSuccess = n.title.includes('Felicidades');
+      const iconClass = isSuccess ? 'fa-circle-check success' : 'fa-circle-xmark danger';
+      const wrapperClass = isSuccess ? 'success' : 'danger';
+      const itemClass = !n.read ? (isSuccess ? 'notification-item unread unread-success' : 'notification-item unread unread-danger') : 'notification-item';
+      
+      const timeStr = new Date(n.createdAt).toLocaleDateString('es-ES', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+      
+      return `
+        <div class="${itemClass}">
+          <div class="notification-icon-wrapper ${wrapperClass}">
+            <i class="fa-solid ${iconClass}"></i>
+          </div>
+          <div class="notification-item-content">
+            <div class="notification-item-title">${n.title}</div>
+            <div class="notification-item-body">${n.body}</div>
+            <span class="notification-item-time">${timeStr}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+  } catch (err) {
+    console.error("Error rendering notifications:", err);
+    listEl.innerHTML = `<div style="text-align: center; color: var(--red); padding: 1rem;">Error de conexión.</div>`;
+  }
+}
+
+async function markAllNotificationsAsRead() {
+  if (!state.currentUser) return;
+  try {
+    const response = await fetch(`${API_URL}/notifications/read`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id 
+      }
+    });
+    if (response.ok) {
+      const badge = document.getElementById('notification-badge');
+      if (badge) badge.style.display = 'none';
+      
+      // Update UI elements that currently show as unread
+      document.querySelectorAll('.notification-item.unread').forEach(item => {
+        item.classList.remove('unread', 'unread-success', 'unread-danger');
+      });
+    }
+  } catch (err) {
+    console.error("Error marking notifications as read:", err);
+  }
+}
+
+// Convert public VAPID key base64 to Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function requestPushPermission() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    showToast("Tu navegador no soporta notificaciones de fondo.", "error");
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast("Permiso de notificaciones denegado.", "error");
+      return;
+    }
+
+    // Get public VAPID key
+    const vapidRes = await fetch(`${API_URL}/notifications/vapid-key`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const { publicKey } = await vapidRes.json();
+    
+    // Register Push Subscription
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    // Send subscription object to backend
+    const subRes = await fetch(`${API_URL}/notifications/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ subscription })
+    });
+
+    if (subRes.ok) {
+      showToast("¡Notificaciones activadas con éxito!", "success");
+      const enablePushBtn = document.getElementById('enable-push-btn');
+      if (enablePushBtn) enablePushBtn.style.display = 'none';
+    } else {
+      showToast("Error al activar notificaciones en el servidor.", "error");
+    }
+  } catch (err) {
+    console.error("Error setting up Web Push:", err);
+    showToast("Error al configurar las notificaciones.", "error");
+  }
+}
+
+// --- ADMIN EDIT USER PREDICTIONS MODAL ---
+
+async function openEditPredictionsModal(targetUserId, username) {
+  // If target matches are empty, load matches first
+  if (state.matches.length === 0) {
+    try {
+      const matchesRes = await fetch(`${API_URL}/matches`, {
+        headers: { 'x-user-id': state.currentUser.id }
+      });
+      state.matches = await matchesRes.json();
+    } catch (e) {
+      console.error(e);
+      showToast("Error al cargar partidos.", "error");
+      return;
+    }
+  }
+
+  const modal = document.getElementById('edit-predictions-modal');
+  const modalTitle = document.getElementById('edit-modal-user-title');
+  const modalSubtitle = document.getElementById('edit-modal-user-subtitle');
+  const matchesGrid = document.getElementById('edit-modal-matches-grid');
+
+  state.editingUserId = targetUserId;
+  state.editingUsername = username;
+  state.editingUserPredictions = {};
+  state.originalUserPredictions = {};
+
+  matchesGrid.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando pronósticos del usuario...</div>`;
+  modal.style.display = 'flex';
+
+  try {
+    const response = await fetch(`${API_URL}/predictions/user/${targetUserId}`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "No se pudieron obtener los pronósticos", "error");
+      closeEditPredictionsModal();
+      return;
+    }
+
+    modalTitle.textContent = `Editar Pronósticos de: ${data.username}`;
+    modalSubtitle.textContent = `Modifica las predicciones de los partidos para este usuario.`;
+
+    // Save original predictions and setup state.editingUserPredictions
+    state.originalUserPredictions = { ...data.predictions };
+    state.editingUserPredictions = { ...data.predictions };
+
+    matchesGrid.innerHTML = state.matches.map(match => {
+      const currentPred = state.editingUserPredictions[match.id] || null;
+      
+      const actL = currentPred === 'L' ? 'active-L' : '';
+      const actE = currentPred === 'E' ? 'active-E' : '';
+      const actV = currentPred === 'V' ? 'active-V' : '';
+      const actNone = currentPred === null ? 'active-none' : '';
+
+      return `
+        <div class="admin-match-row" style="padding: 0.75rem 1rem; gap: 1rem; align-items: center;">
+          <div class="admin-match-info" style="min-width: auto; flex-grow: 1; gap: 1rem; display: flex; align-items: center;">
+            <span class="admin-match-id" style="width: 28px; height: 28px; font-size: 0.85rem; flex-shrink: 0;">#${match.id}</span>
+            <div class="admin-match-teams" style="font-size: 0.9rem; flex-grow: 1;">
+              <span class="admin-team-l" style="min-width: 80px; font-size: 0.85rem;">${match.team1}</span>
+              <span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; font-weight: normal;">vs</span>
+              <span class="admin-team-v" style="min-width: 80px; font-size: 0.85rem;">${match.team2}</span>
+            </div>
+            ${match.result !== null ? `<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;" title="Resultado real">Resultado: ${match.result}</span>` : ''}
+          </div>
+
+          <div class="admin-controls" style="gap: 0.5rem; flex-shrink: 0;">
+            <div class="admin-result-buttons" style="background: rgba(0,0,0,0.4);">
+              <button class="admin-opt-btn ${actL}" onclick="selectEditedPrediction(${match.id}, 'L')" id="edit-opt-L-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">L</button>
+              <button class="admin-opt-btn ${actE}" onclick="selectEditedPrediction(${match.id}, 'E')" id="edit-opt-E-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">E</button>
+              <button class="admin-opt-btn ${actV}" onclick="selectEditedPrediction(${match.id}, 'V')" id="edit-opt-V-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">V</button>
+              <button class="admin-opt-btn ${actNone}" onclick="selectEditedPrediction(${match.id}, null)" id="edit-opt-null-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; color: var(--red);" title="Sin Pronóstico">-</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error("Error loading user predictions for edit:", error);
+    showToast("Error al cargar datos del usuario", "error");
+    closeEditPredictionsModal();
+  }
+}
+
+function closeEditPredictionsModal() {
+  document.getElementById('edit-predictions-modal').style.display = 'none';
+  state.editingUserId = null;
+  state.editingUsername = null;
+  state.editingUserPredictions = {};
+  state.originalUserPredictions = {};
+}
+
+function selectEditedPrediction(matchId, val) {
+  state.editingUserPredictions[matchId] = val;
+
+  const btnL = document.getElementById(`edit-opt-L-${matchId}`);
+  const btnE = document.getElementById(`edit-opt-E-${matchId}`);
+  const btnV = document.getElementById(`edit-opt-V-${matchId}`);
+  const btnNone = document.getElementById(`edit-opt-null-${matchId}`);
+
+  if (btnL) btnL.classList.remove('active-L');
+  if (btnE) btnE.classList.remove('active-E');
+  if (btnV) btnV.classList.remove('active-V');
+  if (btnNone) btnNone.classList.remove('active-none');
+
+  if (val === 'L' && btnL) btnL.classList.add('active-L');
+  if (val === 'E' && btnE) btnE.classList.add('active-E');
+  if (val === 'V' && btnV) btnV.classList.add('active-V');
+  if (val === null && btnNone) btnNone.classList.add('active-none');
+}
+
+async function submitEditedPredictions() {
+  const saveBtn = document.getElementById('save-edit-predictions-btn');
+  if (!saveBtn) return;
+  const originalHtml = saveBtn.innerHTML;
+
+  // Find predictions that changed
+  const changedPredictions = [];
+  for (const match of state.matches) {
+    const orig = state.originalUserPredictions[match.id] || null;
+    const curr = state.editingUserPredictions[match.id] || null;
+
+    if (orig !== curr) {
+      changedPredictions.push({
+        matchId: match.id,
+        prediction: curr
+      });
+    }
+  }
+
+  if (changedPredictions.length === 0) {
+    showToast("No se detectaron cambios en los pronósticos.", "info");
+    closeEditPredictionsModal();
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...`;
+
+  try {
+    const response = await fetch(`${API_URL}/admin/predictions/user/${state.editingUserId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ predictions: changedPredictions })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al guardar los pronósticos", "error");
+      return;
+    }
+
+    showToast(`Pronósticos de "${state.editingUsername}" actualizados con éxito.`, "success");
+    closeEditPredictionsModal();
+
+    // Refresh user list to show updated points if they changed
+    loadAdminUsers();
+    
+    // Refresh leaderboard
+    fetch(`${API_URL}/leaderboard`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    })
+    .then(res => res.json())
+    .then(leaderboard => {
+      state.leaderboard = leaderboard;
+      renderLeaderboardTables();
+    })
+    .catch(err => console.error("Error refreshing leaderboard after edit:", err));
+
+  } catch (error) {
+    console.error("Error submitting edited predictions:", error);
+    showToast("Error de conexión al guardar pronósticos", "error");
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalHtml;
+  }
+}
+

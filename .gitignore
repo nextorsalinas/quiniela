@@ -1,0 +1,22 @@
+# Dependency directories
+node_modules/
+
+# Firebase cache and config
+.firebase/
+
+# Local database / state files
+db.json
+
+# Certificates / Secrets
+serviceAccountKey.json
+proxy_cert.pem
+
+# Environment variables / local configuration
+.env
+.env.local
+.env.*.local
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini

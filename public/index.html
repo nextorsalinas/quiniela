@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#006341">
+  <title>Quiniela Mundial 2026 - Pronósticos de la Fase de Grupos</title>
+  <!-- PWA Support -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css?v=1.6">
+</head>
+<body>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- AUTH SECTION (Login / Register) -->
+  <div id="auth-section" class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo">
+          <i class="fa-solid fa-trophy gold-glow"></i>
+          <h1>QUINIELA <span>2026</span></h1>
+        </div>
+        <p class="subtitle">Predice la fase de grupos del mundial</p>
+      </div>
+
+      <!-- Tabs for Auth -->
+      <div class="auth-tabs">
+        <button id="tab-login-btn" class="auth-tab active" onclick="switchAuthTab('login')">Ingresar</button>
+        <button id="tab-register-btn" class="auth-tab" onclick="switchAuthTab('register')">Registrarse</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-username"><i class="fa-solid fa-user"></i> Usuario</label>
+          <input type="text" id="login-username" placeholder="Tu nombre de usuario" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
+          <input type="password" id="login-password" placeholder="Tu contraseña" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          Ingresar <i class="fa-solid fa-right-to-bracket"></i>
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
+        <div class="registration-deadline-notice">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span><strong>Importante:</strong> El cierre de registros es el 10 de junio. Después de esta fecha no se podrán registrar nuevos participantes.</span>
+        </div>
+        <div class="form-group">
+          <label for="reg-username"><i class="fa-solid fa-user"></i> Usuario</label>
+          <input type="text" id="reg-username" placeholder="Crea tu usuario (3-20 letras)" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
+          <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required>
+        </div>
+        <button type="submit" class="btn btn-success btn-block">
+          Crear Cuenta <i class="fa-solid fa-user-plus"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  <!-- MAIN APP SECTION (Visible after authentication) -->
+  <div id="app-section" class="app-container" style="display: none;">
+    <!-- Navigation Bar -->
+    <header class="app-header">
+      <div class="header-logo">
+        <i class="fa-solid fa-trophy"></i>
+        <h2>QUINIELA <span>2026</span></h2>
+        <span id="user-display-name" style="display: none;"></span>
+        <!-- Notification Bell Button -->
+        <button id="notification-bell-btn" onclick="toggleNotificationsPanel()" style="background: none; border: none; color: var(--color-text-main); font-size: 0.9rem; cursor: pointer; position: relative; display: inline-flex; align-items: center; justify-content: center; margin-left: 0.6rem; padding: 0.2rem;">
+          <i class="fa-regular fa-bell"></i>
+          <span id="notification-badge" class="notification-badge" style="display: none; top: -5px; right: -5px; min-width: 14px; height: 14px; font-size: 0.6rem; border-width: 1.5px;">0</span>
+        </button>
+        <button class="btn btn-outline" onclick="handleLogout()" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; line-height: 1; margin-left: 0.75rem;">
+          Salir <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+
+      <!-- User Stats in Navbar -->
+      <div class="user-stats-bar">
+        <div class="stat-item highlight">
+          <span class="stat-label">Mis Puntos</span>
+          <span id="user-display-points" class="stat-value">0 pts</span>
+        </div>
+        <!-- Hidden progress elements to prevent JS errors -->
+        <div style="display: none;">
+          <div id="mini-progress-bar"></div>
+          <span id="user-display-progress"></span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <button id="admin-badge" class="badge-admin" style="display: none;"><i class="fa-solid fa-shield-halved"></i> Admin</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-main">
+      <!-- Tabs Selector -->
+      <nav class="app-tabs">
+        <button id="tab-predictions" class="tab-btn active" onclick="switchTab('predictions')">
+          <i class="fa-solid fa-futbol"></i> Mis Pronósticos
+        </button>
+        <button id="tab-leaderboard" class="tab-btn" onclick="switchTab('leaderboard')">
+          <i class="fa-solid fa-ranking-star"></i> Tabla de Posiciones
+        </button>
+        <button id="tab-admin" class="tab-btn" style="display: none;" onclick="switchTab('admin')">
+          <i class="fa-solid fa-gears"></i> Administrador
+        </button>
+      </nav>
+
+      <!-- View 1: Predictions Dashboard -->
+      <section id="view-predictions" class="tab-view active">
+        <!-- Dashboard Header / Overview -->
+        <div class="view-header">
+          <div class="view-title-group">
+            <h3>¡Bienvenido, <span id="welcome-username" class="gold-glow-text" style="color: var(--gold); text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);">Cargando...</span>!</h3>
+            <p id="predictions-instruction">Selecciona tu predicción para cada partido de la Fase de Grupos. <strong>L</strong> (Local), <strong>E</strong> (Empate) o <strong>V</strong> (Visitante). Se guardan automáticamente al pulsar.</p>
+          </div>
+          <div class="prediction-progress-card">
+            <div class="progress-info">
+              <span>Progreso de mi Quiniela</span>
+              <span id="full-progress-text" class="progress-percentage">0% (0 / 72 partidos)</span>
+            </div>
+            <div class="progress-track">
+              <div id="full-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Space between progress and matches -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label for="group-filter"><i class="fa-solid fa-filter"></i> Filtrar por Grupo:</label>
+            <select id="group-filter" onchange="filterMatches()">
+              <option value="all">Todos los grupos</option>
+              <option value="Grupo A">Grupo A</option>
+              <option value="Grupo B">Grupo B</option>
+              <option value="Grupo C">Grupo C</option>
+              <option value="Grupo D">Grupo D</option>
+              <option value="Grupo E">Grupo E</option>
+              <option value="Grupo F">Grupo F</option>
+              <option value="Grupo G">Grupo G</option>
+              <option value="Grupo H">Grupo H</option>
+              <option value="Grupo I">Grupo I</option>
+              <option value="Grupo J">Grupo J</option>
+              <option value="Grupo K">Grupo K</option>
+              <option value="Grupo L">Grupo L</option>
+            </select>
+          </div>
+          <!-- Hidden search element to prevent JS errors -->
+          <input type="text" id="search-filter" value="" style="display: none;">
+        </div>
+
+        <!-- Matches Area -->
+        <div id="matches-grid" class="matches-grid">
+          <div class="loading-spinner">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos del mundial...
+          </div>
+        </div>
+      </section>
+
+      <!-- View 2: Leaderboard -->
+      <section id="view-leaderboard" class="tab-view">
+        <!-- Spacer -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Leaderboard Table Card -->
+        <div class="table-card glass-panel">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">Pos.</th>
+                <th>Jugador</th>
+                <th style="width: 90px; text-align: center;">Puntos</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+              <!-- Injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- View 3: Admin Panel -->
+      <section id="view-admin" class="tab-view">
+        <div class="view-header">
+          <div class="view-title-group">
+            <h3>Resultados Oficiales</h3>
+            <p>Ingresa los resultados reales de los partidos de la Fase de Grupos. Las puntuaciones de todos los participantes se recalcularán al instante.</p>
+          </div>
+          <div class="admin-sync-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-width: 280px; box-sizing: border-box;">
+            <h4 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;"><i class="fa-solid fa-arrows-spin"></i> Sincronización FIFA</h4>
+            <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.3;">Sincroniza los partidos jugados en tiempo real usando los resultados oficiales de la FIFA.</p>
+            <button id="sync-fifa-btn" class="btn btn-primary" onclick="syncFifaScores()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; cursor: pointer;">
+              <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Ahora
+            </button>
+          </div>
+
+          <!-- Broadcast Message Card -->
+          <div class="admin-sync-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem; min-width: 280px; box-sizing: border-box;">
+            <h4 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;"><i class="fa-solid fa-bullhorn"></i> Enviar Mensaje Masivo</h4>
+            <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.3;">Envía una notificación push de fondo e in-app a todos los participantes.</p>
+            <input type="text" id="broadcast-title" value="Aviso Importante ⚠️" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-size: 0.8rem;" placeholder="Título del aviso">
+            <textarea id="broadcast-body" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-size: 0.8rem; min-height: 50px; font-family: inherit; resize: vertical;" placeholder="Mensaje para todos los usuarios...">Recuerden que el tiempo límite para depositar es mañana miércoles 10 de junio.</textarea>
+            <button id="broadcast-btn" class="btn btn-success" onclick="sendBroadcastNotification()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; cursor: pointer;">
+              <i class="fa-solid fa-paper-plane"></i> Enviar a Todos
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin Filters -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label for="admin-group-filter"><i class="fa-solid fa-filter"></i> Filtrar por Grupo:</label>
+            <select id="admin-group-filter" onchange="filterAdminMatches()">
+              <option value="all">Todos los grupos</option>
+              <option value="Grupo A">Grupo A</option>
+              <option value="Grupo B">Grupo B</option>
+              <option value="Grupo C">Grupo C</option>
+              <option value="Grupo D">Grupo D</option>
+              <option value="Grupo E">Grupo E</option>
+              <option value="Grupo F">Grupo F</option>
+              <option value="Grupo G">Grupo G</option>
+              <option value="Grupo H">Grupo H</option>
+              <option value="Grupo I">Grupo I</option>
+              <option value="Grupo J">Grupo J</option>
+              <option value="Grupo K">Grupo K</option>
+              <option value="Grupo L">Grupo L</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Admin Matches List -->
+        <div id="admin-matches-list" class="admin-matches-list">
+          <!-- Admin rows injected via JS -->
+        </div>
+
+        <!-- User Management Section -->
+        <div class="view-header" style="margin-top: 3rem; border-top: 1px solid var(--border-glass); padding-top: 2rem;">
+          <div class="view-title-group">
+            <h3>Gestión de Usuarios</h3>
+            <p>Administra las cuentas de los participantes registrados. Puedes ver sus datos y eliminar usuarios si es necesario.</p>
+          </div>
+        </div>
+
+        <div class="table-card glass-panel" style="margin-top: 1rem; overflow-x: auto;">
+          <table class="leaderboard-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th style="text-align: center; width: 100px;">Puntos</th>
+                <th style="text-align: center; width: 100px;">Rol</th>
+                <th style="text-align: center; width: 280px;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-body">
+              <!-- Injected dynamically via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Quiniela Mundial de la FIFA 2026™ | Diseñado con fines recreativos</p>
+    </footer>
+  </div>
+
+  <!-- PWA INSTALL MODAL -->
+  <div id="pwa-install-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 2000;">
+    <div class="modal-content glass-panel" style="max-width: 400px; text-align: center; padding: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+        <div style="width: 80px; height: 80px; background: var(--gold); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(245, 158, 11, 0.3); border: 2px solid rgba(255,255,255,0.1);">
+          <i class="fa-solid fa-mobile-screen-button" style="font-size: 2.5rem; color: #111827;"></i>
+        </div>
+        <h3 style="font-family: var(--font-title); font-weight: 800; font-size: 1.5rem; margin-top: 0.5rem;">Instalar Aplicación</h3>
+        <p style="font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.4; margin: 0;">
+          Instala la Quiniela 2026 en tu teléfono para acceder al instante desde tu pantalla de inicio y disfrutar de una mejor experiencia.
+        </p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+        <button id="pwa-install-btn" class="btn btn-success" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.9rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Instalar Ahora
+        </button>
+        <button class="btn btn-outline" onclick="closePwaModal()" style="width: 100%; padding: 0.8rem; font-size: 0.85rem; cursor: pointer; border-radius: 12px;">
+          Más tarde
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON MODAL -->
+  <div id="comparison-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-user-title">Pronósticos de Jugador</h3>
+          <p id="modal-user-subtitle">Comparación de predicciones y resultados reales</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeComparisonModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-legend">
+          <span class="legend-item"><span class="indicator ind-correct"></span> Acierto (+3 pts)</span>
+          <span class="legend-item"><span class="indicator ind-incorrect"></span> Error (0 pts)</span>
+          <span class="legend-item"><span class="indicator ind-pending"></span> Pendiente / Sin Resultado</span>
+        </div>
+        
+        <div id="modal-comparison-grid" class="modal-comparison-grid">
+          <!-- Match comparisons injected via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT PREDICTIONS MODAL (Admin only) -->
+  <div id="edit-predictions-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content glass-panel" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="edit-modal-user-title">Editar Pronósticos de Jugador</h3>
+          <p id="edit-modal-user-subtitle">Modifica las predicciones de los partidos para este usuario</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeEditPredictionsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
+        <div id="edit-modal-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; padding-right: 0.5rem; flex-grow: 1;">
+          <!-- Match edit rows injected via JS -->
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem; margin-top: 0.5rem; flex-shrink: 0;">
+          <button class="btn btn-outline" onclick="closeEditPredictionsModal()">Cancelar</button>
+          <button id="save-edit-predictions-btn" class="btn btn-primary" onclick="submitEditedPredictions()">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- NOTIFICATIONS PANEL / MODAL -->
+  <div id="notifications-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1500;">
+    <div class="modal-content glass-panel" style="max-width: 450px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; padding: 1.5rem; gap: 1rem;">
+      <div class="modal-header" style="padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main);"><i class="fa-solid fa-bell"></i> Notificaciones</h3>
+          <p style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted);">Tus aciertos y puntos en tiempo real</p>
+        </div>
+        <button class="modal-close-btn" onclick="toggleNotificationsPanel()" style="background: none; border: none; font-size: 1.5rem; color: var(--color-text-muted); cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+      </div>
+      <div id="notifications-list" style="overflow-y: auto; flex-grow: 1; padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.75rem; max-height: 50vh; min-height: 100px;">
+        <!-- Notifications injected dynamically -->
+      </div>
+      <div style="padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
+        <button class="btn btn-outline" onclick="markAllNotificationsAsRead()" style="width: 100%; font-size: 0.85rem; padding: 0.6rem;">Marcar como leídas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Back to Top Button -->
+  <button id="back-to-top-btn" class="back-to-top-btn" onclick="scrollToTop()" aria-label="Regresar al principio">
+    <i class="fa-solid fa-arrow-up"></i>
+  </button>
+
+  <!-- Scripts -->
+  <script src="app.js?v=1.6"></script>
+</body>
+</html>
