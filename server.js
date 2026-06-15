@@ -322,11 +322,6 @@ app.get('/api/top-scorers', authenticate, async (req, res) => {
 app.get('/api/predictions/user/:userId', authenticate, async (req, res) => {
   const { userId } = req.params;
 
-  // Securizar: solo el propio usuario o un administrador pueden ver el detalle
-  if (req.user.id !== userId && !req.user.isAdmin) {
-    return res.status(403).json({ error: "Acceso denegado. No tienes permiso para ver los pronósticos de otros participantes." });
-  }
-
   try {
     const details = await dbHelper.getUserPredictionsDetail(userId);
     res.json(details);

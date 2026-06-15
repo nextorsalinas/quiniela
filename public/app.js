@@ -645,9 +645,9 @@ function renderLeaderboardTables() {
       else if (position === 3) rankBadgeClass = 'rank-3';
 
       const isMe = player.id === state.currentUser.id;
-      const canView = isMe || state.currentUser.isAdmin;
-      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
-      const rowClass = canView ? 'clickable' : '';
+      const canView = true;
+      const clickHandler = `onclick="viewPlayerPredictions('${player.id}')"`;
+      const rowClass = 'clickable';
       const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
       const adminBadge = player.isAdmin ? '<span class="badge badge-error" style="font-size: 0.6rem; padding: 0.1rem 0.3rem; margin-left: 0.5rem;">Admin</span>' : '';
 
@@ -683,9 +683,9 @@ function renderLeaderboardTables() {
       else if (position === 3) rankBadgeClass = 'rank-3';
 
       const isMe = player.id === state.currentUser.id;
-      const canView = isMe || state.currentUser.isAdmin;
-      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
-      const rowClass = canView ? 'clickable' : '';
+      const canView = true;
+      const clickHandler = `onclick="viewPlayerPredictions('${player.id}')"`;
+      const rowClass = 'clickable';
       const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
 
       return `
