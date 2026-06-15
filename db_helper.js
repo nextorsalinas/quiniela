@@ -707,7 +707,8 @@ const teamAliases = {
   "republicofireland": "ireland",
   "czechia": "czechrepublic",
   "turkiye": "turkey",
-  "congodr": "drcongo"
+  "congodr": "drcongo",
+  "bosniaherzegovina": "bosniaandherzegovina"
 };
 
 function normalizeTeam(name) {
@@ -728,14 +729,15 @@ function normalizeTeam(name) {
 }
 
 async function syncFifaResults() {
-  console.log("Fetching live matches from worldcupjson.net...");
-  const response = await fetch("https://worldcupjson.net/matches");
+  console.log("Fetching live matches from openfootball GitHub repository...");
+  const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
-    throw new Error(`Failed to fetch FIFA matches: ${response.statusText}`);
+    throw new Error(`Failed to fetch World Cup matches: ${response.statusText}`);
   }
   
-  const apiMatches = await response.json();
-  console.log(`Fetched ${apiMatches.length} matches from FIFA API.`);
+  const data = await response.json();
+  const apiMatches = data.matches || [];
+  console.log(`Fetched ${apiMatches.length} matches from openfootball JSON.`);
 
   // Get current matches in our DB
   const dbMatches = await getMatches();
@@ -750,34 +752,37 @@ async function syncFifaResults() {
 
     // Find corresponding match in API
     const apiMatch = apiMatches.find(am => {
-      const amHome = normalizeTeam(am.home_team?.name || am.home_team_country);
-      const amAway = normalizeTeam(am.away_team?.name || am.away_team_country);
+      const amHome = normalizeTeam(am.team1);
+      const amAway = normalizeTeam(am.team2);
       
       return (amHome === normT1 && amAway === normT2) || (amHome === normT2 && amAway === normT1);
     });
 
     if (apiMatch) {
-      console.log(`Found match in API: ${dbMatch.team1} vs ${dbMatch.team2} (Status: ${apiMatch.status})`);
-      if (apiMatch.status === "completed") {
+      const isFinished = !!apiMatch.score;
+      console.log(`Found match in API: ${dbMatch.team1} vs ${dbMatch.team2} (Finished: ${isFinished})`);
+      
+      if (isFinished) {
         // Determine the result relative to our team1 (local) and team2 (visitor)
-        const apiHomeNorm = normalizeTeam(apiMatch.home_team?.name || apiMatch.home_team_country);
+        const apiHomeNorm = normalizeTeam(apiMatch.team1);
         const isT1Home = (apiHomeNorm === normT1);
 
         let result = null;
-        const winner = apiMatch.winner;
         
-        const homeGoals = apiMatch.home_team?.goals;
-        const awayGoals = apiMatch.away_team?.goals;
+        const homeGoals = parseInt(apiMatch.score.ft[0]);
+        const awayGoals = parseInt(apiMatch.score.ft[1]);
 
-        if (winner === "Draw" || apiMatch.winner_code === "Draw" || homeGoals === awayGoals) {
+        if (isNaN(homeGoals) || isNaN(awayGoals)) {
+          console.warn(`Invalid scores in API match: home=${apiMatch.score.ft[0]}, away=${apiMatch.score.ft[1]}`);
+          continue;
+        }
+
+        if (homeGoals === awayGoals) {
           result = 'E';
+        } else if (homeGoals > awayGoals) {
+          result = isT1Home ? 'L' : 'V';
         } else {
-          const homeWon = (winner === apiMatch.home_team?.name || apiMatch.winner_code === apiMatch.home_team_country || homeGoals > awayGoals);
-          if (homeWon) {
-            result = isT1Home ? 'L' : 'V';
-          } else {
-            result = isT1Home ? 'V' : 'L';
-          }
+          result = isT1Home ? 'V' : 'L';
         }
 
         if (result) {
@@ -1069,6 +1074,152 @@ async function deleteUser(userId) {
   }
 }
 
+// Reverse map for English to Spanish
+const englishToSpanishTeamMap = {};
+for (const [es, en] of Object.entries(teamNameMap)) {
+  const normEn = en.toLowerCase().replace(/[^a-z0-9]/g, "");
+  englishToSpanishTeamMap[normEn] = es;
+}
+// Special case
+englishToSpanishTeamMap["bosniaherzegovina"] = "Bosnia y Herzegovina";
+
+function translateTeamToSpanish(engName) {
+  if (!engName) return "";
+  const key = engName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return englishToSpanishTeamMap[key] || engName;
+}
+
+async function getTopScorers() {
+  console.log("Fetching live matches for top scorers from openfootball...");
+  const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
+  if (!response.ok) {
+    throw new Error(`Failed to fetch scorers: ${response.statusText}`);
+  }
+  const data = await response.json();
+  const matches = data.matches || [];
+  
+  const scorersMap = {};
+
+  matches.forEach(m => {
+    if (m.goals1 && Array.isArray(m.goals1)) {
+      m.goals1.forEach(g => {
+        const name = g.name;
+        if (!scorersMap[name]) {
+          scorersMap[name] = { name, team: translateTeamToSpanish(m.team1), goals: 0 };
+        }
+        scorersMap[name].goals++;
+      });
+    }
+    if (m.goals2 && Array.isArray(m.goals2)) {
+      m.goals2.forEach(g => {
+        const name = g.name;
+        if (!scorersMap[name]) {
+          scorersMap[name] = { name, team: translateTeamToSpanish(m.team2), goals: 0 };
+        }
+        scorersMap[name].goals++;
+      });
+    }
+  });
+
+  return Object.values(scorersMap).sort((a, b) => b.goals - a.goals);
+}
+
+async function deleteNotification(notificationId, userId) {
+  if (dbType === 'firestore') {
+    const docRef = firestoreDb.collection('notifications').doc(notificationId);
+    const doc = await docRef.get();
+    if (!doc.exists) throw new Error("Notificación no encontrada.");
+    if (doc.data().userId !== userId) throw new Error("No tienes permiso para eliminar esta notificación.");
+    await docRef.delete();
+  } else {
+    const db = readDb();
+    if (!db.notifications) db.notifications = [];
+    const index = db.notifications.findIndex(n => n.id === notificationId);
+    if (index === -1) throw new Error("Notificación no encontrada.");
+    if (db.notifications[index].userId !== userId) throw new Error("No tienes permiso para eliminar esta notificación.");
+    db.notifications.splice(index, 1);
+    writeDb(db);
+  }
+}
+
+async function getMatchTrends() {
+  // 1. Get all matches
+  const matches = await getMatches();
+  
+  // 2. Filter matches that don't have a result (result === null)
+  const unplayedMatches = matches
+    .filter(m => m.result === null)
+    .sort((a, b) => a.id - b.id);
+    
+  if (unplayedMatches.length === 0) {
+    return [];
+  }
+  
+  const matchIds = unplayedMatches.map(m => m.id);
+  
+  // 3. Fetch all predictions for these match IDs
+  let predictions = [];
+  let usersMap = {}; // id -> username
+  
+  if (dbType === 'firestore') {
+    // Fetch users to map userId -> username
+    const usersSnap = await firestoreDb.collection('users').get();
+    usersSnap.docs.forEach(doc => {
+      const u = doc.data();
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    
+    // Fetch predictions for the matchIds
+    for (const mId of matchIds) {
+      const predsSnap = await firestoreDb.collection('predictions')
+        .where('matchId', '==', mId).get();
+      predsSnap.docs.forEach(doc => {
+        predictions.push(doc.data());
+      });
+    }
+  } else {
+    const db = readDb();
+    (db.users || []).forEach(u => {
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
+  }
+  
+  // 4. Aggregate L, E, V
+  const trends = unplayedMatches.map(match => {
+    const matchPreds = predictions.filter(p => p.matchId === match.id);
+    
+    const stats = {
+      L: { count: 0, users: [] },
+      E: { count: 0, users: [] },
+      V: { count: 0, users: [] }
+    };
+    
+    matchPreds.forEach(p => {
+      const username = usersMap[p.userId];
+      if (username && stats[p.prediction]) {
+        stats[p.prediction].count++;
+        stats[p.prediction].users.push(username);
+      }
+    });
+    
+    return {
+      matchId: match.id,
+      team1: match.team1,
+      team2: match.team2,
+      group: match.group,
+      date: match.date,
+      stats
+    };
+  });
+  
+  return trends;
+}
+
 module.exports = {
   initDb,
   getUsers: async () => {
@@ -1093,6 +1244,9 @@ module.exports = {
   savePushSubscription,
   getNotificationsByUser,
   markNotificationsAsRead,
-  deleteUser
+  deleteUser,
+  getTopScorers,
+  deleteNotification,
+  getMatchTrends
 };
 

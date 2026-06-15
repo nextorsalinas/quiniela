@@ -336,7 +336,7 @@ body {
   width: 100%;
   max-width: 1300px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 80px 1.5rem; /* Bottom padding so the sticky navigation doesn't overlap contents */
 }
 
 .app-header {
@@ -1706,7 +1706,7 @@ body {
 /* Floating Back to Top Button */
 .back-to-top-btn {
   position: fixed;
-  bottom: 2rem;
+  bottom: 85px; /* Shifted up so it doesn't overlap with the bottom navigation bar */
   right: 2rem;
   width: 48px;
   height: 48px;
@@ -1870,4 +1870,160 @@ body {
     align-items: center;
     justify-content: space-between;
   }
+}
+
+/* STICKY BOTTOM NAVIGATION BAR (Facebook style) */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background: #CE1126; /* Mexican flag red */
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1500;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.5);
+  padding: 0 0.5rem;
+}
+
+/* Scroll Hide/Show Animation Class */
+.bottom-nav.nav-hidden {
+  transform: translateY(100%);
+}
+
+/* Navigation button styles */
+.bottom-nav .tab-btn {
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65); /* Semi-transparent white for text */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+  padding: 0.35rem 0;
+}
+
+.bottom-nav .tab-btn i {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.65); /* Semi-transparent white for icons */
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s ease;
+}
+
+.bottom-nav .tab-btn:hover {
+  color: #ffffff;
+}
+
+.bottom-nav .tab-btn:hover i {
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+/* Active tab style */
+.bottom-nav .tab-btn.active {
+  color: #ffffff; /* Pure white */
+  font-weight: 700;
+}
+
+.bottom-nav .tab-btn.active i {
+  color: #ffffff; /* Pure white */
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6));
+}
+
+/* Premium active top-indicator line */
+.bottom-nav .tab-btn.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: #ffffff; /* White indicator */
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive adjustments for bottom navigation */
+@media (max-width: 600px) {
+  .bottom-nav {
+    height: 60px;
+  }
+  .bottom-nav .tab-btn {
+    font-size: 0.7rem;
+    padding: 0.25rem 0;
+  }
+  .bottom-nav .tab-btn i {
+    font-size: 1.15rem;
+  }
+}
+
+/* Voting Trends Styles */
+.trends-section {
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-glass);
+}
+.trend-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.trend-teams-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+.trend-votes-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+.trend-vote-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  padding: 0.35rem 0.2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+.trend-vote-box:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+.trend-vote-label {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.trend-vote-count {
+  font-size: 0.92rem;
+  font-family: var(--font-title);
+  font-weight: 800;
+  color: var(--color-text-main);
 }

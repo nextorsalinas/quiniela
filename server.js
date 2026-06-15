@@ -296,6 +296,28 @@ app.get('/api/leaderboard', authenticate, async (req, res) => {
   }
 });
 
+// Get matches voting trends (next 2 unplayed matches)
+app.get('/api/matches/trends', authenticate, async (req, res) => {
+  try {
+    const trends = await dbHelper.getMatchTrends();
+    res.json(trends);
+  } catch (error) {
+    console.error("Error getting match trends:", error);
+    res.status(500).json({ error: "Error al obtener las tendencias de votación." });
+  }
+});
+
+// Get top scorers list
+app.get('/api/top-scorers', authenticate, async (req, res) => {
+  try {
+    const topScorers = await dbHelper.getTopScorers();
+    res.json(topScorers);
+  } catch (error) {
+    console.error("Error fetching top scorers:", error);
+    res.status(500).json({ error: "Error al obtener la tabla de goleadores." });
+  }
+});
+
 // Get another user's predictions details
 app.get('/api/predictions/user/:userId', authenticate, async (req, res) => {
   const { userId } = req.params;
@@ -351,6 +373,17 @@ app.post('/api/notifications/read', authenticate, async (req, res) => {
     res.json({ message: "Notificaciones marcadas como leídas." });
   } catch (error) {
     res.status(500).json({ error: "Error al marcar notificaciones: " + error.message });
+  }
+});
+
+// Delete a specific notification
+app.delete('/api/notifications/:notificationId', authenticate, async (req, res) => {
+  const { notificationId } = req.params;
+  try {
+    await dbHelper.deleteNotification(notificationId, req.user.id);
+    res.json({ message: "Notificación eliminada con éxito." });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 

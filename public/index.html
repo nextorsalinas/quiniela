@@ -15,7 +15,12 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=1.6">
+  <link rel="stylesheet" href="styles.css?v=2.6">
+  <!-- Prevent FOUC/FOUI for views before external stylesheet loads -->
+  <style>
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+  </style>
 </head>
 <body>
 
@@ -33,12 +38,6 @@
         <p class="subtitle">Predice la fase de grupos del mundial</p>
       </div>
 
-      <!-- Tabs for Auth -->
-      <div class="auth-tabs">
-        <button id="tab-login-btn" class="auth-tab active" onclick="switchAuthTab('login')">Ingresar</button>
-        <button id="tab-register-btn" class="auth-tab" onclick="switchAuthTab('register')">Registrarse</button>
-      </div>
-
       <!-- Login Form -->
       <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
         <div class="form-group">
@@ -52,25 +51,11 @@
         <button type="submit" class="btn btn-primary btn-block">
           Ingresar <i class="fa-solid fa-right-to-bracket"></i>
         </button>
-      </form>
-
-      <!-- Register Form -->
-      <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
-        <div class="registration-deadline-notice">
-          <i class="fa-solid fa-circle-exclamation"></i>
-          <span><strong>Importante:</strong> El cierre de registros es el 10 de junio. Después de esta fecha no se podrán registrar nuevos participantes.</span>
+        <div style="margin-top: 1.25rem; text-align: center;">
+          <a href="https://wa.me/525525000024?text=Hola,%20olvidé%20mi%20contraseña%20para%20la%20Quiniela%20Mundial%202026." target="_blank" rel="noopener" class="btn btn-outline btn-block" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: #25D366; color: #25D366; width: 100%; box-sizing: border-box; text-decoration: none;">
+            <i class="fa-brands fa-whatsapp"></i> Olvidé mi contraseña
+          </a>
         </div>
-        <div class="form-group">
-          <label for="reg-username"><i class="fa-solid fa-user"></i> Usuario</label>
-          <input type="text" id="reg-username" placeholder="Crea tu usuario (3-20 letras)" required>
-        </div>
-        <div class="form-group">
-          <label for="reg-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
-          <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required>
-        </div>
-        <button type="submit" class="btn btn-success btn-block">
-          Crear Cuenta <i class="fa-solid fa-user-plus"></i>
-        </button>
       </form>
     </div>
   </div>
@@ -81,22 +66,17 @@
       <div class="header-logo">
         <i class="fa-solid fa-trophy"></i>
         <h2>QUINIELA <span>2026</span></h2>
-        <span id="user-display-name" style="display: none;"></span>
-        <!-- Notification Bell Button -->
-        <button id="notification-bell-btn" onclick="toggleNotificationsPanel()" style="background: none; border: none; color: var(--color-text-main); font-size: 0.9rem; cursor: pointer; position: relative; display: inline-flex; align-items: center; justify-content: center; margin-left: 0.6rem; padding: 0.2rem;">
-          <i class="fa-regular fa-bell"></i>
-          <span id="notification-badge" class="notification-badge" style="display: none; top: -5px; right: -5px; min-width: 14px; height: 14px; font-size: 0.6rem; border-width: 1.5px;">0</span>
-        </button>
         <button class="btn btn-outline" onclick="handleLogout()" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; line-height: 1; margin-left: 0.75rem;">
           Salir <i class="fa-solid fa-right-from-bracket"></i>
         </button>
       </div>
 
       <!-- User Stats in Navbar -->
-      <div class="user-stats-bar">
-        <div class="stat-item highlight">
-          <span class="stat-label">Mis Puntos</span>
-          <span id="user-display-points" class="stat-value">0 pts</span>
+      <div class="user-stats-bar" style="display: flex; align-items: center; padding: 0.4rem 1.25rem;">
+        <div class="stat-item highlight" style="flex-direction: row; align-items: center; gap: 0.5rem;">
+          <span id="user-display-name" class="stat-label" style="text-transform: none; font-size: 0.85rem; font-weight: 700; color: var(--gold);">Cargando...</span>
+          <span style="color: var(--color-text-muted); font-size: 0.8rem; font-weight: normal; opacity: 0.5;">|</span>
+          <span id="user-display-points" class="stat-value" style="font-size: 0.85rem; display: inline-flex; align-items: center;">0 pts</span>
         </div>
         <!-- Hidden progress elements to prevent JS errors -->
         <div style="display: none;">
@@ -113,63 +93,15 @@
 
     <!-- Main Workspace -->
     <main class="app-main">
-      <!-- Tabs Selector -->
-      <nav class="app-tabs">
-        <button id="tab-predictions" class="tab-btn active" onclick="switchTab('predictions')">
-          <i class="fa-solid fa-futbol"></i> Mis Pronósticos
-        </button>
-        <button id="tab-leaderboard" class="tab-btn" onclick="switchTab('leaderboard')">
-          <i class="fa-solid fa-ranking-star"></i> Tabla de Posiciones
-        </button>
-        <button id="tab-admin" class="tab-btn" style="display: none;" onclick="switchTab('admin')">
-          <i class="fa-solid fa-gears"></i> Administrador
-        </button>
-      </nav>
+      <!-- Tabs Selector (moved to bottom navigation bar) -->
 
       <!-- View 1: Predictions Dashboard -->
-      <section id="view-predictions" class="tab-view active">
+      <section id="view-predictions" class="tab-view">
         <!-- Dashboard Header / Overview -->
-        <div class="view-header">
+        <div class="view-header" style="margin-bottom: 1rem;">
           <div class="view-title-group">
-            <h3>¡Bienvenido, <span id="welcome-username" class="gold-glow-text" style="color: var(--gold); text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);">Cargando...</span>!</h3>
             <p id="predictions-instruction">Selecciona tu predicción para cada partido de la Fase de Grupos. <strong>L</strong> (Local), <strong>E</strong> (Empate) o <strong>V</strong> (Visitante). Se guardan automáticamente al pulsar.</p>
           </div>
-          <div class="prediction-progress-card">
-            <div class="progress-info">
-              <span>Progreso de mi Quiniela</span>
-              <span id="full-progress-text" class="progress-percentage">0% (0 / 72 partidos)</span>
-            </div>
-            <div class="progress-track">
-              <div id="full-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Space between progress and matches -->
-        <div style="margin-top: 1.5rem;"></div>
-
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label for="group-filter"><i class="fa-solid fa-filter"></i> Filtrar por Grupo:</label>
-            <select id="group-filter" onchange="filterMatches()">
-              <option value="all">Todos los grupos</option>
-              <option value="Grupo A">Grupo A</option>
-              <option value="Grupo B">Grupo B</option>
-              <option value="Grupo C">Grupo C</option>
-              <option value="Grupo D">Grupo D</option>
-              <option value="Grupo E">Grupo E</option>
-              <option value="Grupo F">Grupo F</option>
-              <option value="Grupo G">Grupo G</option>
-              <option value="Grupo H">Grupo H</option>
-              <option value="Grupo I">Grupo I</option>
-              <option value="Grupo J">Grupo J</option>
-              <option value="Grupo K">Grupo K</option>
-              <option value="Grupo L">Grupo L</option>
-            </select>
-          </div>
-          <!-- Hidden search element to prevent JS errors -->
-          <input type="text" id="search-filter" value="" style="display: none;">
         </div>
 
         <!-- Matches Area -->
@@ -181,9 +113,19 @@
       </section>
 
       <!-- View 2: Leaderboard -->
-      <section id="view-leaderboard" class="tab-view">
+      <section id="view-leaderboard" class="tab-view active">
         <!-- Spacer -->
         <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Voting Trends Section -->
+        <div id="trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none;">
+          <h3 style="margin: 0 0 0.55rem 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-chart-simple"></i> Próximos Partidos
+          </h3>
+          <div id="trends-grid" class="trends-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+            <!-- Injected dynamically via app.js -->
+          </div>
+        </div>
 
         <!-- Leaderboard Table Card -->
         <div class="table-card glass-panel">
@@ -199,6 +141,71 @@
               <!-- Injected dynamically -->
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- View 6: Voting Trends (All together) -->
+      <section id="view-trends" class="tab-view">
+        <!-- Spacer -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Unified Voting Trends Section -->
+        <div id="tab-trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none;">
+          <h3 style="margin: 0 0 0.55rem 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-chart-simple"></i> Tendencias
+          </h3>
+          <div id="tab-trends-grid" class="trends-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+            <!-- Injected dynamically via app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- View 4: Goleadores -->
+      <section id="view-goleadores" class="tab-view">
+        <!-- Spacer -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Goleadores Table Card -->
+        <div class="table-card glass-panel">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Goleador</th>
+                <th>Equipo</th>
+                <th style="width: 90px; text-align: center;">Goles</th>
+              </tr>
+            </thead>
+            <tbody id="goleadores-body">
+              <!-- Injected dynamically via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- View 5: Notifications -->
+      <section id="view-notifications" class="tab-view">
+        <!-- Spacer -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <!-- Notifications Card -->
+        <div class="table-card glass-panel" style="padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;">
+          <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div class="view-title-group">
+              <h3 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-bell" style="color: var(--gold);"></i> Notificaciones
+              </h3>
+              <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--color-text-muted);">Tus aciertos y avisos en tiempo real</p>
+            </div>
+            <button class="btn btn-outline" onclick="markAllNotificationsAsRead()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 8px;">
+              Marcar como leídas
+            </button>
+          </div>
+          
+
+
+          <div id="notifications-list" style="display: flex; flex-direction: column; gap: 0.75rem; min-height: 120px;">
+            <!-- Injected dynamically via app.js -->
+          </div>
         </div>
       </section>
 
@@ -286,6 +293,36 @@
     <footer class="app-footer">
       <p>Quiniela Mundial de la FIFA 2026™ | Diseñado con fines recreativos</p>
     </footer>
+
+    <!-- Bottom Navigation Bar -->
+    <nav id="bottom-nav-bar" class="bottom-nav">
+      <button id="tab-predictions" class="tab-btn" onclick="switchTab('predictions')">
+        <i class="fa-solid fa-futbol"></i>
+        <span>Pronóstico</span>
+      </button>
+      <button id="tab-leaderboard" class="tab-btn active" onclick="switchTab('leaderboard')">
+        <i class="fa-solid fa-ranking-star"></i>
+        <span>Posición</span>
+      </button>
+      <button id="tab-trends" class="tab-btn" onclick="switchTab('trends')">
+        <i class="fa-solid fa-chart-simple"></i>
+        <span>Tendencia</span>
+      </button>
+      <button id="tab-goleadores" class="tab-btn" onclick="switchTab('goleadores')">
+        <i class="fa-solid fa-medal"></i>
+        <span>Goles</span>
+      </button>
+      <button id="tab-notifications" class="tab-btn" onclick="switchTab('notifications')">
+        <div style="position: relative; display: inline-flex; align-items: center; justify-content: center;">
+          <i class="fa-solid fa-bell"></i>
+          <span id="notification-badge" class="notification-badge" style="display: none; top: -5px; right: -7px; min-width: 14px; height: 14px; font-size: 0.6rem; border-width: 1.5px; z-index: 10;">0</span>
+        </div>
+      </button>
+      <button id="tab-admin" class="tab-btn" style="display: none;" onclick="switchTab('admin')">
+        <i class="fa-solid fa-gears"></i>
+        <span>Admin</span>
+      </button>
+    </nav>
   </div>
 
   <!-- PWA INSTALL MODAL -->
@@ -359,22 +396,20 @@
     </div>
   </div>
 
-
-  <!-- NOTIFICATIONS PANEL / MODAL -->
-  <div id="notifications-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1500;">
-    <div class="modal-content glass-panel" style="max-width: 450px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; padding: 1.5rem; gap: 1rem;">
-      <div class="modal-header" style="padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: flex-start;">
+  <!-- TRENDS VOTERS MODAL -->
+  <div id="trends-voters-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1600;">
+    <div class="modal-content glass-panel" style="max-width: 400px; width: 90%;">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem;">
         <div>
-          <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main);"><i class="fa-solid fa-bell"></i> Notificaciones</h3>
-          <p style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted);">Tus aciertos y puntos en tiempo real</p>
+          <h3 id="trends-modal-title" style="margin: 0; font-size: 1.15rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main);">Participantes</h3>
+          <p id="trends-modal-subtitle" style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted);">Pronosticaron esta opción</p>
         </div>
-        <button class="modal-close-btn" onclick="toggleNotificationsPanel()" style="background: none; border: none; font-size: 1.5rem; color: var(--color-text-muted); cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+        <button class="modal-close-btn" onclick="closeTrendsVotersModal()">&times;</button>
       </div>
-      <div id="notifications-list" style="overflow-y: auto; flex-grow: 1; padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.75rem; max-height: 50vh; min-height: 100px;">
-        <!-- Notifications injected dynamically -->
-      </div>
-      <div style="padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-        <button class="btn btn-outline" onclick="markAllNotificationsAsRead()" style="width: 100%; font-size: 0.85rem; padding: 0.6rem;">Marcar como leídas</button>
+      <div class="modal-body" style="max-height: 300px; overflow-y: auto; padding-top: 1rem;">
+        <ul id="trends-voters-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+          <!-- Injected dynamically -->
+        </ul>
       </div>
     </div>
   </div>
@@ -384,7 +419,16 @@
     <i class="fa-solid fa-arrow-up"></i>
   </button>
 
+  <!-- Elementos auxiliares ocultos para evitar errores en app.js -->
+  <div style="display: none !important;">
+    <span id="welcome-username"></span>
+    <span id="full-progress-text"></span>
+    <div id="full-progress-bar"></div>
+    <select id="group-filter"><option value="all">all</option></select>
+    <input type="text" id="search-filter" value="">
+  </div>
+
   <!-- Scripts -->
-  <script src="app.js?v=1.6"></script>
+  <script src="app.js?v=3.5"></script>
 </body>
 </html>
