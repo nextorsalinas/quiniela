@@ -119,6 +119,28 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Public Password Reset
+app.post('/api/auth/reset-password-public', async (req, res) => {
+  const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: "El nombre de usuario es requerido." });
+  }
+
+  try {
+    const user = await dbHelper.findUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado." });
+    }
+
+    const newPassword = Math.random().toString(36).slice(-8);
+    await dbHelper.resetUserPassword(user.id, newPassword);
+    res.json({ message: "Contraseña restaurada con éxito.", newPassword });
+  } catch (error) {
+    console.error("Public reset password error:", error);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
+});
+
 // 2. MATCHES
 
 // Get matches

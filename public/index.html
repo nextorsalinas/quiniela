@@ -52,9 +52,9 @@
           Ingresar <i class="fa-solid fa-right-to-bracket"></i>
         </button>
         <div style="margin-top: 1.25rem; text-align: center;">
-          <a href="https://wa.me/525525000024?text=Hola,%20olvidé%20mi%20contraseña%20para%20la%20Quiniela%20Mundial%202026." target="_blank" rel="noopener" class="btn btn-outline btn-block" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: #25D366; color: #25D366; width: 100%; box-sizing: border-box; text-decoration: none;">
-            <i class="fa-brands fa-whatsapp"></i> Olvidé mi contraseña
-          </a>
+          <button type="button" class="btn btn-outline btn-block" onclick="openPublicResetModal()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: var(--gold); color: var(--gold); width: 100%; box-sizing: border-box;">
+            <i class="fa-solid fa-key"></i> Restaurar Contraseña
+          </button>
         </div>
       </form>
     </div>
@@ -368,6 +368,28 @@
     <div id="full-progress-bar"></div>
     <select id="group-filter"><option value="all">all</option></select>
     <input type="text" id="search-filter" value="">
+  </div>
+
+  <!-- PUBLIC RESET PASSWORD MODAL -->
+  <div id="public-reset-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1600;">
+    <div class="modal-content glass-panel" style="max-width: 400px; width: 90%; text-align: center;">
+      <div class="modal-header" style="justify-content: center; position: relative;">
+        <h3 style="color: var(--gold); margin: 0; font-size: 1.25rem;"><i class="fa-solid fa-key"></i> Restaurar Contraseña</h3>
+        <button class="modal-close-btn" onclick="closePublicResetModal()" style="position: absolute; right: 0;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1rem;">
+        <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 1rem;">Ingresa tu nombre de usuario exacto para generar una nueva contraseña.</p>
+        <input type="text" id="public-reset-username" placeholder="Tu nombre de usuario" style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; margin-bottom: 1rem; text-align: center; font-size: 1rem;">
+        <div id="public-reset-result" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(0, 255, 0, 0.1); border: 1px solid #25D366; border-radius: 6px;">
+          <p style="margin: 0; font-size: 0.9rem; color: #25D366; font-weight: 600;">Tu nueva contraseña es:</p>
+          <p id="public-reset-new-pwd" style="margin: 0.5rem 0 0 0; font-size: 1.5rem; color: white; letter-spacing: 2px; font-weight: bold;"></p>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Cópiala o tómale captura y guárdala bien.</p>
+        </div>
+        <button id="public-reset-btn" class="btn btn-primary" style="width: 100%;" onclick="submitPublicReset()">
+          Generar Nueva Contraseña
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->

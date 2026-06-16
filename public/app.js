@@ -132,6 +132,61 @@ function showAuthScreen() {
   switchAuthTab('login');
 }
 
+// Public Password Reset
+function openPublicResetModal() {
+  document.getElementById('public-reset-modal').style.display = 'flex';
+  document.getElementById('public-reset-username').value = '';
+  document.getElementById('public-reset-result').style.display = 'none';
+  document.getElementById('public-reset-new-pwd').textContent = '';
+  document.getElementById('public-reset-btn').style.display = 'block';
+}
+
+function closePublicResetModal() {
+  document.getElementById('public-reset-modal').style.display = 'none';
+}
+
+async function submitPublicReset() {
+  const username = document.getElementById('public-reset-username').value.trim();
+  if (!username) {
+    showToast("Debes ingresar tu nombre de usuario", "error");
+    return;
+  }
+
+  const btn = document.getElementById('public-reset-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generando...';
+
+  try {
+    const response = await fetch(`${API_URL}/auth/reset-password-public`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al restaurar contraseña", "error");
+      btn.disabled = false;
+      btn.innerHTML = 'Generar Nueva Contraseña';
+      return;
+    }
+
+    document.getElementById('public-reset-new-pwd').textContent = data.newPassword;
+    document.getElementById('public-reset-result').style.display = 'block';
+    btn.style.display = 'none';
+    showToast("Contraseña generada con éxito", "success");
+    
+    // Also fill the login form with this new password to make it easier
+    document.getElementById('login-username').value = username;
+    document.getElementById('login-password').value = data.newPassword;
+  } catch (error) {
+    console.error("Reset error:", error);
+    showToast("Error de conexión", "error");
+    btn.disabled = false;
+    btn.innerHTML = 'Generar Nueva Contraseña';
+  }
+}
+
 function showAppDashboard() {
   document.getElementById('auth-section').style.display = 'none';
   
