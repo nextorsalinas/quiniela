@@ -1073,9 +1073,6 @@ async function loadAdminUsers() {
             ${user.points || 0} pts
           </td>
           <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-            <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
-              <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
-            </button>
             <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: #3b82f6; border-color: #3b82f6;">
               <i class="fa-solid fa-key"></i> Nueva Contraseña
             </button>
@@ -1135,12 +1132,9 @@ async function deleteUser(userId, username) {
 
 function renderAdminMatchesList() {
   const list = document.getElementById('admin-matches-list');
-  const groupFilter = document.getElementById('admin-group-filter').value;
 
-  let filtered = state.matches;
-  if (groupFilter !== 'all') {
-    filtered = filtered.filter(m => m.group === groupFilter);
-  }
+  // Ocultar los resultados registrados (matches that already have a result)
+  let filtered = state.matches.filter(m => !m.result);
 
   list.innerHTML = filtered.map(match => {
     const actL = match.result === 'L' ? 'active-L' : '';
@@ -1180,9 +1174,7 @@ function renderAdminMatchesList() {
   }).join('');
 }
 
-function filterAdminMatches() {
-  renderAdminMatchesList();
-}
+
 
 async function saveAdminResult(matchId, resultValue) {
   try {

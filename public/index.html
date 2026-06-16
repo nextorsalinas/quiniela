@@ -223,39 +223,6 @@
               <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Ahora
             </button>
           </div>
-
-          <!-- Broadcast Message Card -->
-          <div class="admin-sync-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem; min-width: 280px; box-sizing: border-box;">
-            <h4 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;"><i class="fa-solid fa-bullhorn"></i> Enviar Mensaje Masivo</h4>
-            <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.3;">Envía una notificación push de fondo e in-app a todos los participantes.</p>
-            <input type="text" id="broadcast-title" value="Aviso Importante ⚠️" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-size: 0.8rem;" placeholder="Título del aviso">
-            <textarea id="broadcast-body" style="width: 100%; padding: 0.4rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-size: 0.8rem; min-height: 50px; font-family: inherit; resize: vertical;" placeholder="Mensaje para todos los usuarios...">Recuerden que el tiempo límite para depositar es mañana miércoles 10 de junio.</textarea>
-            <button id="broadcast-btn" class="btn btn-success" onclick="sendBroadcastNotification()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; cursor: pointer;">
-              <i class="fa-solid fa-paper-plane"></i> Enviar a Todos
-            </button>
-          </div>
-        </div>
-
-        <!-- Admin Filters -->
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label for="admin-group-filter"><i class="fa-solid fa-filter"></i> Filtrar por Grupo:</label>
-            <select id="admin-group-filter" onchange="filterAdminMatches()">
-              <option value="all">Todos los grupos</option>
-              <option value="Grupo A">Grupo A</option>
-              <option value="Grupo B">Grupo B</option>
-              <option value="Grupo C">Grupo C</option>
-              <option value="Grupo D">Grupo D</option>
-              <option value="Grupo E">Grupo E</option>
-              <option value="Grupo F">Grupo F</option>
-              <option value="Grupo G">Grupo G</option>
-              <option value="Grupo H">Grupo H</option>
-              <option value="Grupo I">Grupo I</option>
-              <option value="Grupo J">Grupo J</option>
-              <option value="Grupo K">Grupo K</option>
-              <option value="Grupo L">Grupo L</option>
-            </select>
-          </div>
         </div>
 
         <!-- Admin Matches List -->
@@ -366,30 +333,6 @@
         
         <div id="modal-comparison-grid" class="modal-comparison-grid">
           <!-- Match comparisons injected via JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EDIT PREDICTIONS MODAL (Admin only) -->
-  <div id="edit-predictions-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content glass-panel" style="max-width: 650px;">
-      <div class="modal-header">
-        <div>
-          <h3 id="edit-modal-user-title">Editar Pronósticos de Jugador</h3>
-          <p id="edit-modal-user-subtitle">Modifica las predicciones de los partidos para este usuario</p>
-        </div>
-        <button class="modal-close-btn" onclick="closeEditPredictionsModal()">&times;</button>
-      </div>
-      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
-        <div id="edit-modal-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; padding-right: 0.5rem; flex-grow: 1;">
-          <!-- Match edit rows injected via JS -->
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem; margin-top: 0.5rem; flex-shrink: 0;">
-          <button class="btn btn-outline" onclick="closeEditPredictionsModal()">Cancelar</button>
-          <button id="save-edit-predictions-btn" class="btn btn-primary" onclick="submitEditedPredictions()">
-            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-          </button>
         </div>
       </div>
     </div>
