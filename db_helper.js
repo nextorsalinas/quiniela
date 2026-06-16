@@ -309,10 +309,16 @@ async function verifyUserPassword(username, password) {
 }
 
 // Match functions
+let cachedMatches = null;
+
 async function getMatches() {
   if (dbType === 'firestore') {
+    if (cachedMatches) {
+      return cachedMatches;
+    }
     const snap = await firestoreDb.collection('matches').orderBy('id', 'asc').get();
-    return snap.docs.map(d => d.data());
+    cachedMatches = snap.docs.map(d => d.data());
+    return cachedMatches;
   }
   const db = readDb();
   return db.matches;
@@ -322,6 +328,8 @@ async function updateMatchResult(matchId, result) {
   if (result !== null && result !== 'L' && result !== 'E' && result !== 'V') {
     throw new Error("Resultado inválido. Debe ser 'L', 'E', 'V' o null");
   }
+
+  cachedMatches = null;
 
   if (dbType === 'firestore') {
     // 1. Update Match Doc
@@ -739,6 +747,22 @@ async function syncFifaResults() {
   const apiMatches = data.matches || [];
   console.log(`Fetched ${apiMatches.length} matches from openfootball JSON.`);
 
+  // Generate a summary representation of all currently finished matches in the external API
+  const finishedSummary = apiMatches
+    .filter(am => !!am.score && am.score.ft)
+    .map(am => `${am.team1}-${am.team2}-${am.score.ft[0]}-${am.score.ft[1]}`)
+    .sort()
+    .join('|');
+
+  if (dbType === 'firestore') {
+    // Read the stored summary from metadata/sync
+    const syncDoc = await firestoreDb.collection('metadata').doc('sync').get();
+    if (syncDoc.exists && syncDoc.data().summary === finishedSummary) {
+      console.log("No changes in finished matches from FIFA API. Skipping Firestore read operations.");
+      return { checked: 0, updated: 0 };
+    }
+  }
+
   // Get current matches in our DB
   const dbMatches = await getMatches();
   const pendingMatches = dbMatches.filter(m => m.result === null);
@@ -792,6 +816,11 @@ async function syncFifaResults() {
         }
       }
     }
+  }
+
+  // If we successfully checked the matches, save the new summary to Firestore
+  if (dbType === 'firestore') {
+    await firestoreDb.collection('metadata').doc('sync').set({ summary: finishedSummary });
   }
 
   return { checked: pendingMatches.length, updated: updatedCount };
