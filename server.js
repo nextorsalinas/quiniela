@@ -496,8 +496,8 @@ if (process.env.FIREBASE_CONFIG) {
 
   exports.api = onRequest(app);
   
-  // Scheduled Cloud Function running every 30 minutes to automatically pull FIFA results
-  exports.scheduledFifaSync = onSchedule("every 30 minutes", async (event) => {
+  // Scheduled Cloud Function running at 5 and 55 minutes past the hour to automatically pull FIFA results
+  exports.scheduledFifaSync = onSchedule("5,55 * * * *", async (event) => {
     console.log("Starting scheduled FIFA match results synchronization...");
     try {
       const stats = await dbHelper.syncFifaResults();
