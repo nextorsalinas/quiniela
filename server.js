@@ -413,6 +413,23 @@ app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
   }
 });
 
+// Reset user password (Admin only)
+app.post('/api/admin/users/:userId/reset-password', requireAdmin, async (req, res) => {
+  const { userId } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.trim().length < 6) {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres." });
+  }
+
+  try {
+    await dbHelper.resetUserPassword(userId, newPassword.trim());
+    res.json({ message: "Contraseña actualizada con éxito." });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Update user predictions (Admin only)
 app.post('/api/admin/predictions/user/:userId', requireAdmin, async (req, res) => {
   const { userId } = req.params;

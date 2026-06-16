@@ -1219,6 +1219,25 @@ async function getMatchTrends() {
   
   return trends;
 }
+async function resetUserPassword(userId, newPassword) {
+  const salt = bcrypt.genSaltSync(10);
+  const hashedPassword = bcrypt.hashSync(newPassword, salt);
+
+  if (dbType === 'firestore') {
+    const userRef = firestoreDb.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) throw new Error("Usuario no encontrado.");
+    
+    await userRef.update({ password: hashedPassword });
+  } else {
+    const db = readDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) throw new Error("Usuario no encontrado.");
+    
+    db.users[userIndex].password = hashedPassword;
+    writeDb(db);
+  }
+}
 
 module.exports = {
   initDb,
@@ -1247,6 +1266,6 @@ module.exports = {
   deleteUser,
   getTopScorers,
   deleteNotification,
-  getMatchTrends
+  getMatchTrends,
+  resetUserPassword
 };
-

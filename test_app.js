@@ -4,7 +4,7 @@ let state = {
   matches: [],
   predictions: {}, // Key: matchId, Value: prediction string ('L', 'E', 'V')
   leaderboard: [],
-  activeTab: 'leaderboard',
+  activeTab: 'predictions',
   authTab: 'login'
 };
 
@@ -134,13 +134,6 @@ function showAuthScreen() {
 
 function showAppDashboard() {
   document.getElementById('auth-section').style.display = 'none';
-  
-  // Safeguard: explicitly remove active states from predictions to avoid flashing cached HTML views
-  const predView = document.getElementById('view-predictions');
-  if (predView) predView.classList.remove('active');
-  const predTab = document.getElementById('tab-predictions');
-  if (predTab) predTab.classList.remove('active');
-  
   document.getElementById('app-section').style.display = 'flex';
   
   // Set UI user info
@@ -148,24 +141,22 @@ function showAppDashboard() {
   document.getElementById('welcome-username').textContent = state.currentUser.username;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
-  // Show admin tab/badge if admin, and hide predictions tab since it is not used for admin
+  // Show admin tab/badge if admin
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
     document.getElementById('tab-admin').style.display = 'flex';
-    document.getElementById('tab-predictions').style.display = 'none';
   } else {
     document.getElementById('admin-badge').style.display = 'none';
     document.getElementById('tab-admin').style.display = 'none';
-    document.getElementById('tab-predictions').style.display = 'flex';
   }
 
   // Initial data fetch
   switchTab('leaderboard');
 
-  // Notifications init
-  refreshUnreadNotificationCount();
-  if (notificationsInterval) clearInterval(notificationsInterval);
-  notificationsInterval = setInterval(refreshUnreadNotificationCount, 120000);
+  // Chat init
+  loadChatMessages();
+  if (chatInterval) clearInterval(chatInterval);
+  chatInterval = setInterval(loadChatMessages, 5000);
 }
 
 function switchAuthTab(tab) {
@@ -177,15 +168,15 @@ function switchAuthTab(tab) {
   const registerBtn = document.getElementById('tab-register-btn');
 
   if (tab === 'login') {
-    if (loginForm) loginForm.classList.add('active');
-    if (registerForm) registerForm.classList.remove('active');
-    if (loginBtn) loginBtn.classList.add('active');
-    if (registerBtn) registerBtn.classList.remove('active');
+    loginForm.classList.add('active');
+    registerForm.classList.remove('active');
+    loginBtn.classList.add('active');
+    registerBtn.classList.remove('active');
   } else {
-    if (loginForm) loginForm.classList.remove('active');
-    if (registerForm) registerForm.classList.add('active');
-    if (loginBtn) loginBtn.classList.remove('active');
-    if (registerBtn) registerBtn.classList.add('active');
+    loginForm.classList.remove('active');
+    registerForm.classList.add('active');
+    loginBtn.classList.remove('active');
+    registerBtn.classList.add('active');
   }
 }
 
@@ -261,6 +252,10 @@ async function handleRegister(event) {
 }
 
 function handleLogout() {
+  if (chatInterval) {
+    clearInterval(chatInterval);
+    chatInterval = null;
+  }
   if (notificationsInterval) {
     clearInterval(notificationsInterval);
     notificationsInterval = null;
@@ -277,22 +272,13 @@ function handleLogout() {
 // --- DASHBOARD ROUTING & TABS ---
 
 function switchTab(tabId) {
-  // If user is admin and tries to go to predictions, redirect to leaderboard
-  if (tabId === 'predictions' && state.currentUser && state.currentUser.isAdmin) {
-    tabId = 'leaderboard';
-  }
-
   state.activeTab = tabId;
   
   // Update Tab buttons styling
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.remove('active');
   });
-  
-  const targetTab = document.getElementById(`tab-${tabId}`);
-  if (targetTab) {
-    targetTab.classList.add('active');
-  }
+  document.getElementById(`tab-${tabId}`).classList.add('active');
 
   // Update views visibility
   document.querySelectorAll('.tab-view').forEach(view => {
@@ -305,12 +291,6 @@ function switchTab(tabId) {
     loadPredictionsDashboard();
   } else if (tabId === 'leaderboard') {
     loadLeaderboard();
-  } else if (tabId === 'trends') {
-    loadVotingTrends();
-  } else if (tabId === 'goleadores') {
-    loadGoleadores();
-  } else if (tabId === 'notifications') {
-    loadNotifications();
   } else if (tabId === 'admin') {
     loadAdminDashboard();
   }
@@ -394,13 +374,15 @@ function updateStatsBar() {
     fullText.textContent = `${percentage}% (${predictedCount} de ${totalMatches} partidos)`;
     fullBar.style.width = `${percentage}%`;
   }
-  refreshUnreadNotificationCount();
 }
 
 function renderMatchesGrid() {
   const grid = document.getElementById('matches-grid');
-  const groupFilter = document.getElementById('group-filter').value;
-  const searchQuery = document.getElementById('search-filter').value.toLowerCase().trim();
+  const groupFilterEl = document.getElementById('group-filter');
+  const groupFilter = groupFilterEl ? groupFilterEl.value : 'all';
+  
+  const searchFilterEl = document.getElementById('search-filter');
+  const searchQuery = searchFilterEl ? searchFilterEl.value.toLowerCase().trim() : '';
 
   // Filter matches
   let filtered = state.matches;
@@ -427,6 +409,17 @@ function renderMatchesGrid() {
   }
 
   let completedBannerHtml = '';
+  if (isFull) {
+    completedBannerHtml = `
+      <div class="quiniela-completed-banner glass-panel" style="grid-column: 1 / -1;">
+        <i class="fa-solid fa-circle-check"></i>
+        <div>
+          <h4>¡Quiniela Completada!</h4>
+          <p>Has registrado tus 72 pronósticos. Tu quiniela está guardada y bloqueada para consultas.</p>
+        </div>
+      </div>
+    `;
+  }
 
   if (filtered.length === 0) {
     grid.innerHTML = completedBannerHtml + `
@@ -621,7 +614,6 @@ async function loadLeaderboard() {
     }
 
     renderLeaderboardTables();
-    loadVotingTrends();
   } catch (error) {
     console.error("Error loading leaderboard:", error);
     showToast("Error al cargar la tabla de posiciones", "error");
@@ -645,9 +637,9 @@ function renderLeaderboardTables() {
       else if (position === 3) rankBadgeClass = 'rank-3';
 
       const isMe = player.id === state.currentUser.id;
-      const canView = true;
-      const clickHandler = `onclick="viewPlayerPredictions('${player.id}')"`;
-      const rowClass = 'clickable';
+      const canView = isMe || state.currentUser.isAdmin;
+      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
+      const rowClass = canView ? 'clickable' : '';
       const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
       const adminBadge = player.isAdmin ? '<span class="badge badge-error" style="font-size: 0.6rem; padding: 0.1rem 0.3rem; margin-left: 0.5rem;">Admin</span>' : '';
 
@@ -659,8 +651,8 @@ function renderLeaderboardTables() {
           <td>
             <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
               <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
-              <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
-                <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
+              <div>
+                <span class="player-name">${player.username} ${isMe ? '(Tú)' : ''}</span>
                 ${adminBadge}
               </div>
             </div>
@@ -683,9 +675,9 @@ function renderLeaderboardTables() {
       else if (position === 3) rankBadgeClass = 'rank-3';
 
       const isMe = player.id === state.currentUser.id;
-      const canView = true;
-      const clickHandler = `onclick="viewPlayerPredictions('${player.id}')"`;
-      const rowClass = 'clickable';
+      const canView = isMe || state.currentUser.isAdmin;
+      const clickHandler = canView ? `onclick="viewPlayerPredictions('${player.id}')"` : '';
+      const rowClass = canView ? 'clickable' : '';
       const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
 
       return `
@@ -706,56 +698,6 @@ function renderLeaderboardTables() {
         </tr>
       `;
     }).join('');
-  }
-}
-
-async function loadGoleadores() {
-  const tbody = document.getElementById('goleadores-body');
-  if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 3rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de goleadores...</td></tr>`;
-
-  try {
-    const response = await fetch(`${API_URL}/top-scorers`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    
-    const scorers = await response.json();
-    
-    if (scorers.error) {
-      showToast(scorers.error, "error");
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--red);">${scorers.error}</td></tr>`;
-      return;
-    }
-
-    if (scorers.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">Aún no hay goles registrados en el torneo.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = scorers.map((scorer) => {
-      return `
-        <tr>
-          <td style="padding: 0.65rem 1rem;">
-            <div style="font-weight: 600; font-size: 0.82rem; color: var(--color-text-main);">
-              ${scorer.name}
-            </div>
-          </td>
-          <td style="padding: 0.65rem 1rem;">
-            <div style="font-weight: 500; font-size: 0.8rem; color: var(--color-text-muted);">
-              ${scorer.team}
-            </div>
-          </td>
-          <td style="text-align: center; padding: 0.65rem 1rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); font-size: 0.82rem; width: 90px;">
-            ${scorer.goals}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-  } catch (error) {
-    console.error("Error loading top scorers:", error);
-    showToast("Error al cargar la tabla de goleadores", "error");
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--red);">Error de red al cargar goleadores.</td></tr>`;
   }
 }
 
@@ -860,150 +802,17 @@ window.onclick = function(event) {
   const modal = document.getElementById('comparison-modal');
   const editModal = document.getElementById('edit-predictions-modal');
   const pwaModal = document.getElementById('pwa-install-modal');
-  const trendsModal = document.getElementById('trends-voters-modal');
+  const chatModal = document.getElementById('chat-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
     closeEditPredictionsModal();
   } else if (event.target === pwaModal) {
     closePwaModal();
-  } else if (event.target === trendsModal) {
-    closeTrendsVotersModal();
+  } else if (event.target === chatModal) {
+    chatModal.style.display = 'none';
   }
 };
-
-let currentTrendsData = [];
-
-async function loadVotingTrends() {
-  const container = document.getElementById('trends-container');
-  const grid = document.getElementById('trends-grid');
-  
-  const tabTrendsContainer = document.getElementById('tab-trends-container');
-  const tabTrendsGrid = document.getElementById('tab-trends-grid');
-
-  try {
-    const res = await fetch(`${API_URL}/matches/trends`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    if (!res.ok) throw new Error("Error fetching trends");
-    
-    currentTrendsData = await res.json();
-    
-    if (currentTrendsData.length === 0) {
-      if (container) container.style.display = 'none';
-      if (tabTrendsContainer) tabTrendsContainer.style.display = 'none';
-      return;
-    }
-    
-    // 1. Render for "Posiciones" tab (only the first 2 next unplayed matches)
-    const next2 = currentTrendsData.slice(0, 2);
-    if (next2.length === 0) {
-      if (container) container.style.display = 'none';
-    } else {
-      if (container && grid) {
-        container.style.display = 'block';
-        grid.innerHTML = next2.map((match, idx) => {
-          return `
-            <div class="trend-card">
-              <div class="trend-teams-row">
-                <span>${match.team1}</span>
-                <span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; margin: 0 0.5rem;">vs</span>
-                <span>${match.team2}</span>
-              </div>
-              <div class="trend-votes-row">
-                <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'L')">
-                  <span class="trend-vote-label">Local</span>
-                  <span class="trend-vote-count">${match.stats.L.count}</span>
-                </div>
-                <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'E')">
-                  <span class="trend-vote-label">Empate</span>
-                  <span class="trend-vote-count">${match.stats.E.count}</span>
-                </div>
-                <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'V')">
-                  <span class="trend-vote-label">Visitante</span>
-                  <span class="trend-vote-count">${match.stats.V.count}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-    
-    // 2. Render all trends in "Tendencia" tab (unified grid)
-    if (tabTrendsContainer && tabTrendsGrid) {
-      tabTrendsContainer.style.display = 'block';
-      tabTrendsGrid.innerHTML = currentTrendsData.map((match, idx) => {
-        return `
-          <div class="trend-card">
-            <div class="trend-teams-row">
-              <span>${match.team1}</span>
-              <span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; margin: 0 0.5rem;">vs</span>
-              <span>${match.team2}</span>
-            </div>
-            <div class="trend-votes-row">
-              <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'L')">
-                <span class="trend-vote-label">Local</span>
-                <span class="trend-vote-count">${match.stats.L.count}</span>
-              </div>
-              <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'E')">
-                <span class="trend-vote-label">Empate</span>
-                <span class="trend-vote-count">${match.stats.E.count}</span>
-              </div>
-              <div class="trend-vote-box" onclick="showTrendsVoters(${idx}, 'V')">
-                <span class="trend-vote-label">Visitante</span>
-                <span class="trend-vote-count">${match.stats.V.count}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-  } catch (error) {
-    console.error("Error loading voting trends:", error);
-    if (container) container.style.display = 'none';
-    if (tabTrendsContainer) tabTrendsContainer.style.display = 'none';
-  }
-}
-
-function showTrendsVoters(matchIndex, predictionType) {
-  const match = currentTrendsData[matchIndex];
-  if (!match) return;
-
-  const optionName = predictionType === 'L' ? 'Local' : (predictionType === 'E' ? 'Empate' : 'Visitante');
-  const predictionStats = match.stats[predictionType];
-  if (!predictionStats) return;
-
-  const modal = document.getElementById('trends-voters-modal');
-  const modalTitle = document.getElementById('trends-modal-title');
-  const modalSubtitle = document.getElementById('trends-modal-subtitle');
-  const votersList = document.getElementById('trends-voters-list');
-
-  if (!modal || !modalTitle || !modalSubtitle || !votersList) return;
-
-  modalTitle.textContent = `${match.team1} vs ${match.team2}`;
-  modalSubtitle.textContent = `Votaron por ${optionName} (${predictionStats.count} personas)`;
-
-  if (predictionStats.users.length === 0) {
-    votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); padding: 1rem 0; font-size: 0.85rem;">Nadie pronosticó esta opción.</li>`;
-  } else {
-    votersList.innerHTML = predictionStats.users.map(username => {
-      return `
-        <li style="padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-user-check" style="color: var(--gold); font-size: 0.75rem;"></i>
-          ${username}
-        </li>
-      `;
-    }).join('');
-  }
-
-  modal.style.display = 'flex';
-}
-
-function closeTrendsVotersModal() {
-  const modal = document.getElementById('trends-voters-modal');
-  if (modal) modal.style.display = 'none';
-}
 
 // --- ADMIN DASHBOARD ---
 
@@ -1322,39 +1131,136 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
-// --- FLOATING BACK TO TOP BUTTON & BOTTOM NAV SCROLL LOGIC ---
-
-let lastScrollTop = 0;
+// --- FLOATING BACK TO TOP BUTTON LOGIC ---
 
 window.addEventListener('scroll', () => {
   const btn = document.getElementById('back-to-top-btn');
-  if (btn) {
-    if (window.scrollY > 400) {
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
-    }
+  if (!btn) return;
+  if (window.scrollY > 400) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
   }
-
-  const bottomNav = document.getElementById('bottom-nav-bar');
-  if (bottomNav) {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    if (scrollTop > lastScrollTop && scrollTop > 100) {
-      // Scrolling down -> hide bottom nav
-      bottomNav.classList.add('nav-hidden');
-    } else {
-      // Scrolling up -> show bottom nav
-      bottomNav.classList.remove('nav-hidden');
-    }
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-  }
-}, { passive: true });
+});
 
 function scrollToTop() {
   window.scrollTo({
     top: 0,
     behavior: 'smooth'
   });
+}
+
+// --- CHAT CLIENT LOGIC ---
+
+let chatInterval = null;
+
+function toggleChatPanel() {
+  const modal = document.getElementById('chat-modal');
+  if (!modal) return;
+  
+  if (modal.style.display === 'flex') {
+    modal.style.display = 'none';
+  } else {
+    modal.style.display = 'flex';
+    loadChatMessages(true);
+  }
+}
+
+async function loadChatMessages(scrollToBottom = false) {
+  if (!state.currentUser) return;
+  const listEl = document.getElementById('chat-list');
+  if (!listEl && scrollToBottom) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/chat`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!response.ok) return;
+    const messages = await response.json();
+    
+    if (messages.length > 0) {
+      const lastSeenStr = localStorage.getItem('quiniela_last_chat_time') || '0';
+      const lastSeenTime = parseInt(lastSeenStr);
+      
+      const unreadCount = messages.filter(m => new Date(m.createdAt).getTime() > lastSeenTime).length;
+      
+      const badge = document.getElementById('chat-badge');
+      if (badge) {
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+    
+    if (!listEl) return;
+    
+    const wasAtBottom = listEl.scrollHeight - listEl.scrollTop <= listEl.clientHeight + 20;
+
+    if (messages.length === 0) {
+      listEl.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); padding: 2rem 1rem;">No hay mensajes todavía. ¡Sé el primero en escribir!</div>`;
+      return;
+    }
+    
+    listEl.innerHTML = messages.map(m => {
+      const isMe = m.userId === state.currentUser.id;
+      const timeStr = new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      const align = isMe ? 'flex-end' : 'flex-start';
+      const bg = isMe ? 'var(--gold)' : 'rgba(255, 255, 255, 0.1)';
+      const color = isMe ? '#000' : 'var(--color-text-main)';
+      const adminBadge = m.isAdmin && !isMe ? `<span style="font-size:0.6rem; background:var(--red); color:white; padding: 1px 4px; border-radius:3px; margin-left:4px;">Admin</span>` : '';
+      
+      return `
+        <div style="display: flex; flex-direction: column; align-items: ${align}; margin-bottom: 0.5rem; width: 100%;">
+          <div style="font-size: 0.7rem; color: var(--color-text-muted); margin-bottom: 2px;">
+            ${isMe ? 'Tú' : m.username} ${adminBadge} <span style="margin-left: 4px; opacity:0.7;">${timeStr}</span>
+          </div>
+          <div style="background: ${bg}; color: ${color}; padding: 0.5rem 0.75rem; border-radius: 8px; max-width: 85%; font-size: 0.85rem; word-break: break-word;">
+            ${m.text}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    if (scrollToBottom || wasAtBottom) {
+      listEl.scrollTop = listEl.scrollHeight;
+    }
+    
+    const modal = document.getElementById('chat-modal');
+    if (modal && modal.style.display === 'flex' && messages.length > 0) {
+      localStorage.setItem('quiniela_last_chat_time', new Date(messages[messages.length - 1].createdAt).getTime().toString());
+      const badge = document.getElementById('chat-badge');
+      if (badge) badge.style.display = 'none';
+    }
+    
+  } catch (err) {
+    console.error("Error loading chat messages:", err);
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  
+  input.value = '';
+  try {
+    await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ text })
+    });
+    loadChatMessages(true);
+  } catch (err) {
+    console.error("Error sending chat message:", err);
+    showToast("Error al enviar mensaje", "error");
+  }
 }
 
 // --- NOTIFICATIONS CLIENT LOGIC ---
@@ -1408,16 +1314,6 @@ async function refreshUnreadNotificationCount() {
 }
 
 async function loadNotifications() {
-  // Check push support and display banner accordingly
-  const containerEl = document.getElementById('enable-push-btn-container');
-  if (containerEl) {
-    if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'granted') {
-      containerEl.style.display = 'block';
-    } else {
-      containerEl.style.display = 'none';
-    }
-  }
-
   const listEl = document.getElementById('notifications-list');
   if (!listEl) return;
   
@@ -1455,7 +1351,7 @@ async function loadNotifications() {
       });
       
       return `
-        <div class="${itemClass}" data-id="${n.id}">
+        <div class="${itemClass}">
           <div class="notification-icon-wrapper ${wrapperClass}">
             <i class="fa-solid ${iconClass}"></i>
           </div>
@@ -1468,124 +1364,9 @@ async function loadNotifications() {
       `;
     }).join('');
     
-    // Initialize swipe listeners for touch delete
-    initSwipeToDelete();
-    
   } catch (err) {
     console.error("Error rendering notifications:", err);
     listEl.innerHTML = `<div style="text-align: center; color: var(--red); padding: 1rem;">Error de conexión.</div>`;
-  }
-}
-
-function initSwipeToDelete() {
-  const items = document.querySelectorAll('.notification-item');
-  items.forEach(item => {
-    let startX = 0;
-    let startY = 0;
-    let currentX = 0;
-    let isSwiping = false;
-    const notificationId = item.getAttribute('data-id');
-
-    item.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      item.style.transition = 'none';
-      isSwiping = false;
-    }, { passive: true });
-
-    item.addEventListener('touchmove', (e) => {
-      const touchX = e.touches[0].clientX;
-      const touchY = e.touches[0].clientY;
-      const diffX = touchX - startX;
-      const diffY = touchY - startY;
-
-      // Check if horizontal gesture is dominant
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
-        isSwiping = true;
-        currentX = diffX;
-        
-        // Translate node
-        item.style.transform = `translateX(${diffX}px)`;
-        const opacity = Math.max(0.1, 1 - Math.abs(diffX) / 250);
-        item.style.opacity = opacity;
-        
-        // Prevent page scroll when swiping horizontally
-        if (e.cancelable) e.preventDefault();
-      }
-    }, { passive: false });
-
-    item.addEventListener('touchend', () => {
-      if (!isSwiping) return;
-      
-      const threshold = 120; // swipe threshold to delete
-      item.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
-
-      if (Math.abs(currentX) > threshold) {
-        // Slide out in swipe direction
-        const direction = currentX > 0 ? 1 : -1;
-        item.style.transform = `translateX(${direction * 120}%)`;
-        item.style.opacity = '0';
-        
-        // Collapse height and delete
-        setTimeout(() => {
-          deleteNotificationClient(notificationId, item);
-        }, 300);
-      } else {
-        // Bounce back
-        item.style.transform = 'translateX(0)';
-        item.style.opacity = '1';
-      }
-    }, { passive: true });
-  });
-}
-
-async function deleteNotificationClient(notificationId, element) {
-  // Collapse element height smoothly
-  element.style.transition = 'all 0.3s ease';
-  element.style.height = `${element.offsetHeight}px`;
-  // Force layout recalculation
-  element.offsetHeight;
-  
-  element.style.height = '0';
-  element.style.padding = '0';
-  element.style.margin = '0';
-  element.style.border = 'none';
-  element.style.overflow = 'hidden';
-  
-  setTimeout(() => {
-    element.remove();
-    // Check if empty
-    const listEl = document.getElementById('notifications-list');
-    if (listEl && listEl.querySelectorAll('.notification-item').length === 0) {
-      listEl.innerHTML = `
-        <div style="text-align: center; color: var(--color-text-muted); padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
-          <i class="fa-regular fa-bell-slash" style="font-size: 2rem; color: var(--color-text-muted); opacity: 0.5;"></i>
-          <p style="font-size: 0.85rem; margin: 0; line-height: 1.4;">No tienes notificaciones todavía.</p>
-        </div>
-      `;
-    }
-  }, 300);
-
-  try {
-    const response = await fetch(`${API_URL}/notifications/${notificationId}`, {
-      method: 'DELETE',
-      headers: {
-        'x-user-id': state.currentUser.id
-      }
-    });
-    
-    if (!response.ok) {
-      const data = await response.json();
-      showToast(data.error || "Error al eliminar la notificación", "error");
-      loadNotifications();
-    } else {
-      showToast("Notificación eliminada.", "success");
-      refreshUnreadNotificationCount();
-    }
-  } catch (error) {
-    console.error("Error deleting notification:", error);
-    showToast("Error de red al eliminar la notificación", "error");
-    loadNotifications();
   }
 }
 
@@ -1669,8 +1450,6 @@ async function requestPushPermission() {
       showToast("¡Notificaciones activadas con éxito!", "success");
       const enablePushBtn = document.getElementById('enable-push-btn');
       if (enablePushBtn) enablePushBtn.style.display = 'none';
-      const containerEl = document.getElementById('enable-push-btn-container');
-      if (containerEl) containerEl.style.display = 'none';
     } else {
       showToast("Error al activar notificaciones en el servidor.", "error");
     }
