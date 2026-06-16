@@ -1038,14 +1038,14 @@ async function loadAdminUsers() {
     });
     
     if (!response.ok) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--red);">Error al cargar usuarios.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--red);">Error al cargar usuarios.</td></tr>`;
       return;
     }
 
     const users = await response.json();
     
     if (users.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay usuarios registrados.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay usuarios registrados.</td></tr>`;
       return;
     }
 
@@ -1072,9 +1072,6 @@ async function loadAdminUsers() {
           <td style="text-align: center; font-family: var(--font-title); font-weight: 700; color: ${isMe ? 'var(--gold)' : 'inherit'}">
             ${user.points || 0} pts
           </td>
-          <td style="text-align: center;">
-            ${roleText}
-          </td>
           <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
             <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
               <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
@@ -1092,7 +1089,7 @@ async function loadAdminUsers() {
 
   } catch (error) {
     console.error("Error loading admin users:", error);
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--red);">Error de red al cargar usuarios.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--red);">Error de red al cargar usuarios.</td></tr>`;
   }
 }
 
