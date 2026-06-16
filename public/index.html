@@ -95,19 +95,13 @@
     <main class="app-main">
       <!-- Tabs Selector (moved to bottom navigation bar) -->
 
-      <!-- View 1: Predictions Dashboard -->
-      <section id="view-predictions" class="tab-view">
-        <!-- Dashboard Header / Overview -->
-        <div class="view-header" style="margin-bottom: 1rem;">
-          <div class="view-title-group">
-            <p id="predictions-instruction">Selecciona tu predicción para cada partido de la Fase de Grupos. <strong>L</strong> (Local), <strong>E</strong> (Empate) o <strong>V</strong> (Visitante). Se guardan automáticamente al pulsar.</p>
-          </div>
-        </div>
-
-        <!-- Matches Area -->
-        <div id="matches-grid" class="matches-grid">
+      <!-- View 1: Groups Dashboard -->
+      <section id="view-groups" class="tab-view">
+        <div style="margin-top: 1.5rem;"></div>
+        
+        <div id="groups-grid" class="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
           <div class="loading-spinner">
-            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos del mundial...
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando grupos del mundial...
           </div>
         </div>
       </section>
@@ -262,9 +256,9 @@
 
     <!-- Bottom Navigation Bar -->
     <nav id="bottom-nav-bar" class="bottom-nav">
-      <button id="tab-predictions" class="tab-btn" onclick="switchTab('predictions')">
-        <i class="fa-solid fa-futbol"></i>
-        <span>Pronóstico</span>
+      <button id="tab-groups" class="tab-btn" onclick="switchTab('groups')">
+        <i class="fa-solid fa-table"></i>
+        <span>Grupos</span>
       </button>
       <button id="tab-leaderboard" class="tab-btn active" onclick="switchTab('leaderboard')">
         <i class="fa-solid fa-ranking-star"></i>
@@ -395,6 +389,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=3.8"></script>
+  <script src="app.js?v=3.9"></script>
 </body>
 </html>

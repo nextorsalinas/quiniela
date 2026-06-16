@@ -196,10 +196,10 @@ async function submitPublicReset() {
 function showAppDashboard() {
   document.getElementById('auth-section').style.display = 'none';
   
-  // Safeguard: explicitly remove active states from predictions to avoid flashing cached HTML views
-  const predView = document.getElementById('view-predictions');
+  // Safeguard: explicitly remove active states from groups to avoid flashing cached HTML views
+  const predView = document.getElementById('view-groups');
   if (predView) predView.classList.remove('active');
-  const predTab = document.getElementById('tab-predictions');
+  const predTab = document.getElementById('tab-groups');
   if (predTab) predTab.classList.remove('active');
   
   document.getElementById('app-section').style.display = 'flex';
@@ -209,16 +209,15 @@ function showAppDashboard() {
   document.getElementById('welcome-username').textContent = state.currentUser.username;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
-  // Show admin tab/badge if admin, and hide predictions tab since it is not used for admin
+  // Show admin tab/badge if admin
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
     document.getElementById('tab-admin').style.display = 'flex';
-    document.getElementById('tab-predictions').style.display = 'none';
   } else {
     document.getElementById('admin-badge').style.display = 'none';
     document.getElementById('tab-admin').style.display = 'none';
-    document.getElementById('tab-predictions').style.display = 'flex';
   }
+  document.getElementById('tab-groups').style.display = 'flex';
 
   // Initial data fetch
   switchTab('leaderboard');
@@ -338,11 +337,6 @@ function handleLogout() {
 // --- DASHBOARD ROUTING & TABS ---
 
 function switchTab(tabId) {
-  // If user is admin and tries to go to predictions, redirect to leaderboard
-  if (tabId === 'predictions' && state.currentUser && state.currentUser.isAdmin) {
-    tabId = 'leaderboard';
-  }
-
   state.activeTab = tabId;
   
   // Update Tab buttons styling
@@ -362,8 +356,8 @@ function switchTab(tabId) {
   document.getElementById(`view-${tabId}`).classList.add('active');
 
   // Fetch data depending on tab
-  if (tabId === 'predictions') {
-    loadPredictionsDashboard();
+  if (tabId === 'groups') {
+    loadGroupsDashboard();
   } else if (tabId === 'leaderboard') {
     loadLeaderboard();
   } else if (tabId === 'trends') {
@@ -379,44 +373,120 @@ function switchTab(tabId) {
 
 // --- DATA FETCHING & UI RENDERING ---
 
-async function loadPredictionsDashboard() {
-  const grid = document.getElementById('matches-grid');
-  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tus pronósticos...</div>`;
+async function loadGroupsDashboard() {
+  const grid = document.getElementById('groups-grid');
+  if (!grid) return;
+  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando grupos del mundial...</div>`;
 
   try {
-    // 1. Fetch matches
-    const matchesRes = await fetch(`${API_URL}/matches`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    
-    if (matchesRes.status === 401) {
-      handleLogout();
-      return;
+    if (state.matches.length === 0) {
+      const response = await fetch(`${API_URL}/matches`, {
+        headers: { 'x-user-id': state.currentUser.id }
+      });
+      state.matches = await response.json();
+    }
+
+    renderGroupsTables();
+  } catch (error) {
+    console.error("Error loading groups:", error);
+    grid.innerHTML = `<div style="text-align: center; color: var(--red); padding: 2rem;">Error de conexión al cargar los grupos.</div>`;
+  }
+}
+
+function renderGroupsTables() {
+  const grid = document.getElementById('groups-grid');
+  if (!grid) return;
+
+  // 1. Group matches by their group field
+  const groupsData = {}; // groupName -> { teamName -> { pg, pe, pp, pj, pts } }
+
+  state.matches.forEach(match => {
+    const groupName = match.group;
+    if (!groupsData[groupName]) {
+      groupsData[groupName] = {};
     }
     
-    state.matches = await matchesRes.json();
-
-    // 2. Fetch predictions
-    const predsRes = await fetch(`${API_URL}/predictions`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    const predsData = await predsRes.json();
-    
-    // Map array to object state
-    state.predictions = {};
-    predsData.forEach(p => {
-      state.predictions[p.matchId] = p.prediction;
+    // Initialize stats for both teams
+    [match.team1, match.team2].forEach(team => {
+      if (!groupsData[groupName][team]) {
+        groupsData[groupName][team] = { name: team, pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
+      }
     });
 
-    // 3. Update navbar user stats (points might have changed if admin set new results)
-    updateStatsBar();
+    // Update stats if match has a result
+    if (match.result !== null) {
+      const t1 = groupsData[groupName][match.team1];
+      const t2 = groupsData[groupName][match.team2];
 
-    // 4. Render matches
-    renderMatchesGrid();
-  } catch (error) {
-    console.error("Error loading dashboard data:", error);
-    showToast("Error de conexión al cargar datos", "error");
-  }
+      t1.pj++;
+      t2.pj++;
+
+      if (match.result === 'L') {
+        t1.pg++;
+        t1.pts += 3;
+        t2.pp++;
+      } else if (match.result === 'E') {
+        t1.pe++;
+        t1.pts += 1;
+        t2.pe++;
+        t2.pts += 1;
+      } else if (match.result === 'V') {
+        t2.pg++;
+        t2.pts += 3;
+        t1.pp++;
+      }
+    }
+  });
+
+  // 2. Render each group table card
+  const groupNames = Object.keys(groupsData).sort((a, b) => a.localeCompare(b));
+  
+  grid.innerHTML = groupNames.map(groupName => {
+    const teamsList = Object.values(groupsData[groupName]).sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if (b.pg !== a.pg) return b.pg - a.pg;
+      return a.name.localeCompare(b.name);
+    });
+
+    return `
+      <div class="table-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+        <h3 style="margin: 0; font-size: 1rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-list-ol"></i> ${groupName}
+        </h3>
+        <table class="leaderboard-table" style="font-size: 0.8rem; width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 25px; text-align: center; font-size: 0.75rem;">Pos</th>
+              <th style="text-align: left; font-size: 0.75rem;">Equipo</th>
+              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Partidos Jugados">PJ</th>
+              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Ganados">G</th>
+              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Empatados">E</th>
+              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Perdidos">P</th>
+              <th style="width: 40px; text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--gold);">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${teamsList.map((team, idx) => {
+              const pos = idx + 1;
+              const isQualified = pos <= 2;
+              const rankStyle = isQualified ? 'color: var(--success); font-weight: bold;' : 'color: var(--color-text-muted);';
+              return `
+                <tr>
+                  <td style="text-align: center; ${rankStyle}">${pos}</td>
+                  <td style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="${team.name}">${team.name}</td>
+                  <td style="text-align: center;">${team.pj}</td>
+                  <td style="text-align: center;">${team.pg}</td>
+                  <td style="text-align: center;">${team.pe}</td>
+                  <td style="text-align: center;">${team.pp}</td>
+                  <td style="text-align: center; font-weight: 700; color: var(--gold);">${team.pts}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join('');
 }
 
 function updateStatsBar() {
