@@ -136,9 +136,9 @@ function showAuthScreen() {
 function openPublicResetModal() {
   document.getElementById('public-reset-modal').style.display = 'flex';
   document.getElementById('public-reset-username').value = '';
-  document.getElementById('public-reset-result').style.display = 'none';
-  document.getElementById('public-reset-new-pwd').textContent = '';
+  document.getElementById('public-reset-new-pwd-input').value = '';
   document.getElementById('public-reset-btn').style.display = 'block';
+  document.getElementById('public-reset-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Nueva Contraseña';
 }
 
 function closePublicResetModal() {
@@ -147,43 +147,49 @@ function closePublicResetModal() {
 
 async function submitPublicReset() {
   const username = document.getElementById('public-reset-username').value.trim();
+  const newPassword = document.getElementById('public-reset-new-pwd-input').value;
+  
   if (!username) {
     showToast("Debes ingresar tu nombre de usuario", "error");
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    showToast("La contraseña debe tener al menos 6 caracteres", "error");
     return;
   }
 
   const btn = document.getElementById('public-reset-btn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generando...';
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...';
 
   try {
     const response = await fetch(`${API_URL}/auth/reset-password-public`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ username, newPassword })
     });
 
     const data = await response.json();
     if (!response.ok) {
       showToast(data.error || "Error al restaurar contraseña", "error");
       btn.disabled = false;
-      btn.innerHTML = 'Generar Nueva Contraseña';
+      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Nueva Contraseña';
       return;
     }
 
-    document.getElementById('public-reset-new-pwd').textContent = data.newPassword;
-    document.getElementById('public-reset-result').style.display = 'block';
-    btn.style.display = 'none';
-    showToast("Contraseña generada con éxito", "success");
+    showToast("Contraseña actualizada con éxito", "success");
     
-    // Also fill the login form with this new password to make it easier
+    // Fill the login form with this new password to make it easier
     document.getElementById('login-username').value = username;
-    document.getElementById('login-password').value = data.newPassword;
+    document.getElementById('login-password').value = newPassword;
+    
+    closePublicResetModal();
   } catch (error) {
     console.error("Reset error:", error);
     showToast("Error de conexión", "error");
     btn.disabled = false;
-    btn.innerHTML = 'Generar Nueva Contraseña';
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Nueva Contraseña';
   }
 }
 

@@ -378,21 +378,23 @@
         <button class="modal-close-btn" onclick="closePublicResetModal()" style="position: absolute; right: 0;">&times;</button>
       </div>
       <div class="modal-body" style="padding: 1.5rem 1rem;">
-        <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 1rem;">Ingresa tu nombre de usuario exacto para generar una nueva contraseña.</p>
-        <input type="text" id="public-reset-username" placeholder="Tu nombre de usuario" style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; margin-bottom: 1rem; text-align: center; font-size: 1rem;">
-        <div id="public-reset-result" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(0, 255, 0, 0.1); border: 1px solid #25D366; border-radius: 6px;">
-          <p style="margin: 0; font-size: 0.9rem; color: #25D366; font-weight: 600;">Tu nueva contraseña es:</p>
-          <p id="public-reset-new-pwd" style="margin: 0.5rem 0 0 0; font-size: 1.5rem; color: white; letter-spacing: 2px; font-weight: bold;"></p>
-          <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Cópiala o tómale captura y guárdala bien.</p>
+        <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 1rem;">Ingresa tu nombre de usuario y la nueva contraseña que deseas usar.</p>
+        <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
+          <label for="public-reset-username" style="font-size: 0.8rem; color: var(--color-text-muted);"><i class="fa-solid fa-user"></i> Nombre de Usuario</label>
+          <input type="text" id="public-reset-username" placeholder="Tu nombre de usuario exacto" style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; margin-top: 0.25rem;">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem; text-align: left;">
+          <label for="public-reset-new-pwd-input" style="font-size: 0.8rem; color: var(--color-text-muted);"><i class="fa-solid fa-lock"></i> Nueva Contraseña</label>
+          <input type="password" id="public-reset-new-pwd-input" placeholder="Mínimo 6 caracteres" style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; margin-top: 0.25rem;">
         </div>
         <button id="public-reset-btn" class="btn btn-primary" style="width: 100%;" onclick="submitPublicReset()">
-          Generar Nueva Contraseña
+          <i class="fa-solid fa-floppy-disk"></i> Guardar Nueva Contraseña
         </button>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=3.7"></script>
+  <script src="app.js?v=3.8"></script>
 </body>
 </html>
