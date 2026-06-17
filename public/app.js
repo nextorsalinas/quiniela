@@ -735,6 +735,66 @@ async function savePrediction(matchId, predictionValue) {
 
 // --- LEADERBOARD & COMPARISONS ---
 
+async function loadStreaks() {
+  const container = document.getElementById('streaks-container');
+  const content = document.getElementById('streaks-content');
+  if (!container || !content) return;
+
+  try {
+    const res = await fetch(`${API_URL}/streaks`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const data = await res.json();
+    
+    if (!data || !Array.isArray(data.buenaRacha) || !Array.isArray(data.malaRacha)) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    let html = '';
+
+    // Buena
+    if (data.buenaRacha.length > 0) {
+      const top = data.buenaRacha[0];
+      html += `
+        <div class="racha-row-container">
+          <div class="racha-row">
+            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user">${top.username}</span></div></div>
+            <div class="racha-badge" onclick="toggleStreaksTop3('buena')">${top.activeHits} <span class="seguidos-text">aciertos seguidos</span></div>
+          </div>
+          <div id="top3-buena" class="top3-list">
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text">seguidos</span></span></div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    // Mala
+    if (data.malaRacha.length > 0) {
+      const top = data.malaRacha[0];
+      html += `
+        <div class="racha-row-container">
+          <div class="racha-row">
+            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user">${top.username}</span></div></div>
+            <div class="racha-badge" onclick="toggleStreaksTop3('mala')">${top.activeMisses} <span class="seguidos-text">fallos seguidos</span></div>
+          </div>
+          <div id="top3-mala" class="top3-list">
+            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text">seguidos</span></span></div>`).join('')}
+          </div>
+        </div>`;
+    }
+    content.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    container.style.display = 'none';
+  }
+}
+
+function toggleStreaksTop3(type) {
+  const el = document.getElementById(`top3-${type}`);
+  if (el) el.classList.toggle('active');
+}
+
 async function loadLeaderboard() {
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 3rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
@@ -753,6 +813,7 @@ async function loadLeaderboard() {
 
     renderLeaderboardTables();
     loadVotingTrends();
+    loadStreaks();
   } catch (error) {
     console.error("Error loading leaderboard:", error);
     showToast("Error al cargar la tabla de posiciones", "error");

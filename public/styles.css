@@ -2025,5 +2025,127 @@ body {
   font-size: 0.92rem;
   font-family: var(--font-title);
   font-weight: 800;
+  color: var(--color-text-main); 
+  }
+
+  /* Rachas Section Styles */
+  .racha-row-container {
+  display: flex;
+  flex-direction: column;
+  }
+
+  .racha-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  }
+
+  .racha-label-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  }
+
+  .racha-emoji {
+  font-size: 1.1rem;
+  }
+
+  .racha-info {
+  display: flex;
+  flex-direction: column;
+  }
+
+  .racha-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  }
+
+  .racha-user {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  }
+
+  .racha-badge .seguidos-text {
+  font-size: 0.58rem;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-left: 2px;
+  }
+
+  .racha-badge {
+  background: var(--gold);
+  color: #111;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+  transition: all 0.2s ease;
+  }
+
+  .racha-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+  }
+
+  .top3-list {
+  display: none;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: fadeInDown 0.3s ease forwards;
+  }
+
+  .top3-list.active {
+  display: flex;
+  }
+
+  .top3-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .top3-item:last-child {
+  border-bottom: none;
+  }
+
+  .top3-rank {
+  color: var(--gold);
+  font-weight: 700;
+  width: 20px;
+  }
+
+  .top3-username {
+  flex: 1;
   color: var(--color-text-main);
-}
+  padding-left: 0.5rem;
+  text-align: left;
+  }
+
+  .top3-val {
+  font-weight: 800;
+  color: #fff;
+  }
+
+  @keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+  }

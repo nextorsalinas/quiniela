@@ -332,6 +332,15 @@ app.get('/api/matches/trends', authenticate, async (req, res) => {
   }
 });
 
+app.get('/api/streaks', authenticate, async (req, res) => {
+  try {
+    const streaks = await dbHelper.getStreaks();
+    res.json(streaks);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener las rachas." });
+  }
+});
+
 // Get top scorers list
 app.get('/api/top-scorers', authenticate, async (req, res) => {
   try {

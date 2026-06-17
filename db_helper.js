@@ -337,7 +337,7 @@ async function updateMatchResult(matchId, result) {
     const matchDoc = await matchRef.get();
     if (!matchDoc.exists) throw new Error("Partido no encontrado");
     
-    await matchRef.update({ result });
+    await matchRef.update({ result, updatedAt: new Date().toISOString() });
 
     // 2. Fetch all predictions for this match to recalculate points
     const predsSnap = await firestoreDb.collection('predictions').where('matchId', '==', parseInt(matchId)).get();
@@ -386,6 +386,7 @@ async function updateMatchResult(matchId, result) {
     if (!match) throw new Error("Partido no encontrado");
 
     match.result = result;
+    match.updatedAt = new Date().toISOString();
     writeDb(db);
 
     // Recalculate all scores
@@ -1248,6 +1249,84 @@ async function getMatchTrends() {
   
   return trends;
 }
+
+async function getStreaks() {
+  const matches = await getMatches();
+  const finishedMatches = matches
+    .filter(m => m.result !== null)
+    .sort((a, b) => {
+      if (a.updatedAt && b.updatedAt) {
+        return new Date(a.updatedAt) - new Date(b.updatedAt);
+      } else if (a.updatedAt) {
+        return 1; // Put ones with date after ones without
+      } else if (b.updatedAt) {
+        return -1;
+      }
+      return (a.excelOrder || a.id) - (b.excelOrder || b.id);
+    });
+
+  const users = await getUsers();
+  const nonAdminUsers = users.filter(u => !u.isAdmin);
+  
+  let allPredictions = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('predictions').get();
+    allPredictions = snap.docs.map(doc => doc.data());
+  } else {
+    allPredictions = readDb().predictions || [];
+  }
+
+  const userStreaks = nonAdminUsers.map(user => {
+    let currentHits = 0;
+    let currentMisses = 0;
+
+    finishedMatches.forEach(match => {
+      const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
+      if (!pred || pred.prediction !== match.result) {
+        currentHits = 0;
+        currentMisses++;
+      } else {
+        currentHits++;
+        currentMisses = 0;
+      }
+    });
+
+    return {
+      id: user.id,
+      username: user.username,
+      points: user.points || 0,
+      activeHits: currentHits,
+      activeMisses: currentMisses
+    };
+  });
+
+  let buenaRacha = [...userStreaks]
+    .filter(u => u.activeHits > 0)
+    .sort((a, b) => b.activeHits - a.activeHits || a.username.localeCompare(b.username))
+    .slice(0, 3);
+
+  if (buenaRacha.length === 0 && userStreaks.length > 0) {
+    buenaRacha = [...userStreaks]
+      .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
+      .slice(0, 3)
+      .map(u => ({ ...u, activeHits: 0 }));
+  }
+
+  let malaRacha = [...userStreaks]
+    .filter(u => u.activeMisses > 0)
+    .sort((a, b) => b.activeMisses - a.activeMisses || a.username.localeCompare(b.username))
+    .slice(0, 3);
+
+  if (malaRacha.length === 0 && userStreaks.length > 0) {
+    malaRacha = [...userStreaks]
+      .sort((a, b) => a.points - b.points || a.username.localeCompare(b.username))
+      .slice(0, 3)
+      .map(u => ({ ...u, activeMisses: 0 }));
+  }
+
+  return { buenaRacha, malaRacha };
+}
+
 async function resetUserPassword(userId, newPassword) {
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(newPassword, salt);
@@ -1296,5 +1375,6 @@ module.exports = {
   getTopScorers,
   deleteNotification,
   getMatchTrends,
+  getStreaks,
   resetUserPassword
 };
