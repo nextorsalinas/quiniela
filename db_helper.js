@@ -1265,7 +1265,13 @@ async function getStreaks() {
       return (a.excelOrder || a.id) - (b.excelOrder || b.id);
     });
 
-  const users = await getUsers();
+  let users = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('users').get();
+    users = snap.docs.map(doc => doc.data());
+  } else {
+    users = readDb().users;
+  }
   const nonAdminUsers = users.filter(u => !u.isAdmin);
   
   let allPredictions = [];
