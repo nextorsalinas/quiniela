@@ -981,7 +981,7 @@ async function viewPlayerPredictions(targetUserId) {
       return;
     }
 
-    modalTitle.textContent = `Pronósticos de: ${data.username}`;
+    modalTitle.textContent = `Panel de Pronósticos: ${data.username}`;
     modalSubtitle.textContent = `Puntos acumulados: ${data.points} pts | Partidos pronosticados: ${Object.keys(data.predictions).length} de 72`;
 
     comparisonGrid.innerHTML = state.matches.map(match => {
