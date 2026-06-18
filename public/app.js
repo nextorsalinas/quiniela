@@ -1,3 +1,38 @@
+// --- THEME TOGGLE LOGIC ---
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-theme');
+    updateThemeButtonUI('dark');
+  } else {
+    updateThemeButtonUI('light');
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.toggle('dark-theme');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  updateThemeButtonUI(isDark ? 'dark' : 'light');
+}
+
+function updateThemeButtonUI(theme) {
+  const btn = document.getElementById('floating-theme-btn');
+  if (!btn) return;
+  if (theme === 'dark') {
+    btn.innerHTML = '<i class="fa-solid fa-sun"></i> Modo claro';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-moon"></i> Modo oscuro';
+  }
+}
+
+function truncateName(name, maxLength = 10) {
+  if (!name) return '';
+  return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
+}
+
+// Initialize theme immediately
+initTheme();
+
 // APPLICATION STATE
 let state = {
   currentUser: null,
@@ -760,11 +795,11 @@ async function loadStreaks() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user">${top.username}</span></div></div>
-            <div class="racha-badge" onclick="toggleStreaksTop3('buena')">${top.activeHits} <span class="seguidos-text">aciertos seguidos</span></div>
+            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-badge racha-buena" onclick="toggleStreaksTop3('buena')">${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></div>
           </div>
           <div id="top3-buena" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text">seguidos</span></span></div>`).join('')}
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -775,11 +810,11 @@ async function loadStreaks() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user">${top.username}</span></div></div>
-            <div class="racha-badge" onclick="toggleStreaksTop3('mala')">${top.activeMisses} <span class="seguidos-text">fallos seguidos</span></div>
+            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-badge racha-mala" onclick="toggleStreaksTop3('mala')">${top.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></div>
           </div>
           <div id="top3-mala" class="top3-list">
-            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text">seguidos</span></span></div>`).join('')}
+            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -1087,14 +1122,14 @@ async function loadVotingTrends() {
       return;
     }
     
-    // 1. Render for "Posiciones" tab (only the first 2 next unplayed matches)
-    const next2 = currentTrendsData.slice(0, 2);
-    if (next2.length === 0) {
+    // 1. Render for "Posiciones" tab (only the first 3 next unplayed matches)
+    const next3 = currentTrendsData.slice(0, 3);
+    if (next3.length === 0) {
       if (container) container.style.display = 'none';
     } else {
       if (container && grid) {
         container.style.display = 'block';
-        grid.innerHTML = next2.map((match, idx) => {
+        grid.innerHTML = next3.map((match, idx) => {
           return `
             <div class="trend-card">
               <div class="trend-teams-row">

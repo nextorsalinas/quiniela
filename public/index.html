@@ -62,32 +62,31 @@
   <!-- MAIN APP SECTION (Visible after authentication) -->
   <div id="app-section" class="app-container" style="display: none;">
     <!-- Navigation Bar -->
-    <header class="app-header">
-      <div class="header-logo">
-        <i class="fa-solid fa-trophy"></i>
-        <h2>QUINIELA <span>2026</span></h2>
-        <button class="btn btn-outline" onclick="handleLogout()" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; line-height: 1; margin-left: 0.75rem;">
+    <header class="app-header" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 0; gap: 1rem;">
+      <div class="header-logo" style="margin: 0; justify-content: flex-start; gap: 0;">
+        <h2 style="font-family: var(--font-body); font-weight: 300; font-size: 1.7rem; letter-spacing: -0.5px;">Mi<span style="font-weight: 800; color: var(--gold);">quiniela</span></h2>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end;">
+        <button id="admin-badge" class="badge-admin" style="display: none; padding: 0.3rem 0.6rem; margin: 0;"><i class="fa-solid fa-shield-halved"></i> Admin</button>
+        
+        <!-- User Stats in Navbar -->
+        <div class="user-stats-bar" style="display: flex; align-items: center; padding: 0.3rem 0.8rem; margin: 0; min-height: 32px;">
+          <div class="stat-item highlight" style="flex-direction: row; align-items: center; gap: 0.4rem;">
+            <span id="user-display-name" class="stat-label" style="text-transform: none; font-size: 0.95rem; font-weight: 700; color: var(--gold);">Cargando...</span>
+            <span style="color: var(--color-text-muted); font-size: 0.85rem; font-weight: normal; opacity: 0.5;">|</span>
+            <span id="user-display-points" class="stat-value" style="font-size: 0.95rem; display: inline-flex; align-items: center;">0 pts</span>
+          </div>
+          <!-- Hidden progress elements to prevent JS errors -->
+          <div style="display: none;">
+            <div id="mini-progress-bar"></div>
+            <span id="user-display-progress"></span>
+          </div>
+        </div>
+
+        <button class="btn btn-outline" onclick="handleLogout()" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem; line-height: 1; margin: 0;">
           Salir <i class="fa-solid fa-right-from-bracket"></i>
         </button>
-      </div>
-
-      <!-- User Stats in Navbar -->
-      <div class="user-stats-bar" style="display: flex; align-items: center; padding: 0.4rem 1.25rem;">
-        <div class="stat-item highlight" style="flex-direction: row; align-items: center; gap: 0.5rem;">
-          <span id="user-display-name" class="stat-label" style="text-transform: none; font-size: 0.85rem; font-weight: 700; color: var(--gold);">Cargando...</span>
-          <span style="color: var(--color-text-muted); font-size: 0.8rem; font-weight: normal; opacity: 0.5;">|</span>
-          <span id="user-display-points" class="stat-value" style="font-size: 0.85rem; display: inline-flex; align-items: center;">0 pts</span>
-        </div>
-        <!-- Hidden progress elements to prevent JS errors -->
-        <div style="display: none;">
-          <div id="mini-progress-bar"></div>
-          <span id="user-display-progress"></span>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="header-actions">
-        <button id="admin-badge" class="badge-admin" style="display: none;"><i class="fa-solid fa-shield-halved"></i> Admin</button>
       </div>
     </header>
 
@@ -132,7 +131,10 @@
         </div>
 
         <!-- Leaderboard Table Card -->
-        <div class="table-card glass-panel">
+        <div class="table-card glass-panel" style="padding: 1rem 0 0 0;">
+          <h3 style="margin: 0 1.5rem 1rem 1.5rem; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-ranking-star"></i> Posiciones
+          </h3>
           <table class="leaderboard-table">
             <thead>
               <tr>
@@ -259,11 +261,6 @@
       </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-      <p>Quiniela Mundial de la FIFA 2026™ | Diseñado con fines recreativos</p>
-    </footer>
-
     <!-- Bottom Navigation Bar -->
     <nav id="bottom-nav-bar" class="bottom-nav">
       <button id="tab-groups" class="tab-btn" onclick="switchTab('groups')">
@@ -359,6 +356,11 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating Theme Toggle Button -->
+  <button id="floating-theme-btn" class="floating-theme-btn" onclick="toggleTheme()" aria-label="Cambiar tema">
+    <i class="fa-solid fa-moon"></i> Modo claro
+  </button>
 
   <!-- Floating Back to Top Button -->
   <button id="back-to-top-btn" class="back-to-top-btn" onclick="scrollToTop()" aria-label="Regresar al principio">
