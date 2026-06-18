@@ -507,7 +507,7 @@ if (process.env.FIREBASE_CONFIG) {
   
   // Scheduled Cloud Function running at 5 and 55 minutes past the hour (PM 13-23) to automatically pull FIFA results
   exports.scheduledFifaSync = onSchedule({
-    schedule: "5,55 13-23 * * *",
+    schedule: "5 12-23/2 * * *",
     timeZone: "America/Mexico_City"
   }, async (event) => {
     console.log("Starting scheduled FIFA match results synchronization...");

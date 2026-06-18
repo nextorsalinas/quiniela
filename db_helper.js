@@ -21,6 +21,24 @@ const excelPath = path.join(__dirname, 'Quiniela_Mundial_2026_Fase_Grupos.xlsx')
 let dbType = 'json'; // 'json' or 'firestore'
 let firestoreDb = null;
 
+// --- IN-MEMORY CACHE ---
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const cache = {
+  leaderboard: { data: null, timestamp: 0 },
+  trends: { data: null, timestamp: 0 },
+  streaks: { data: null, timestamp: 0 },
+  topScorers: { data: null, timestamp: 0 }
+};
+
+function invalidateCache() {
+  console.log("Invalidating in-memory cache due to data change.");
+  cache.leaderboard.timestamp = 0;
+  cache.trends.timestamp = 0;
+  cache.streaks.timestamp = 0;
+  cache.topScorers.timestamp = 0;
+}
+// -----------------------
+
 try {
   const admin = require('firebase-admin');
   if (process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -330,6 +348,7 @@ async function updateMatchResult(matchId, result) {
   }
 
   cachedMatches = null;
+  invalidateCache(); // INVALIDATE CACHE ON RESULT CHANGE
 
   if (dbType === 'firestore') {
     // 1. Update Match Doc
@@ -411,6 +430,7 @@ async function getPredictionsByUser(userId) {
 }
 
 async function savePredictions(userId, matchPredictions, isAdmin = false) {
+  invalidateCache(); // INVALIDATE CACHE ON NEW PREDICTIONS
   if (dbType === 'firestore') {
     // Verify user exists
     const userDoc = await firestoreDb.collection('users').doc(userId).get();
@@ -579,6 +599,12 @@ function recalculateScoresSync(db) {
 // Leaderboard
 async function getLeaderboard() {
   if (dbType === 'firestore') {
+    const now = Date.now();
+    if (cache.leaderboard.data && (now - cache.leaderboard.timestamp) < CACHE_TTL_MS) {
+      console.log("Serving leaderboard from cache.");
+      return cache.leaderboard.data;
+    }
+
     const snap = await firestoreDb.collection('users').orderBy('points', 'desc').get();
     const leaderboard = [];
     
@@ -599,6 +625,9 @@ async function getLeaderboard() {
         predictionCount: countSnap.data().count
       });
     }
+    
+    cache.leaderboard.data = leaderboard;
+    cache.leaderboard.timestamp = now;
     return leaderboard;
   }
 
@@ -1173,6 +1202,14 @@ async function deleteNotification(notificationId, userId) {
 }
 
 async function getMatchTrends() {
+  if (dbType === 'firestore') {
+    const now = Date.now();
+    if (cache.trends.data && (now - cache.trends.timestamp) < CACHE_TTL_MS) {
+      console.log("Serving trends from cache.");
+      return cache.trends.data;
+    }
+  }
+
   // 1. Get all matches
   const matches = await getMatches();
   
@@ -1251,6 +1288,14 @@ async function getMatchTrends() {
 }
 
 async function getStreaks() {
+  if (dbType === 'firestore') {
+    const now = Date.now();
+    if (cache.streaks.data && (now - cache.streaks.timestamp) < CACHE_TTL_MS) {
+      console.log("Serving streaks from cache.");
+      return cache.streaks.data;
+    }
+  }
+
   const matches = await getMatches();
   const finishedMatches = matches
     .filter(m => m.result !== null)
@@ -1330,7 +1375,14 @@ async function getStreaks() {
       .map(u => ({ ...u, activeMisses: 0 }));
   }
 
-  return { buenaRacha, malaRacha };
+  const resultData = { buenaRacha, malaRacha };
+  
+  if (dbType === 'firestore') {
+    cache.streaks.data = resultData;
+    cache.streaks.timestamp = Date.now();
+  }
+
+  return resultData;
 }
 
 async function resetUserPassword(userId, newPassword) {
