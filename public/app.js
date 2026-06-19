@@ -1156,7 +1156,7 @@ async function loadVotingTrends() {
         }).join('');
 
         // Apply collapsed state if saved in localStorage
-        const isCollapsed = localStorage.getItem('trends_collapsed') === 'true';
+        const isCollapsed = localStorage.getItem('trends_collapsed') !== 'false';
         const toggleIcon = document.getElementById('trends-toggle-icon');
         const titleH3 = container.querySelector('h3');
         if (isCollapsed) {
