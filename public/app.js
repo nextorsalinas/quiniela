@@ -256,6 +256,7 @@ function showAppDashboard() {
 
   // Initial data fetch
   switchTab('leaderboard');
+  checkAnnouncementModal();
 
   // Notifications init
   refreshUnreadNotificationCount();
@@ -1088,6 +1089,7 @@ window.onclick = function(event) {
   const editModal = document.getElementById('edit-predictions-modal');
   const pwaModal = document.getElementById('pwa-install-modal');
   const trendsModal = document.getElementById('trends-voters-modal');
+  const announcementModal = document.getElementById('info-announcement-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
@@ -1096,6 +1098,8 @@ window.onclick = function(event) {
     closePwaModal();
   } else if (event.target === trendsModal) {
     closeTrendsVotersModal();
+  } else if (event.target === announcementModal) {
+    closeAnnouncementModal();
   }
 };
 
@@ -1229,6 +1233,20 @@ function showTrendsVoters(matchIndex, predictionType) {
 
 function closeTrendsVotersModal() {
   const modal = document.getElementById('trends-voters-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function checkAnnouncementModal() {
+  const hasSeen = localStorage.getItem('quiniela_seen_groups_announcement_3');
+  if (!hasSeen && state.currentUser) {
+    const modal = document.getElementById('info-announcement-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+}
+
+function closeAnnouncementModal() {
+  localStorage.setItem('quiniela_seen_groups_announcement_3', 'true');
+  const modal = document.getElementById('info-announcement-modal');
   if (modal) modal.style.display = 'none';
 }
 
