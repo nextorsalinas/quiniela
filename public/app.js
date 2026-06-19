@@ -313,6 +313,30 @@ async function handleLogin(event) {
   }
 }
 
+async function loginAsGuest() {
+  try {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'invitado', password: 'mundial' })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al iniciar sesión como invitado", "error");
+      return;
+    }
+
+    state.currentUser = data.user;
+    localStorage.setItem('quiniela_user', JSON.stringify(data.user));
+    showToast("¡Ingresaste como invitado!", "success");
+    showAppDashboard();
+  } catch (error) {
+    console.error("Guest login error:", error);
+    showToast("Error de conexión al ingresar como invitado", "error");
+  }
+}
+
 async function handleRegister(event) {
   event.preventDefault();
   const usernameInput = document.getElementById('reg-username').value;

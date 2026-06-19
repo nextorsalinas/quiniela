@@ -50,11 +50,9 @@
         <button type="submit" class="btn btn-primary btn-block">
           Ingresar <i class="fa-solid fa-right-to-bracket"></i>
         </button>
-        <div style="margin-top: 1.5rem; padding: 0.75rem 1rem; border-radius: 8px; background: rgba(245, 158, 11, 0.08); border: 1px dashed var(--gold); text-align: center; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.25rem;">
-          <span style="font-weight: 700; color: var(--gold);"><i class="fa-solid fa-ghost"></i> Modo Invitado (Phantom User)</span>
-          <span style="color: var(--color-text-main);">Usuario: <strong style="color: white; font-family: monospace;">invitado</strong></span>
-          <span style="color: var(--color-text-main);">Contraseña: <strong style="color: white; font-family: monospace;">mundial</strong></span>
-        </div>
+        <button type="button" class="btn" onclick="loginAsGuest()" style="margin-top: 1.5rem; background: rgba(16, 185, 129, 0.08); border: 1px dashed var(--gold); color: var(--gold); font-size: 0.9rem; padding: 0.75rem; border-radius: var(--radius-md); font-weight: 700; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
+          <i class="fa-solid fa-ghost"></i> Ingresar como Invitado
+        </button>
         <div style="margin-top: 1.25rem; text-align: center;">
           <button type="button" class="btn btn-outline" onclick="openPublicResetModal()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-color: var(--gold); color: var(--gold); font-size: 0.8rem; padding: 0.5rem 1rem;">
             <i class="fa-solid fa-key"></i> Restaurar Contraseña
@@ -454,6 +452,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=3.16"></script>
+  <script src="app.js?v=3.17"></script>
 </body>
 </html>
