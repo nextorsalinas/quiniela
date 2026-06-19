@@ -610,7 +610,7 @@ async function getLeaderboard() {
     
     for (const doc of snap.docs) {
       const u = doc.data();
-      if (u.isAdmin) continue;
+      if (u.isAdmin || u.username === 'invitado') continue;
       
       // Fast count aggregation
       const countSnap = await firestoreDb.collection('predictions')
@@ -633,7 +633,7 @@ async function getLeaderboard() {
 
   const db = readDb();
   const leaderboard = db.users
-    .filter(u => !u.isAdmin)
+    .filter(u => !u.isAdmin && u.username !== 'invitado')
     .map(u => ({
       id: u.id,
       username: u.username,
@@ -1317,7 +1317,7 @@ async function getStreaks() {
   } else {
     users = readDb().users;
   }
-  const nonAdminUsers = users.filter(u => !u.isAdmin);
+  const nonAdminUsers = users.filter(u => !u.isAdmin && u.username !== 'invitado');
   
   let allPredictions = [];
   if (dbType === 'firestore') {

@@ -235,8 +235,9 @@ function showAppDashboard() {
   document.getElementById('app-section').style.display = 'flex';
   
   // Set UI user info
-  document.getElementById('user-display-name').textContent = state.currentUser.username;
-  document.getElementById('welcome-username').textContent = state.currentUser.username;
+  const displayUsername = state.currentUser.username === 'invitado' ? 'Phantom User' : state.currentUser.username;
+  document.getElementById('user-display-name').textContent = displayUsername;
+  document.getElementById('welcome-username').textContent = displayUsername;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
   // Show admin tab/badge if admin
@@ -860,7 +861,7 @@ function renderLeaderboardTables() {
 
   // 1. Render main tab table (Detailed version)
   if (tbody) {
-    tbody.innerHTML = state.leaderboard.map((player, index) => {
+    tbody.innerHTML = state.leaderboard.filter(player => player.username !== 'invitado').map((player, index) => {
       const position = index + 1;
       let rankBadgeClass = 'rank-other';
       if (position === 1) rankBadgeClass = 'rank-1';
@@ -898,7 +899,7 @@ function renderLeaderboardTables() {
 
   // 2. Render side sticky table (Compact version)
   if (sideTbody) {
-    sideTbody.innerHTML = state.leaderboard.map((player, index) => {
+    sideTbody.innerHTML = state.leaderboard.filter(player => player.username !== 'invitado').map((player, index) => {
       const position = index + 1;
       let rankBadgeClass = 'rank-other';
       if (position === 1) rankBadgeClass = 'rank-1';
