@@ -493,34 +493,7 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-app.get('/api/debug-guest', async (req, res) => {
-  try {
-    const u = await dbHelper.findUserByUsername('invitado');
-    const u_raw = u ? { ...u, password: '[PROTECTED]' } : null;
-    const test_pwd = u ? require('bcryptjs').compareSync('mundial', u.password) : false;
-    res.json({
-      dbType: dbHelper.getDbType ? dbHelper.getDbType() : "unknown",
-      userExists: !!u,
-      userRaw: u_raw,
-      passwordValid: test_pwd
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
-app.get('/api/seed-guest-in-prod', async (req, res) => {
-  try {
-    const existing = await dbHelper.findUserByUsername('invitado');
-    if (existing) {
-      return res.json({ message: "El usuario 'invitado' ya existe en producción.", user: existing });
-    }
-    const newUser = await dbHelper.registerUser('invitado', '', 'mundial');
-    res.json({ message: "¡Usuario 'invitado' creado con éxito en producción!", user: newUser });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // Catch-all route to serve the frontend
 app.get('*', (req, res) => {
