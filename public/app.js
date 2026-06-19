@@ -1,12 +1,7 @@
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'dark') {
-    document.body.classList.add('dark-theme');
-    updateThemeButtonUI('dark');
-  } else {
-    updateThemeButtonUI('light');
-  }
+  document.body.classList.add('dark-theme');
+  localStorage.setItem('theme', 'dark');
 }
 
 function toggleTheme() {
@@ -1126,14 +1121,14 @@ async function loadVotingTrends() {
       return;
     }
     
-    // 1. Render for "Posiciones" tab (only the first 3 next unplayed matches)
-    const next3 = currentTrendsData.slice(0, 3);
-    if (next3.length === 0) {
+    // 1. Render for "Posiciones" tab (only the first 4 next unplayed matches)
+    const next4 = currentTrendsData.slice(0, 4);
+    if (next4.length === 0) {
       if (container) container.style.display = 'none';
     } else {
       if (container && grid) {
         container.style.display = 'block';
-        grid.innerHTML = next3.map((match, idx) => {
+        grid.innerHTML = next4.map((match, idx) => {
           return `
             <div class="trend-card">
               <div class="trend-teams-row">
@@ -1318,6 +1313,9 @@ async function loadAdminUsers() {
             ${user.points || 0} pts
           </td>
           <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+            <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
+              <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
+            </button>
             <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: #3b82f6; border-color: #3b82f6;">
               <i class="fa-solid fa-key"></i> Nueva Contraseña
             </button>

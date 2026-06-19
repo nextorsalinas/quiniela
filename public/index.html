@@ -22,7 +22,7 @@
     .tab-view.active { display: block; }
   </style>
 </head>
-<body>
+<body class="dark-theme">
 
   <!-- Toast Notification System -->
   <div id="toast-container" class="toast-container"></div>
@@ -363,6 +363,30 @@
     </div>
   </div>
 
+  <!-- EDIT PREDICTIONS MODAL (Admin only) -->
+  <div id="edit-predictions-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1500;">
+    <div class="modal-content glass-panel" style="max-width: 650px; width: 95%; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem; flex-shrink: 0;">
+        <div>
+          <h3 id="edit-modal-user-title" style="margin: 0; font-size: 1.15rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main);">Editar Pronósticos de Jugador</h3>
+          <p id="edit-modal-user-subtitle" style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: var(--color-text-muted);">Modifica las predicciones de los partidos para este usuario</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeEditPredictionsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; overflow: hidden; flex-grow: 1; padding: 1.25rem 0.5rem 0 0.5rem;">
+        <div id="edit-modal-matches-grid" style="display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; padding-right: 0.5rem; flex-grow: 1;">
+          <!-- Match edit rows injected via JS -->
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem; margin-top: 0.5rem; flex-shrink: 0; padding-bottom: 0.5rem;">
+          <button class="btn btn-outline" onclick="closeEditPredictionsModal()">Cancelar</button>
+          <button id="save-edit-predictions-btn" class="btn btn-primary" onclick="submitEditedPredictions()">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TRENDS VOTERS MODAL -->
   <div id="trends-voters-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1600;">
     <div class="modal-content glass-panel" style="max-width: 400px; width: 90%;">
@@ -382,7 +406,7 @@
   </div>
 
   <!-- Floating Theme Toggle Button -->
-  <button id="floating-theme-btn" class="floating-theme-btn" onclick="toggleTheme()" aria-label="Cambiar tema">
+  <button id="floating-theme-btn" class="floating-theme-btn" onclick="toggleTheme()" aria-label="Cambiar tema" style="display: none !important;">
     <i class="fa-solid fa-moon"></i> Modo claro
   </button>
 
@@ -425,6 +449,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=3.10"></script>
+  <script src="app.js?v=3.11"></script>
 </body>
 </html>
