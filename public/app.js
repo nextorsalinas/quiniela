@@ -1154,6 +1154,20 @@ async function loadVotingTrends() {
             </div>
           `;
         }).join('');
+
+        // Apply collapsed state if saved in localStorage
+        const isCollapsed = localStorage.getItem('trends_collapsed') === 'true';
+        const toggleIcon = document.getElementById('trends-toggle-icon');
+        const titleH3 = container.querySelector('h3');
+        if (isCollapsed) {
+          grid.style.display = 'none';
+          if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+          if (titleH3) titleH3.style.marginBottom = '0';
+        } else {
+          grid.style.display = 'grid';
+          if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+          if (titleH3) titleH3.style.marginBottom = '0.55rem';
+        }
       }
     }
     
@@ -1190,6 +1204,26 @@ async function loadVotingTrends() {
     console.error("Error loading voting trends:", error);
     if (container) container.style.display = 'none';
     if (tabTrendsContainer) tabTrendsContainer.style.display = 'none';
+  }
+}
+
+function toggleTrendsGrid() {
+  const grid = document.getElementById('trends-grid');
+  const icon = document.getElementById('trends-toggle-icon');
+  const title = document.querySelector('.trends-section h3');
+  if (!grid || !icon) return;
+
+  const isCollapsed = grid.style.display === 'none';
+  if (isCollapsed) {
+    grid.style.display = 'grid';
+    icon.style.transform = 'rotate(0deg)';
+    if (title) title.style.marginBottom = '0.55rem';
+    localStorage.setItem('trends_collapsed', 'false');
+  } else {
+    grid.style.display = 'none';
+    icon.style.transform = 'rotate(180deg)';
+    if (title) title.style.marginBottom = '0';
+    localStorage.setItem('trends_collapsed', 'true');
   }
 }
 
