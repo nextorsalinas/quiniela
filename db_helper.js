@@ -42,7 +42,9 @@ function invalidateCache() {
 try {
   const admin = require('firebase-admin');
   if (process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    admin.initializeApp();
+    if (admin.apps.length === 0) {
+      admin.initializeApp();
+    }
     firestoreDb = admin.firestore();
     dbType = 'firestore';
     console.log("===================================================");
@@ -51,9 +53,11 @@ try {
   } else {
     const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
     if (fs.existsSync(serviceAccountPath)) {
-      admin.initializeApp({
-        credential: admin.credential.cert(require(serviceAccountPath))
-      });
+      if (admin.apps.length === 0) {
+        admin.initializeApp({
+          credential: admin.credential.cert(require(serviceAccountPath))
+        });
+      }
       firestoreDb = admin.firestore();
       dbType = 'firestore';
       console.log("===================================================");
@@ -1434,5 +1438,6 @@ module.exports = {
   deleteNotification,
   getMatchTrends,
   getStreaks,
-  resetUserPassword
+  resetUserPassword,
+  getDbType: () => dbType
 };

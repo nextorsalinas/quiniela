@@ -488,7 +488,8 @@ app.get('/api/info', (req, res) => {
     app: "Quiniela Mundial 2026",
     status: "online",
     adminCredentials: "admin / admin2026",
-    deployment: process.env.FIREBASE_CONFIG ? "Firebase Functions" : "Local"
+    deployment: process.env.FIREBASE_CONFIG ? "Firebase Functions" : "Local",
+    dbType: dbHelper.getDbType ? dbHelper.getDbType() : "unknown"
   });
 });
 
