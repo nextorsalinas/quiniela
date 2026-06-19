@@ -452,7 +452,9 @@ async function getPredictionsByUser(userId) {
 }
 
 async function savePredictions(userId, matchPredictions, isAdmin = false) {
-  invalidateCache(); // INVALIDATE CACHE ON NEW PREDICTIONS
+  // We do not invalidate the cache on every prediction save anymore
+  // to prevent high Firestore read volume. Leaderboard and streaks only
+  // depend on match results. Trends can use the 5-minute cache.
   if (dbType === 'firestore') {
     // Verify user exists
     const userDoc = await firestoreDb.collection('users').doc(userId).get();
@@ -1305,6 +1307,11 @@ async function getMatchTrends() {
       stats
     };
   });
+  
+  if (dbType === 'firestore') {
+    cache.trends.data = trends;
+    cache.trends.timestamp = Date.now();
+  }
   
   return trends;
 }
