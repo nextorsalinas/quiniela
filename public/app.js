@@ -1326,7 +1326,7 @@ window.openCompleteTrendsModal = async function() {
   </div>`;
 
   try {
-    const res = await fetch('/api/matches/trends/all', {
+    const res = await fetch(`${API_URL}/matches/trends/all`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
     if (!res.ok) throw new Error("Error loading complete trends");
