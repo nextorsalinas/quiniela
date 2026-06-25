@@ -78,7 +78,9 @@ body.dark-theme * {
 body {
   font-family: var(--font-body);
   background-color: var(--bg-main);
-  background-image: none; /* Changed to none for Light Mode default */
+  background-image: url('bg.png'); /* World Cup background */
+  background-size: cover;
+  background-position: center;
   background-attachment: fixed;
   color: var(--color-text-main);
   min-height: 100vh;
@@ -235,7 +237,11 @@ body {
 
 .auth-card {
   width: 100%;
-  max-width: 450px;
+  max-width: 480px;
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: var(--bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -244,6 +250,28 @@ body {
   box-shadow: var(--shadow-premium);
   padding: 2.5rem;
   transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('inicio.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-card:hover {
@@ -2215,47 +2243,12 @@ body {
   to { opacity: 1; transform: translateY(0); }
   }
 
-/* Floating Predict Win Button */
-.floating-predict-btn {
-  position: fixed;
-  bottom: 85px;
-  right: 2rem;
-  background: linear-gradient(135deg, #10b981, #047857);
-  color: #ffffff;
-  border: none;
-  border-radius: 50px;
-  padding: 0.95rem 1.6rem;
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: 0.92rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  z-index: 1000;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
 
-.floating-predict-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
-  background: linear-gradient(135deg, #34d399, #059669);
-}
 
-.floating-predict-btn:active {
-  transform: translateY(-1px) scale(0.98);
-}
-
-@media (max-width: 600px) {
-  .floating-predict-btn {
-    bottom: 75px;
-    right: 1rem;
-    padding: 0.75rem 1.1rem;
-    font-size: 0.82rem;
-  }
-}
+.team-info { transition: background 0.2s, transform 0.2s; }
+.team-info[onclick]:hover { background: rgba(255,255,255,0.1); transform: scale(1.02); }
 
 /* Register Mode Visual Distinction */
 .auth-card.register-mode {
@@ -2290,75 +2283,4 @@ body {
 
 .auth-card.register-mode .btn-primary:hover {
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
-}
-
-/* Remove spin arrows from score and number inputs globally */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-/* Cosmic purple theme for Nuevo panel (Fase Final positions & trends) */
-#view-new-panel {
-  --gold: #c084fc; /* Purple/violet */
-  --emerald: #a78bfa; /* Light purple */
-}
-
-#view-new-panel .rank-1 {
-  background: linear-gradient(135deg, #d8b4fe, #a855f7);
-  color: #070913;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
-}
-
-#view-new-panel .rank-2 {
-  background: linear-gradient(135deg, #e9d5ff, #c084fc);
-  color: #070913;
-}
-
-#view-new-panel .rank-3 {
-  background: linear-gradient(135deg, #c084fc, #8b5cf6);
-  color: #fff;
-}
-
-#view-new-panel .table-card {
-  border: 1px solid rgba(168, 85, 247, 0.2);
-  background: rgba(15, 10, 25, 0.6);
-}
-
-#view-new-panel .glass-panel {
-  border: 1px solid rgba(168, 85, 247, 0.2);
-  background: rgba(15, 10, 25, 0.6);
-}
-
-#view-new-panel .trend-vote-box {
-  background: rgba(168, 85, 247, 0.05);
-  border: 1px solid rgba(168, 85, 247, 0.15);
-}
-
-#view-new-panel .trend-vote-box:hover {
-  background: rgba(168, 85, 247, 0.15);
-  border-color: rgba(168, 85, 247, 0.3);
-}
-
-#view-new-panel .trend-vote-count {
-  color: #c084fc;
-}
-
-#view-new-panel .racha-badge.racha-buena {
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  color: #c084fc;
-}
-
-#view-new-panel .top3-val {
-  color: #c084fc;
-}
-
-#view-new-panel .clickable:hover {
-  background: rgba(168, 85, 247, 0.05) !important;
 }

@@ -1,7 +1,14 @@
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
-  document.body.classList.add('dark-theme');
-  localStorage.setItem('theme', 'dark');
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.body.classList.remove('dark-theme');
+    updateThemeButtonUI('light');
+  } else {
+    document.body.classList.add('dark-theme');
+    localStorage.setItem('theme', 'dark');
+    updateThemeButtonUI('dark');
+  }
 }
 
 function toggleTheme() {
@@ -32,22 +39,41 @@ initTheme();
 let state = {
   currentUser: null,
   matches: [],
-  predictions: {}, // Key: matchId, Value: prediction string ('L', 'E', 'V')
+  predictions: {},
+  config: { predictionsPaused: false }, // Key: matchId, Value: prediction string ('L', 'E', 'V')
   leaderboard: [],
   activeTab: 'leaderboard',
   authTab: 'login'
 };
 
-// STATE FOR PHASE 2 (Fase Final)
-let statePhase2 = {
-  matches: [],
-  predictions: {}, // Key: matchId, Value: prediction object { team1Score, team2Score, winner }
-  config: { predictionsPaused: false },
-  leaderboard: []
-};
-
 // API BASE PATH
-const API_URL = '/api';
+const API_URL = '/api/phase2';
+
+window.selectWinner = function(matchId, winner) {
+  const v1 = document.getElementById(`pred1-${matchId}`).value;
+  const v2 = document.getElementById(`pred2-${matchId}`).value;
+  if (!state.predictions[matchId]) state.predictions[matchId] = {};
+  state.predictions[matchId].winner = winner;
+  if (v1 !== '' && v2 !== '') {
+      savePrediction(matchId);
+  } else {
+      renderMatchesGrid();
+  }
+}
+
+window.selectAdminWinner = function(matchId, winner) {
+  if (!window.adminWinners) window.adminWinners = {};
+  window.adminWinners[matchId] = winner;
+  
+    const btn = document.getElementById('btn-toggle-pause');
+    if (btn) {
+      btn.innerHTML = state.config && state.config.predictionsPaused ? '<i class="fa-solid fa-play"></i> Habilitar Ediciones' : '<i class="fa-solid fa-pause"></i> Pausar Ediciones';
+      btn.className = state.config && state.config.predictionsPaused ? "btn btn-success" : "btn btn-warning";
+    }
+
+    renderAdminMatchesList();
+}
+
 
 // --- PWA LÓGICA DE INSTALACIÓN ---
 let deferredPrompt = null;
@@ -234,10 +260,10 @@ async function submitPublicReset() {
 function showAppDashboard() {
   document.getElementById('auth-section').style.display = 'none';
   
-  // Safeguard: explicitly remove active states from groups to avoid flashing cached HTML views
-  const predView = document.getElementById('view-groups');
+  // Safeguard: explicitly remove active states to avoid flashing cached HTML views
+  const predView = document.getElementById('view-predictions');
   if (predView) predView.classList.remove('active');
-  const predTab = document.getElementById('tab-groups');
+  const predTab = document.getElementById('tab-predictions');
   if (predTab) predTab.classList.remove('active');
   
   document.getElementById('app-section').style.display = 'flex';
@@ -248,26 +274,19 @@ function showAppDashboard() {
   document.getElementById('welcome-username').textContent = displayUsername;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
-  // Show admin tab/badge if admin
+  // Show admin tab/badge if admin, and hide predictions tab since it is not used for admin
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
     document.getElementById('tab-admin').style.display = 'flex';
-    const tabAdmin2 = document.getElementById('tab-admin-2');
-    if (tabAdmin2) tabAdmin2.style.display = 'flex';
+    document.getElementById('tab-predictions').style.display = 'none';
   } else {
     document.getElementById('admin-badge').style.display = 'none';
     document.getElementById('tab-admin').style.display = 'none';
-    const tabAdmin2 = document.getElementById('tab-admin-2');
-    if (tabAdmin2) tabAdmin2.style.display = 'none';
+    document.getElementById('tab-predictions').style.display = 'flex';
   }
-  const tabGroups = document.getElementById('tab-groups');
-  if (tabGroups) tabGroups.style.display = 'flex';
-
-
 
   // Initial data fetch
-  switchTab('leaderboard');
-  checkAnnouncementModal();
+  switchTab('predictions');
 
   // Notifications init
   refreshUnreadNotificationCount();
@@ -411,6 +430,11 @@ function handleLogout() {
 // --- DASHBOARD ROUTING & TABS ---
 
 function switchTab(tabId) {
+  // If user is admin and tries to go to predictions, redirect to leaderboard
+  if (tabId === 'predictions' && state.currentUser && state.currentUser.isAdmin) {
+    tabId = 'leaderboard';
+  }
+
   state.activeTab = tabId;
   
   // Update Tab buttons styling
@@ -427,143 +451,71 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-view').forEach(view => {
     view.classList.remove('active');
   });
-  const targetView = document.getElementById(`view-${tabId}`);
-  if (targetView) {
-    targetView.classList.add('active');
-  }
+  document.getElementById(`view-${tabId}`).classList.add('active');
 
   // Fetch data depending on tab
-  if (tabId === 'leaderboard') {
+  if (tabId === 'predictions') {
+    loadPredictionsDashboard();
+  } else if (tabId === 'leaderboard') {
     loadLeaderboard();
-  } else if (tabId === 'new-panel') {
-    loadPhase2Leaderboard();
-  } else if (tabId === 'probability') {
-    loadProbabilityDashboard();
+  } else if (tabId === 'trends') {
+    loadVotingTrends();
+  } else if (tabId === 'goleadores') {
+    loadGoleadores();
+  } else if (tabId === 'notifications') {
+    loadNotifications();
   } else if (tabId === 'admin') {
     loadAdminDashboard();
-  } else if (tabId === 'final-predictions') {
-    loadFinalPredictionsDashboard();
-  } else if (tabId === 'admin-2') {
-    loadAdmin2Dashboard();
   }
 }
 
 // --- DATA FETCHING & UI RENDERING ---
 
-async function loadGroupsDashboard() {
-  const grid = document.getElementById('groups-grid');
-  if (!grid) return;
-  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando grupos del mundial...</div>`;
+async function loadPredictionsDashboard() {
+  const grid = document.getElementById('matches-grid');
+  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tus pronósticos...</div>`;
 
   try {
-    if (state.matches.length === 0) {
-      const response = await fetch(`${API_URL}/matches`, {
-        headers: { 'x-user-id': state.currentUser.id }
-      });
-      state.matches = await response.json();
-    }
+    // 1. Fetch matches
 
-    renderGroupsTables();
-  } catch (error) {
-    console.error("Error loading groups:", error);
-    grid.innerHTML = `<div style="text-align: center; color: var(--red); padding: 2rem;">Error de conexión al cargar los grupos.</div>`;
-  }
-}
+    // fetch config
+    try {
+      const cfgRes = await fetch(`${API_URL}/config`, { headers: { 'x-user-id': state.currentUser.id } });
+      if (cfgRes.ok) state.config = await cfgRes.json();
+    } catch(e) {}
 
-function renderGroupsTables() {
-  const grid = document.getElementById('groups-grid');
-  if (!grid) return;
-
-  // 1. Group matches by their group field
-  const groupsData = {}; // groupName -> { teamName -> { pg, pe, pp, pj, pts } }
-
-  state.matches.forEach(match => {
-    const groupName = match.group;
-    if (!groupsData[groupName]) {
-      groupsData[groupName] = {};
+    const matchesRes = await fetch(`${API_URL}/matches`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    
+    if (matchesRes.status === 401) {
+      handleLogout();
+      return;
     }
     
-    // Initialize stats for both teams
-    [match.team1, match.team2].forEach(team => {
-      if (!groupsData[groupName][team]) {
-        groupsData[groupName][team] = { name: team, pj: 0, pg: 0, pe: 0, pp: 0, pts: 0 };
-      }
+    state.matches = await matchesRes.json();
+
+    // 2. Fetch predictions
+    const predsRes = await fetch(`${API_URL}/predictions`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const predsData = await predsRes.json();
+    
+    // Map array to object state
+    state.predictions = {};
+    predsData.forEach(p => {
+      state.predictions[p.matchId] = p.prediction;
     });
 
-    // Update stats if match has a result
-    if (match.result !== null) {
-      const t1 = groupsData[groupName][match.team1];
-      const t2 = groupsData[groupName][match.team2];
+    // 3. Update navbar user stats (points might have changed if admin set new results)
+    updateStatsBar();
 
-      t1.pj++;
-      t2.pj++;
-
-      if (match.result === 'L') {
-        t1.pg++;
-        t1.pts += 3;
-        t2.pp++;
-      } else if (match.result === 'E') {
-        t1.pe++;
-        t1.pts += 1;
-        t2.pe++;
-        t2.pts += 1;
-      } else if (match.result === 'V') {
-        t2.pg++;
-        t2.pts += 3;
-        t1.pp++;
-      }
-    }
-  });
-
-  // 2. Render each group table card
-  const groupNames = Object.keys(groupsData).sort((a, b) => a.localeCompare(b));
-  
-  grid.innerHTML = groupNames.map(groupName => {
-    const teamsList = Object.values(groupsData[groupName]).sort((a, b) => {
-      if (b.pts !== a.pts) return b.pts - a.pts;
-      if (b.pg !== a.pg) return b.pg - a.pg;
-      return a.name.localeCompare(b.name);
-    });
-
-    return `
-      <div class="table-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
-        <h3 style="margin: 0; font-size: 1rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-list-ol"></i> ${groupName}
-        </h3>
-        <table class="leaderboard-table" style="font-size: 0.8rem; width: 100%;">
-          <thead>
-            <tr>
-              <th style="width: 25px; text-align: center; font-size: 0.75rem;">Pos</th>
-              <th style="text-align: left; font-size: 0.75rem;">Equipo</th>
-              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Partidos Jugados">PJ</th>
-              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Ganados">G</th>
-              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Empatados">E</th>
-              <th style="width: 30px; text-align: center; font-size: 0.75rem;" title="Perdidos">P</th>
-              <th style="width: 40px; text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--gold);">Pts</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${teamsList.map((team, idx) => {
-              const pos = idx + 1;
-              const isQualified = pos <= 2;
-              const rankStyle = isQualified ? 'color: var(--success); font-weight: bold;' : 'color: var(--color-text-muted);';
-              return `
-                <tr>
-                  <td style="text-align: center; ${rankStyle}">${pos}</td>
-                  <td style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="${team.name}">${team.name}</td>
-                  <td style="text-align: center;">${team.pj}</td>
-                  <td style="text-align: center;">${team.pg}</td>
-                  <td style="text-align: center;">${team.pe}</td>
-                  <td style="text-align: center;">${team.pp}</td>
-                  <td style="text-align: center; font-weight: 700; color: var(--gold);">${team.pts}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }).join('');
+    // 4. Render matches
+    renderMatchesGrid();
+  } catch (error) {
+    console.error("Error loading dashboard data:", error);
+    showToast("Error de conexión al cargar datos", "error");
+  }
 }
 
 function updateStatsBar() {
@@ -587,13 +539,19 @@ function updateStatsBar() {
   .catch(err => console.error("Error refreshing points:", err));
 
   // Calculate prediction progress
-  const totalMatches = 72;
+  const totalMatches = state.matches ? state.matches.length : 32;
   const predictedCount = Object.keys(state.predictions).length;
-  const percentage = Math.round((predictedCount / totalMatches) * 100);
+  const percentage = totalMatches > 0 ? Math.round((predictedCount / totalMatches) * 100) : 0;
 
   // Update navbar mini-bar
   document.getElementById('mini-progress-bar').style.width = `${percentage}%`;
   document.getElementById('user-display-progress').textContent = `${predictedCount}/${totalMatches}`;
+
+  // Update big progress indicator in Predictions view
+  const predictionsProgress = document.getElementById('predictions-progress');
+  if (predictionsProgress) {
+    predictionsProgress.textContent = `${predictedCount} / ${totalMatches}`;
+  }
 
   // Update big progress card
   const fullText = document.getElementById('full-progress-text');
@@ -610,130 +568,72 @@ function renderMatchesGrid() {
   const groupFilter = document.getElementById('group-filter').value;
   const searchQuery = document.getElementById('search-filter').value.toLowerCase().trim();
 
-  // Filter matches
   let filtered = state.matches;
-
-  if (groupFilter !== 'all') {
-    filtered = filtered.filter(m => m.group === groupFilter);
-  }
-
-  if (searchQuery !== '') {
-    filtered = filtered.filter(m => 
-      m.team1.toLowerCase().includes(searchQuery) || 
-      m.team2.toLowerCase().includes(searchQuery)
-    );
-  }
-
-  const totalMatches = 72;
-  const predictedCount = Object.keys(state.predictions).length;
-  const isFull = predictedCount === totalMatches;
-
-  // Toggle instructions visibility
-  const instructionElement = document.getElementById('predictions-instruction');
-  if (instructionElement) {
-    instructionElement.style.display = isFull ? 'none' : 'block';
-  }
+  if (groupFilter !== 'all') filtered = filtered.filter(m => m.group === groupFilter);
+  if (searchQuery !== '') filtered = filtered.filter(m => m.team1.toLowerCase().includes(searchQuery) || m.team2.toLowerCase().includes(searchQuery));
 
   let completedBannerHtml = '';
-
   if (filtered.length === 0) {
-    grid.innerHTML = completedBannerHtml + `
-      <div class="glass-panel" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-text-muted);">
-        <i class="fa-solid fa-face-frown" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--gold);"></i>
-        <p>No se encontraron partidos para la búsqueda seleccionada.</p>
-      </div>
-    `;
+    grid.innerHTML = `<div class="glass-panel" style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--color-text-muted);"><p>No se encontraron partidos.</p></div>`;
     return;
   }
 
-  // Generate match card HTML
   const matchesHtml = filtered.map(match => {
     const userPrediction = state.predictions[match.id] || null;
     const isCompleted = match.result !== null;
-
-    // Selected class names
-    const selLClass = userPrediction === 'L' ? 'selected-L' : '';
-    const selEClass = userPrediction === 'E' ? 'selected-E' : '';
-    const selVClass = userPrediction === 'V' ? 'selected-V' : '';
-
-    // Generate mock flag/abbreviation text
     const flag1 = match.team1.substring(0, 3);
     const flag2 = match.team2.substring(0, 3);
 
-    // Results Banner logic
     let resultBannerHtml = '';
     if (isCompleted) {
-      if (userPrediction === match.result) {
-        resultBannerHtml = `
-          <div class="real-result-banner correct">
-            <span><i class="fa-solid fa-circle-check"></i> ¡Acertaste el resultado!</span>
-            <span>+3 pts</span>
-          </div>
-        `;
-      } else if (userPrediction === null) {
-        resultBannerHtml = `
-          <div class="real-result-banner pending">
-            <span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico. Resultado: ${match.result}</span>
-            <span>0 pts</span>
-          </div>
-        `;
+      if (userPrediction) {
+        let r1 = parseInt(match.result.team1Score);
+        let r2 = parseInt(match.result.team2Score);
+        let p1 = parseInt(userPrediction.team1Score);
+        let p2 = parseInt(userPrediction.team2Score);
+        let realW = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+        let predW = userPrediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        if (realW === predW) {
+          let pts = (r1 === p1 && r2 === p2) ? 4 : 3;
+          if (pts === 4) {
+            resultBannerHtml = `<div class="real-result-banner correct"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto!</span><span>+4 pts</span></div>`;
+          } else {
+            resultBannerHtml = `<div class="real-result-banner correct"><span><i class="fa-solid fa-circle-check"></i> Acertaste al que avanza</span><span>+3 pts</span></div>`;
+          }
+        } else {
+          resultBannerHtml = `<div class="real-result-banner incorrect"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste. Avanzó ${realW==='L'?match.team1:match.team2}</span><span>0 pts</span></div>`;
+        }
       } else {
-        const transResult = match.result === 'L' ? 'Gana Local' : (match.result === 'E' ? 'Empate' : 'Gana Visitante');
-        resultBannerHtml = `
-          <div class="real-result-banner incorrect">
-            <span><i class="fa-solid fa-circle-xmark"></i> Fallaste. Resultado: ${transResult}</span>
-            <span>0 pts</span>
-          </div>
-        `;
+        resultBannerHtml = `<div class="real-result-banner pending"><span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico.</span><span>0 pts</span></div>`;
       }
     } else {
-      resultBannerHtml = `
-        <div class="real-result-banner pending">
-          <span><i class="fa-solid fa-clock"></i> Partido por jugarse</span>
-          <span>Pendiente</span>
-        </div>
-      `;
+      resultBannerHtml = `<div class="real-result-banner pending"><span><i class="fa-solid fa-clock"></i> Pendiente</span><span>Pendiente</span></div>`;
     }
+
+    const isPaused = state.config && state.config.predictionsPaused;
+    const disabled = isCompleted || isPaused ? 'disabled' : '';
+    const val1 = userPrediction ? userPrediction.team1Score : '';
+    const val2 = userPrediction ? userPrediction.team2Score : '';
+    const selL = (userPrediction && userPrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    const selV = (userPrediction && userPrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
     return `
       <div class="match-card ${userPrediction ? 'completed' : ''}" id="match-card-${match.id}">
-        <div class="match-meta">
-          <span class="match-group">${match.group}</span>
-          <span class="match-date"><i class="fa-regular fa-calendar"></i> ${match.date}</span>
-        </div>
-
-        <div class="match-teams-layout">
-          <div class="team-row">
-            <div class="team-info">
-              <div class="team-flag-mock">${flag1}</div>
-              <span class="team-name">${match.team1}</span>
+        <div class="match-meta"><span class="match-group">${match.group}</span><span class="match-date">${match.date}</span></div>
+        <div class="match-teams-layout" style="margin-bottom: 1rem;">
+          <div class="team-row" style="justify-content: space-between;">
+            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && selectWinner(${match.id}, 'L')" style="cursor: pointer; padding: 0.5rem; ${selL}">
+              <div class="team-flag-mock">${flag1}</div><span class="team-name">${match.team1}</span>
             </div>
-            ${isCompleted && match.result === 'L' ? '<span class="badge badge-success">Ganador</span>' : ''}
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-${match.id}" class="score-input" value="${val1}" onchange="!${isPaused} && savePrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
-          
-          <span class="match-vs">vs</span>
-
-          <div class="team-row">
-            <div class="team-info">
-              <div class="team-flag-mock">${flag2}</div>
-              <span class="team-name">${match.team2}</span>
+          <div class="team-row" style="justify-content: space-between; margin-top: 0.5rem;">
+            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && selectWinner(${match.id}, 'V')" style="cursor: pointer; padding: 0.5rem; ${selV}">
+              <div class="team-flag-mock">${flag2}</div><span class="team-name">${match.team2}</span>
             </div>
-            ${isCompleted && match.result === 'V' ? '<span class="badge badge-success">Ganador</span>' : ''}
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-${match.id}" class="score-input" value="${val2}" onchange="!${isPaused} && savePrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
         </div>
-
-        <div class="match-options">
-          <button class="opt-btn ${selLClass}" onclick="savePrediction(${match.id}, 'L')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
-            L <span class="opt-team-name" title="${match.team1}">${match.team1}</span>
-          </button>
-          <button class="opt-btn ${selEClass}" onclick="savePrediction(${match.id}, 'E')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
-            E <span class="opt-team-name">Empate</span>
-          </button>
-          <button class="opt-btn ${selVClass}" onclick="savePrediction(${match.id}, 'V')" ${(userPrediction !== null || isCompleted) ? 'disabled' : ''}>
-            V <span class="opt-team-name" title="${match.team2}">${match.team2}</span>
-          </button>
-        </div>
-
         ${resultBannerHtml}
       </div>
     `;
@@ -747,70 +647,101 @@ function filterMatches() {
 }
 
 // Save prediction immediately
-async function savePrediction(matchId, predictionValue) {
-  const currentPrediction = state.predictions[matchId];
-  if (currentPrediction !== undefined && currentPrediction !== null) {
-    showToast("Este partido ya cuenta con un pronóstico guardado.", "error");
-    return;
+async function savePrediction(matchId) {
+  if (state.config && state.config.predictionsPaused) return showToast('Las ediciones están pausadas', 'warning');
+  const v1 = document.getElementById(`pred1-${matchId}`).value;
+  const v2 = document.getElementById(`pred2-${matchId}`).value;
+  if (v1 === '' || v2 === '') return;
+
+  const score1 = parseInt(v1);
+  const score2 = parseInt(v2);
+
+  let winner = (state.predictions[matchId] && state.predictions[matchId].winner) ? state.predictions[matchId].winner : null;
+  if (score1 > score2) winner = 'L';
+  if (score2 > score1) winner = 'V';
+
+  if (!winner && score1 === score2) {
+      showToast("Empate: ¡Toca el nombre del equipo que crees que avanzará!", "warning");
+      return;
   }
 
-  // Optimistic UI update
+  const predictionValue = { team1Score: score1, team2Score: score2, winner: winner };
   state.predictions[matchId] = predictionValue;
-  
-  // Re-render only that card's styling and disable buttons immediately
-  const card = document.getElementById(`match-card-${matchId}`);
-  if (card) {
-    const buttons = card.querySelectorAll('.opt-btn');
-    buttons.forEach(btn => {
-      btn.classList.remove('selected-L', 'selected-E', 'selected-V');
-      btn.disabled = true; // Disable immediately to lock it
-    });
-
-    card.classList.add('completed');
-    const targetBtnIndex = predictionValue === 'L' ? 0 : (predictionValue === 'E' ? 1 : 2);
-    buttons[targetBtnIndex].classList.add(`selected-${predictionValue}`);
-    
-    // Temporary animation kick
-    buttons[targetBtnIndex].style.transform = 'scale(0.95)';
-    setTimeout(() => buttons[targetBtnIndex].style.transform = '', 100);
-  }
-
-  // Update progress bars
+  renderMatchesGrid();
   updateStatsBar();
 
   try {
-    const response = await fetch(`${API_URL}/predictions`, {
+    const res = await fetch(`${API_URL}/predictions`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-user-id': state.currentUser.id
-      },
-      body: JSON.stringify({
-        predictions: [{ matchId: matchId, prediction: predictionValue }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-user-id': state.currentUser.id },
+      body: JSON.stringify({ predictions: Object.entries(state.predictions).map(([id, p]) => ({ matchId: parseInt(id), prediction: p })) })
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      showToast(data.error || "Error al guardar pronóstico", "error");
-      // Revert state on error
-      delete state.predictions[matchId];
-      renderMatchesGrid();
-      updateStatsBar();
-    } else {
-      showToast(`Partido #${matchId} guardado.`, "success");
+    if (!res.ok) {
+      const data = await res.json();
+      showToast(data.error || "Error al guardar", "error");
     }
-  } catch (error) {
-    console.error("Save prediction error:", error);
-    showToast("Error de red. No se guardó la predicción.", "error");
-    // Revert state
-    delete state.predictions[matchId];
-    renderMatchesGrid();
-    updateStatsBar();
+  } catch (err) {
+    showToast("Error de conexión", "error");
   }
 }
 
-// --- LEADERBOARD & COMPARISONS ---
+
+async function loadBonus() {
+  const container = document.getElementById('bonus-container');
+  const content = document.getElementById('bonus-content');
+  if (!container || !content) return;
+
+  try {
+    const res = await fetch(`${API_URL}/bonus`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!res.ok) throw new Error('Error fetching bonus');
+    const data = await res.json();
+    
+    if (!data || data.length === 0) {
+      container.style.display = 'block';
+      content.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem;">Nadie ha obtenido puntos extra aún.</div>';
+      return;
+    }
+
+    container.style.display = 'block';
+    
+    const top = data[0];
+    const renderStars = (bonusDetails) => {
+      if (!bonusDetails) return '';
+      return bonusDetails.map(b => 
+        `<i class="fa-solid fa-star" style="color: var(--gold); cursor: pointer; font-size: 1rem; margin-left: 2px;" onclick="event.stopPropagation(); window.showBonusMatch(${b.matchId}, ${b.prediction.team1Score}, ${b.prediction.team2Score})"></i>`
+      ).join('');
+    };
+
+    let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.25rem;">';
+    
+    html += data.map((u, i) => `
+      <div class="top3-item" style="justify-content: space-between; padding: 0.5rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="top3-rank" style="color: var(--gold);">${i+1}°</span>
+          <span class="top3-username" title="${u.username}" style="font-weight: 600;">${u.username}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 2px;">
+          ${renderStars(u.bonusDetails)}
+        </div>
+      </div>
+    `).join('');
+    
+    html += '</div>';
+    
+    content.innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    container.style.display = 'none';
+  }
+}
+
+window.showBonusMatch = function(matchId, s1, s2) {
+  const match = state.matches.find(m => m.id === parseInt(matchId));
+  if (!match) return;
+  showToast(`Marcador exacto: ${match.team1} ${s1} - ${s2} ${match.team2}`, 'info');
+}
 
 async function loadStreaks() {
   const container = document.getElementById('streaks-container');
@@ -891,6 +822,7 @@ async function loadLeaderboard() {
     renderLeaderboardTables();
     loadVotingTrends();
     loadStreaks();
+    loadBonus();
   } catch (error) {
     console.error("Error loading leaderboard:", error);
     showToast("Error al cargar la tabla de posiciones", "error");
@@ -1030,93 +962,85 @@ async function loadGoleadores() {
 
 // Open comparison details of user
 async function viewPlayerPredictions(targetUserId) {
-  // If target matches are empty, load matches first
-  if (state.matches.length === 0) {
-    const matchesRes = await fetch(`${API_URL}/matches`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    state.matches = await matchesRes.json();
-  }
-
-  const modal = document.getElementById('comparison-modal');
-  const modalTitle = document.getElementById('modal-user-title');
-  const modalSubtitle = document.getElementById('modal-user-subtitle');
-  const comparisonGrid = document.getElementById('modal-comparison-grid');
-
-  comparisonGrid.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando predicciones de jugador...</div>`;
-  modal.style.display = 'flex';
-
   try {
-    const response = await fetch(`${API_URL}/predictions/user/${targetUserId}`, {
+    const res = await fetch(`${API_URL}/predictions/user/${targetUserId}`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      showToast(data.error || "No se pudieron obtener los pronósticos", "error");
-      closeComparisonModal();
+    
+    if (res.status === 401) {
+      handleLogout();
+      return;
+    }
+    
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.error || "Error al cargar pronósticos", "error");
       return;
     }
 
-    modalTitle.textContent = `Panel de Pronósticos: ${data.username}`;
-    modalSubtitle.textContent = `Puntos acumulados: ${data.points} pts | Partidos pronosticados: ${Object.keys(data.predictions).length} de 72`;
+    const modal = document.getElementById('comparison-modal');
+    const grid = document.getElementById('modal-comparison-grid');
+    document.getElementById('modal-user-title').textContent = 'Pronósticos de ' + truncateName(data.username, 20);
+    
+    let html = '';
+    
+    // Sort matches
+    const sortedMatches = [...state.matches].sort((a, b) => a.id - b.id);
+    
+    sortedMatches.forEach(match => {
+      // Official Result
+      let resultHtml = '-';
+      if (match.result && typeof match.result === 'object') {
+        resultHtml = `<span style="font-weight:bold;">${match.result.team1Score} - ${match.result.team2Score}</span>`;
+      } else if (match.result) {
+        resultHtml = `<span style="font-weight:bold;">${match.result}</span>`; // Fallback
+      }
+      
+      // Target Prediction
+      const targetPred = data.predictions[match.id] || null;
+      let targetHtml = '-';
+      let highlightClass = '';
 
-    comparisonGrid.innerHTML = state.matches.map(match => {
-      const bet = data.predictions[match.id] || null;
-      const real = match.result;
-      const isCompleted = real !== null;
-
-      let scoreClass = 'pts-pending';
-      let rowStatusClass = '';
-      let pointsText = 'Pendiente';
-
-      if (isCompleted) {
-        if (bet === real) {
-          scoreClass = 'pts-3';
-          rowStatusClass = 'correct';
-          pointsText = '+3 pts';
-        } else {
-          scoreClass = 'pts-0';
-          rowStatusClass = 'incorrect';
-          pointsText = '0 pts';
+      if (targetPred) {
+        targetHtml = `<span style="font-weight:bold;">${targetPred.team1Score} - ${targetPred.team2Score}</span>`;
+        if (match.result && typeof match.result === 'object') {
+          const exactScore = (targetPred.team1Score === match.result.team1Score && targetPred.team2Score === match.result.team2Score);
+          const winnerCorrect = (targetPred.winner === match.result.winner);
+          if (exactScore) {
+            highlightClass = 'background: rgba(16, 185, 129, 0.15); border: 1px solid var(--gold);'; // 4 points
+          } else if (winnerCorrect) {
+            highlightClass = 'background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success);'; // 3 points
+          } else {
+            highlightClass = 'background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger);'; // 0 points
+          }
         }
       }
 
-      const betValClass = bet ? `val-${bet}` : 'val-none';
-      const realValClass = real ? `val-${real}` : 'val-none';
-
-      return `
-        <div class="comp-row ${rowStatusClass}">
-          <div class="comp-match-info">
-            <span class="comp-match-id">#${match.id}</span>
-            <div class="comp-teams">
-              <span class="comp-team-l">${match.team1}</span>
-              <span style="font-size: 0.75rem; color: var(--color-text-muted); font-style: italic;">vs</span>
-              <span class="comp-team-v">${match.team2}</span>
-            </div>
+      html += `
+        <div class="match-card glass-panel" style="${highlightClass} padding: 1rem;">
+          <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 0.75rem; text-align: center;">
+            ${match.team1} vs ${match.team2}
           </div>
-
-          <div class="comp-results-block">
-            <div class="comp-bet">
-              <span class="comp-label">Pronóstico</span>
-              <span class="comp-val ${betValClass}">${bet || '-'}</span>
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 0.2rem;">Resultado</div>
+              ${resultHtml}
             </div>
-            <div class="comp-real">
-              <span class="comp-label">Resultado</span>
-              <span class="comp-val ${realValClass}">${real || '-'}</span>
-            </div>
-            <div class="comp-score-badge ${scoreClass}">
-              ${pointsText}
+            <div style="text-align: center; flex: 1; border-left: 1px solid rgba(255,255,255,0.1);">
+              <div style="font-size: 0.75rem; color: var(--gold); margin-bottom: 0.2rem;">${truncateName(data.username, 10)}</div>
+              ${targetHtml}
             </div>
           </div>
         </div>
       `;
-    }).join('');
+    });
+    
+    grid.innerHTML = html;
+    modal.style.display = 'flex';
 
   } catch (error) {
-    console.error("Error loading user predictions detail:", error);
-    showToast("Error de conexión al cargar pronósticos del jugador", "error");
-    closeComparisonModal();
+    console.error("Error loading player predictions:", error);
+    showToast("Error de conexión", "error");
   }
 }
 
@@ -1167,8 +1091,8 @@ async function loadVotingTrends() {
       return;
     }
     
-    // 1. Render for "Posiciones" tab (only the first 4 next unplayed matches)
-    const next4 = currentTrendsData.slice(0, 4);
+    // 1. Render for "Posiciones" tab (only the first 2 next unplayed matches)
+    const next4 = currentTrendsData.slice(0, 2);
     if (next4.length === 0) {
       if (container) container.style.display = 'none';
     } else {
@@ -1312,13 +1236,15 @@ function closeTrendsVotersModal() {
 }
 
 function checkAnnouncementModal() {
-  if (state.currentUser) {
+  const hasSeen = localStorage.getItem('quiniela_seen_groups_announcement_3');
+  if (!hasSeen && state.currentUser) {
     const modal = document.getElementById('info-announcement-modal');
     if (modal) modal.style.display = 'flex';
   }
 }
 
 function closeAnnouncementModal() {
+  localStorage.setItem('quiniela_seen_groups_announcement_3', 'true');
   const modal = document.getElementById('info-announcement-modal');
   if (modal) modal.style.display = 'none';
 }
@@ -1451,76 +1377,157 @@ async function deleteUser(userId, username) {
   }
 }
 
+
+window.toggleAdminPause = async function() {
+  try {
+    const res = await fetch(`${API_URL}/admin/toggle-predictions`, {
+      method: 'POST',
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (res.ok) {
+      state.config = await res.json();
+      showToast(state.config.predictionsPaused ? "Ediciones pausadas" : "Ediciones habilitadas", "success");
+      const btn = document.getElementById('btn-toggle-pause');
+      if (btn) {
+        btn.innerHTML = state.config.predictionsPaused ? '<i class="fa-solid fa-play"></i> Habilitar Ediciones' : '<i class="fa-solid fa-pause"></i> Pausar Ediciones';
+        btn.className = state.config.predictionsPaused ? "btn btn-success" : "btn btn-warning";
+      }
+      renderMatchesGrid();
+    } else {
+      showToast("Error", "error");
+    }
+  } catch (err) {
+    showToast("Error de conexión", "error");
+  }
+}
+
 function renderAdminMatchesList() {
   const list = document.getElementById('admin-matches-list');
+  if (!window.adminWinners) window.adminWinners = {};
+  
+  const html = state.matches.map(match => {
+    let r1 = match.result ? match.result.team1Score : '';
+    let r2 = match.result ? match.result.team2Score : '';
+    let win = window.adminWinners[match.id] || (match.result ? match.result.winner : null);
 
-  // Ocultar los resultados registrados (matches that already have a result)
-  let filtered = state.matches.filter(m => !m.result);
-
-  list.innerHTML = filtered.map(match => {
-    const actL = match.result === 'L' ? 'active-L' : '';
-    const actE = match.result === 'E' ? 'active-E' : '';
-    const actV = match.result === 'V' ? 'active-V' : '';
+    let selL = win === 'L' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    let selV = win === 'V' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
     return `
-      <div class="admin-match-row">
-        <div class="admin-match-info">
-          <span class="admin-match-id">${match.id}</span>
-          <div class="admin-match-teams">
-            <span class="admin-team-l">${match.team1}</span>
-            <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">vs</span>
-            <span class="admin-team-v">${match.team2}</span>
-          </div>
+      <div class="admin-user-card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <strong>#${match.id} - ${match.group || 'Partido'}</strong>
+          <input type="date" id="admin-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;">
+        </div>
+        
+        <!-- Team Editing -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
+          <input type="text" id="admin-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1">
+          <span>vs</span>
+          <input type="text" id="admin-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2">
+          <button class="btn btn-secondary" onclick="saveAdminTeams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem;">Guardar Datos</button>
         </div>
 
-        <div class="admin-match-meta">
-          <span class="group-label">${match.group}</span>
-          <span>${match.date}</span>
+        <!-- Result Editing -->
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+          <div onclick="selectAdminWinner(${match.id}, 'L')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
+          <span>-</span>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
+          <div onclick="selectAdminWinner(${match.id}, 'V')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
         </div>
-
-        <div class="admin-controls">
-          <div class="admin-result-buttons">
-            <button class="admin-opt-btn ${actL}" onclick="saveAdminResult(${match.id}, 'L')">L</button>
-            <button class="admin-opt-btn ${actE}" onclick="saveAdminResult(${match.id}, 'E')">E</button>
-            <button class="admin-opt-btn ${actV}" onclick="saveAdminResult(${match.id}, 'V')">V</button>
-          </div>
-          ${match.result !== null ? `
-            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          ` : ''}
+        <div style="display: flex; gap: 1rem;">
+          <button class="btn btn-primary" style="flex:1;" onclick="saveAdminResult(${match.id})">Guardar Marcador</button>
+          <button class="btn btn-danger" onclick="saveAdminResult(${match.id}, true)">Borrar Marcador</button>
         </div>
       </div>
     `;
   }).join('');
+  list.innerHTML = html;
 }
 
-
-
-async function saveAdminResult(matchId, resultValue) {
+window.saveAdminTeams = async function(matchId) {
+  const t1 = document.getElementById(`admin-t1-${matchId}`).value;
+  const t2 = document.getElementById(`admin-t2-${matchId}`).value;
+  const date = document.getElementById(`admin-date-${matchId}`).value;
   try {
-    const response = await fetch(`${API_URL}/admin/matches/result`, {
+    const res = await fetch(`${API_URL}/admin/matches/teams`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-user-id': state.currentUser.id
       },
-      body: JSON.stringify({ matchId: matchId, result: resultValue })
+      body: JSON.stringify({ matchId, team1: t1, team2: t2, date })
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      showToast(data.error || "Error al actualizar resultado real", "error");
-      return;
-    }
-
-    showToast(`Resultado del partido #${matchId} guardado. Puntos recalculados.`, "success");
-    
-    // Refresh admin list and state
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast(data.message, 'success');
     loadAdminDashboard();
-  } catch (error) {
-    console.error("Admin save error:", error);
-    showToast("Error de conexión al guardar resultado", "error");
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+};
+
+async function submitBulkMatches() {
+  const text = document.getElementById('admin-bulk-matches').value;
+  if (!text) return showToast("Pega el texto de Excel primero", "error");
+  
+  try {
+    const res = await fetch(`${API_URL}/admin/matches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': state.currentUser.id },
+      body: JSON.stringify({ matchesText: text })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Se agregaron ${data.count} partidos exitosamente`, "success");
+      document.getElementById('admin-bulk-matches').value = '';
+      loadAdminDashboard(); // Reload
+    } else {
+      showToast(data.error || "Error", "error");
+    }
+  } catch (e) {
+    showToast("Error de conexión", "error");
+  }
+}
+
+async function saveAdminResult(matchId, clear = false) {
+  let resultObj = null;
+  if (!clear) {
+    const v1 = document.getElementById(`admin-res1-${matchId}`).value;
+    const v2 = document.getElementById(`admin-res2-${matchId}`).value;
+    if (v1 === '' || v2 === '') {
+      return showToast("Ingresa ambos marcadores", "warning");
+    }
+    const score1 = parseInt(v1);
+    const score2 = parseInt(v2);
+    let win = window.adminWinners ? window.adminWinners[matchId] : null;
+    if (!win) {
+      if (score1 > score2) win = 'L';
+      else if (score2 > score1) win = 'V';
+      else return showToast("Empate: Toca el nombre del equipo que avanzó", "warning");
+    }
+    resultObj = { team1Score: score1, team2Score: score2, winner: win };
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/admin/matches/result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': state.currentUser.id },
+      body: JSON.stringify({ matchId, result: resultObj })
+    });
+    if (res.ok) {
+      showToast("Resultado guardado", "success");
+      const updatedMatch = await res.json();
+      const mIdx = state.matches.findIndex(m => m.id === matchId);
+      if (mIdx > -1) state.matches[mIdx].result = resultObj;
+      renderAdminMatchesList();
+    } else {
+      const data = await res.json();
+      showToast(data.error, "error");
+    }
+  } catch (err) {
+    showToast("Error", "error");
   }
 }
 
@@ -1996,7 +2003,14 @@ async function openEditPredictionsModal(targetUserId, username) {
   // If target matches are empty, load matches first
   if (state.matches.length === 0) {
     try {
-      const matchesRes = await fetch(`${API_URL}/matches`, {
+  
+    // fetch config
+    try {
+      const cfgRes = await fetch(`${API_URL}/config`, { headers: { 'x-user-id': state.currentUser.id } });
+      if (cfgRes.ok) state.config = await cfgRes.json();
+    } catch(e) {}
+
+    const matchesRes = await fetch(`${API_URL}/matches`, {
         headers: { 'x-user-id': state.currentUser.id }
       });
       state.matches = await matchesRes.json();
@@ -2208,913 +2222,3 @@ async function adminResetUserPassword(userId, username) {
     showToast("Error de conexión al restablecer contraseña", "error");
   }
 }
-
-async function loadProbabilityDashboard() {
-  const loading = document.getElementById('probability-loading');
-  const list = document.getElementById('probability-list');
-  if (!loading || !list) return;
-
-  list.innerHTML = '';
-  loading.style.display = 'block';
-
-  try {
-    const response = await fetch(`${API_URL}/predictions/probability`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-
-    const data = await response.json();
-    loading.style.display = 'none';
-
-    if (!response.ok) {
-      showToast(data.error || "No se pudieron calcular las probabilidades", "error");
-      return;
-    }
-
-    if (data.length === 0) {
-      list.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 1.5rem;">No hay usuarios suficientes.</li>`;
-      return;
-    }
-
-    list.innerHTML = data.map((user, idx) => {
-      let colorClass = '';
-      let badgeStyle = '';
-      let pctText = '';
-
-      if (user.hasChance) {
-        colorClass = 'color: #34d399; font-weight: 700;';
-        badgeStyle = 'background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;';
-        if (user.probability === 0) {
-          pctText = '<0.01%';
-        } else {
-          pctText = `${user.probability.toFixed(2)}%`;
-        }
-      } else {
-        colorClass = 'color: #f87171;';
-        badgeStyle = 'background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171;';
-        pctText = '0.00%';
-      }
-
-      return `
-        <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.04); transition: transform 0.2s ease;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span style="font-family: var(--font-title); font-weight: 800; font-size: 0.85rem; color: var(--gold); width: 22px; text-align: center;">${idx + 1}°</span>
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-size: 0.85rem; font-weight: 700; color: white;">${user.username}</span>
-              <span style="font-size: 0.7rem; color: var(--color-text-muted);">${user.points} pts</span>
-            </div>
-          </div>
-          <span style="font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 20px; font-weight: 800; font-family: var(--font-title); ${badgeStyle}">
-            ${pctText}
-          </span>
-        </li>
-      `;
-    }).join('');
-
-  } catch (error) {
-    console.error("Error fetching winning probabilities:", error);
-    showToast("Error de conexión al obtener las probabilidades", "error");
-  }
-}
-
-// ====================================================
-// --- PHASE 2 (Fase Final) CLIENT LOGIC ---
-// ====================================================
-
-async function loadFinalPredictionsDashboard() {
-  const grid = document.getElementById('matches-grid-final');
-  if (!grid) return;
-  grid.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Fase Final...</div>`;
-
-  try {
-    const [matchesRes, predsRes, configRes] = await Promise.all([
-      fetch('/api/phase2/matches', { headers: { 'x-user-id': state.currentUser.id } }),
-      fetch('/api/phase2/predictions', { headers: { 'x-user-id': state.currentUser.id } }),
-      fetch('/api/phase2/config', { headers: { 'x-user-id': state.currentUser.id } })
-    ]);
-
-    if (!matchesRes.ok || !predsRes.ok || !configRes.ok) throw new Error("Error al obtener los datos de Fase Final.");
-
-    statePhase2.matches = await matchesRes.json();
-    const predsArray = await predsRes.json();
-    statePhase2.predictions = {};
-    predsArray.forEach(p => {
-      statePhase2.predictions[p.matchId] = p.prediction;
-    });
-    statePhase2.config = await configRes.json();
-
-    // Render matches
-    renderFinalMatchesGrid();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Error al cargar el panel de Fase Final", "error");
-  }
-}
-
-function renderFinalMatchesGrid() {
-  const grid = document.getElementById('matches-grid-final');
-  if (!grid) return;
-
-  const matchesHtml = statePhase2.matches.map(match => {
-    const userPrediction = statePhase2.predictions[match.id] || null;
-    const isCompleted = match.result !== null;
-    const flag1 = match.team1.substring(0, 3);
-    const flag2 = match.team2.substring(0, 3);
-
-    let resultBannerHtml = '';
-    if (isCompleted) {
-      if (userPrediction) {
-        let r1 = parseInt(match.result.team1Score);
-        let r2 = parseInt(match.result.team2Score);
-        let p1 = parseInt(userPrediction.team1Score);
-        let p2 = parseInt(userPrediction.team2Score);
-        let realW = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
-        let predW = userPrediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
-        if (realW === predW) {
-          let pts = (r1 === p1 && r2 === p2) ? 4 : 3;
-          if (pts === 4) {
-            resultBannerHtml = `<div class="real-result-banner correct"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto!</span><span>+4 pts</span></div>`;
-          } else {
-            resultBannerHtml = `<div class="real-result-banner correct"><span><i class="fa-solid fa-circle-check"></i> Acertaste al que avanza</span><span>+3 pts</span></div>`;
-          }
-        } else {
-          resultBannerHtml = `<div class="real-result-banner incorrect"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste. Avanzó ${realW==='L'?match.team1:match.team2}</span><span>0 pts</span></div>`;
-        }
-      } else {
-        resultBannerHtml = `<div class="real-result-banner pending"><span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico.</span><span>0 pts</span></div>`;
-      }
-    } else {
-      resultBannerHtml = `<div class="real-result-banner pending"><span><i class="fa-solid fa-clock"></i> Pendiente</span><span>Pendiente</span></div>`;
-    }
-
-    const hasTBD = match.team1 === 'A definir' || match.team2 === 'A definir';
-    const isPaused = statePhase2.config && statePhase2.config.predictionsPaused;
-    const disabled = isCompleted || isPaused || hasTBD ? 'disabled' : '';
-    const val1 = userPrediction ? userPrediction.team1Score : '';
-    const val2 = userPrediction ? userPrediction.team2Score : '';
-    const selL = (userPrediction && userPrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-    const selV = (userPrediction && userPrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-
-    if (!isCompleted && hasTBD) {
-      resultBannerHtml = `<div class="real-result-banner pending" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #f87171;"><span><i class="fa-solid fa-lock"></i> Bloqueado (Equipos por definir)</span></div>`;
-    }
-
-    return `
-      <div class="match-card ${userPrediction ? 'completed' : ''}" id="match-card-final-${match.id}">
-        <div class="match-meta"><span class="match-group">${match.group}</span><span class="match-date">${match.date}</span></div>
-        <div class="match-teams-layout" style="margin-bottom: 1rem;">
-          <div class="team-row" style="justify-content: space-between;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'L')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selL}">
-              <div class="team-flag-mock">${flag1}</div><span class="team-name">${match.team1}</span>
-            </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
-          </div>
-          <div class="team-row" style="justify-content: space-between; margin-top: 0.5rem;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'V')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selV}">
-              <div class="team-flag-mock">${flag2}</div><span class="team-name">${match.team2}</span>
-            </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
-          </div>
-        </div>
-        ${resultBannerHtml}
-      </div>
-    `;
-  }).join('');
-
-  // Calculate prediction progress
-  const predCount = statePhase2.matches.filter(m => statePhase2.predictions[m.id]).length;
-  const progressEl = document.getElementById('predictions-progress-final');
-  if (progressEl) {
-    progressEl.textContent = `${predCount} / ${statePhase2.matches.length}`;
-  }
-
-  grid.innerHTML = matchesHtml;
-}
-
-window.selectFinalWinner = function(matchId, winner) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
-  if (!statePhase2.predictions[matchId]) statePhase2.predictions[matchId] = {};
-  statePhase2.predictions[matchId].winner = winner;
-  if (v1 !== '' && v2 !== '') {
-      saveFinalPrediction(matchId);
-  } else {
-      renderFinalMatchesGrid();
-  }
-};
-
-async function saveFinalPrediction(matchId) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
-  
-  if (v1 === '' || v2 === '') return;
-  
-  const score1 = parseInt(v1);
-  const score2 = parseInt(v2);
-  if (isNaN(score1) || isNaN(score2)) return;
-
-  const pred = statePhase2.predictions[matchId] || {};
-  const winner = pred.winner || (score1 > score2 ? 'L' : (score1 < score2 ? 'V' : null));
-  
-  if (score1 === score2 && !winner) {
-    showToast("Para empates, debes tocar el nombre del equipo que avanza.", "warning");
-    return;
-  }
-
-  const finalWinner = score1 > score2 ? 'L' : (score1 < score2 ? 'V' : winner);
-
-  try {
-    const res = await fetch('/api/phase2/predictions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': state.currentUser.id
-      },
-      body: JSON.stringify({
-        predictions: [
-          {
-            matchId: matchId,
-            prediction: {
-              team1Score: score1,
-              team2Score: score2,
-              winner: finalWinner
-            }
-          }
-        ]
-      })
-    });
-    
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    
-    statePhase2.predictions[matchId] = {
-      team1Score: score1,
-      team2Score: score2,
-      winner: finalWinner
-    };
-    
-    showToast("Pronóstico guardado", "success");
-    renderFinalMatchesGrid();
-  } catch (err) {
-    showToast(err.message || "Error al guardar el pronóstico", "error");
-  }
-}
-
-async function loadAdmin2Dashboard() {
-  const list = document.getElementById('admin-2-matches-list');
-  if (!list) return;
-  list.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Fase Final...</div>`;
-
-  try {
-    const [matchesRes, configRes] = await Promise.all([
-      fetch('/api/phase2/matches', { headers: { 'x-user-id': state.currentUser.id } }),
-      fetch('/api/phase2/config', { headers: { 'x-user-id': state.currentUser.id } })
-    ]);
-
-    if (!matchesRes.ok || !configRes.ok) throw new Error("Error al obtener datos de Admin-2.");
-
-    statePhase2.matches = await matchesRes.json();
-    statePhase2.config = await configRes.json();
-
-    const btn = document.getElementById('btn-toggle-pause-final');
-    if (btn) {
-      btn.innerHTML = statePhase2.config.predictionsPaused ? '<i class="fa-solid fa-play"></i> Habilitar Ediciones' : '<i class="fa-solid fa-pause"></i> Pausar Ediciones';
-      btn.className = statePhase2.config.predictionsPaused ? "btn btn-success" : "btn btn-warning";
-    }
-
-    renderAdmin2MatchesList();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Error al cargar la administración de Fase Final", "error");
-  }
-}
-
-function renderAdmin2MatchesList() {
-  const list = document.getElementById('admin-2-matches-list');
-  if (!list) return;
-  if (!window.admin2Winners) window.admin2Winners = {};
-  
-  const html = statePhase2.matches.map(match => {
-    let r1 = match.result ? match.result.team1Score : '';
-    let r2 = match.result ? match.result.team2Score : '';
-    let win = window.admin2Winners[match.id] || (match.result ? match.result.winner : null);
-
-    let selL = win === 'L' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-    let selV = win === 'V' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-
-    return `
-      <div class="admin-user-card" style="margin-bottom: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <strong>#${match.id} - ${match.group || 'Partido'}</strong>
-          <input type="text" id="admin-2-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;" placeholder="Fecha/Sede">
-        </div>
-        
-        <!-- Team Editing -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
-          <input type="text" id="admin-2-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1">
-          <span>vs</span>
-          <input type="text" id="admin-2-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2">
-          <button class="btn btn-secondary" onclick="saveAdmin2Teams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem;">Guardar Datos</button>
-        </div>
-
-        <!-- Result Editing -->
-        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-          <div onclick="selectAdmin2Winner(${match.id}, 'L')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
-          <span>-</span>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
-          <div onclick="selectAdmin2Winner(${match.id}, 'V')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
-        </div>
-        <div style="display: flex; gap: 1rem;">
-          <button class="btn btn-primary" style="flex:1;" onclick="saveAdmin2Result(${match.id})">Guardar Marcador</button>
-          <button class="btn btn-danger" onclick="saveAdmin2Result(${match.id}, true)">Borrar Marcador</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-  list.innerHTML = html;
-}
-
-window.selectAdmin2Winner = function(matchId, winner) {
-  if (!window.admin2Winners) window.admin2Winners = {};
-  window.admin2Winners[matchId] = winner;
-  renderAdmin2MatchesList();
-};
-
-window.saveAdmin2Teams = async function(matchId) {
-  const t1 = document.getElementById(`admin-2-t1-${matchId}`).value;
-  const t2 = document.getElementById(`admin-2-t2-${matchId}`).value;
-  const date = document.getElementById(`admin-2-date-${matchId}`).value;
-  try {
-    const res = await fetch('/api/phase2/admin/matches/teams', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': state.currentUser.id
-      },
-      body: JSON.stringify({ matchId, team1: t1, team2: t2, date })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    showToast(data.message, 'success');
-    loadAdmin2Dashboard();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-};
-
-window.saveAdmin2Result = async function(matchId, clear = false) {
-  let result = null;
-  if (!clear) {
-    const score1Val = document.getElementById(`admin-2-res1-${matchId}`).value;
-    const score2Val = document.getElementById(`admin-2-res2-${matchId}`).value;
-    const winner = window.admin2Winners[matchId] || (statePhase2.matches.find(m => m.id === matchId).result ? statePhase2.matches.find(m => m.id === matchId).result.winner : null);
-
-    if (score1Val === '' || score2Val === '') {
-      showToast("Ingresa los goles para guardar el resultado.", "warning");
-      return;
-    }
-    const s1 = parseInt(score1Val);
-    const s2 = parseInt(score2Val);
-    if (isNaN(s1) || isNaN(s2)) return;
-
-    if (s1 === s2 && !winner) {
-      showToast("Para empates, debes tocar el nombre del equipo que avanza.", "warning");
-      return;
-    }
-    const finalWinner = s1 > s2 ? 'L' : (s1 < s2 ? 'V' : winner);
-    result = { team1Score: s1, team2Score: s2, winner: finalWinner };
-  }
-
-  try {
-    const res = await fetch('/api/phase2/admin/matches/result', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': state.currentUser.id
-      },
-      body: JSON.stringify({ matchId, result })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    
-    if (window.admin2Winners) delete window.admin2Winners[matchId];
-
-    showToast(data.message, 'success');
-    loadAdmin2Dashboard();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-};
-
-window.toggleAdmin2Predictions = async function() {
-  try {
-    const res = await fetch('/api/phase2/admin/toggle-predictions', {
-      method: 'POST',
-      headers: {
-        'x-user-id': state.currentUser.id
-      }
-    });
-    const config = await res.json();
-    statePhase2.config = config;
-    
-    const btn = document.getElementById('btn-toggle-pause-final');
-    if (btn) {
-      btn.innerHTML = config.predictionsPaused ? '<i class="fa-solid fa-play"></i> Habilitar Ediciones' : '<i class="fa-solid fa-pause"></i> Pausar Ediciones';
-      btn.className = config.predictionsPaused ? "btn btn-success" : "btn btn-warning";
-    }
-    
-    showToast(config.predictionsPaused ? "Ediciones pausadas" : "Ediciones habilitadas", "info");
-  } catch (err) {
-    showToast("Error de conexión", "error");
-  }
-};
-
-// --- PHASE 2 LEADERBOARD & COMPARISONS (NEW PANEL) ---
-
-async function loadPhase2Leaderboard() {
-  const tbody = document.getElementById('new-panel-leaderboard-body');
-  if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 3rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones final...</td></tr>`;
-
-  try {
-    const response = await fetch('/api/phase2/leaderboard', {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    
-    statePhase2.leaderboard = await response.json();
-    
-    if (statePhase2.leaderboard.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay participantes registrados.</td></tr>`;
-      return;
-    }
-
-    renderPhase2Leaderboard();
-    loadVotingTrendsPhase2();
-    loadStreaksPhase2();
-    loadBonusPhase2();
-  } catch (error) {
-    console.error("Error loading Phase 2 leaderboard:", error);
-    showToast("Error al cargar la tabla de posiciones final", "error");
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--red);">Error al cargar las posiciones.</td></tr>`;
-  }
-}
-
-function renderPhase2Leaderboard() {
-  const tbody = document.getElementById('new-panel-leaderboard-body');
-  if (!tbody) return;
-
-  tbody.innerHTML = statePhase2.leaderboard.filter(player => player.username !== 'invitado').map((player, index) => {
-    const position = index + 1;
-    let rankBadgeClass = 'rank-other';
-    if (position === 1) rankBadgeClass = 'rank-1';
-    else if (position === 2) rankBadgeClass = 'rank-2';
-    else if (position === 3) rankBadgeClass = 'rank-3';
-
-    const isMe = player.id === state.currentUser.id;
-    const clickHandler = `onclick="viewPlayerPredictionsPhase2('${player.id}')"`;
-    const highlightRowStyle = isMe ? 'background: rgba(245, 158, 11, 0.05); font-weight: 600;' : '';
-    const adminBadge = player.isAdmin ? '<span class="badge badge-error" style="font-size: 0.6rem; padding: 0.1rem 0.3rem; margin-left: 0.5rem;">Admin</span>' : '';
-
-    return `
-      <tr class="clickable" style="${highlightRowStyle}" ${clickHandler}>
-        <td style="text-align: center;">
-          <div class="rank-badge ${rankBadgeClass}">${position}</div>
-        </td>
-        <td>
-          <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
-            <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
-            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
-              <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
-              ${adminBadge}
-            </div>
-          </div>
-        </td>
-        <td style="text-align: center; font-family: var(--font-title); font-weight: 700; color: ${isMe ? 'var(--gold)' : 'inherit'}">
-          ${player.points} pts
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-async function viewPlayerPredictionsPhase2(targetUserId) {
-  if (statePhase2.matches.length === 0) {
-    try {
-      const matchesRes = await fetch('/api/phase2/matches', {
-        headers: { 'x-user-id': state.currentUser.id }
-      });
-      statePhase2.matches = await matchesRes.json();
-    } catch (e) {
-      console.error("Error loading final matches:", e);
-      showToast("Error al cargar partidos de la fase final", "error");
-      return;
-    }
-  }
-
-  const modal = document.getElementById('comparison-modal');
-  const modalTitle = document.getElementById('modal-user-title');
-  const modalSubtitle = document.getElementById('modal-user-subtitle');
-  const comparisonGrid = document.getElementById('modal-comparison-grid');
-
-  comparisonGrid.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando predicciones de jugador...</div>`;
-  modal.style.display = 'flex';
-
-  try {
-    const response = await fetch(`/api/phase2/predictions/user/${targetUserId}`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      showToast((data && data.error) || "No se pudieron obtener los pronósticos", "error");
-      closeComparisonModal();
-      return;
-    }
-
-    modalTitle.textContent = `Panel de Pronósticos Fase Final: ${data.username}`;
-    modalSubtitle.textContent = `Puntos de Fase Final: ${data.points} pts | Partidos pronosticados: ${Object.keys(data.predictions).length} de ${statePhase2.matches.length}`;
-
-    // Render using final match comparison style
-    comparisonGrid.innerHTML = statePhase2.matches.map(match => {
-      const bet = data.predictions[match.id] || null;
-      const real = match.result;
-      const isCompleted = real !== null;
-
-      let scoreClass = 'pts-pending';
-      let rowStatusClass = '';
-      let pointsText = 'Pendiente';
-
-      let betText = '-';
-      let realText = '-';
-
-      if (bet) {
-        betText = `${bet.team1Score} - ${bet.team2Score}`;
-        if (bet.winner) {
-          betText += ` (${bet.winner === 'L' ? match.team1 : match.team2})`;
-        }
-      }
-
-      if (isCompleted && typeof real === 'object') {
-        realText = `${real.team1Score} - ${real.team2Score}`;
-        if (real.winner) {
-          realText += ` (${real.winner === 'L' ? match.team1 : match.team2})`;
-        }
-        
-        const exactScore = (bet && bet.team1Score === real.team1Score && bet.team2Score === real.team2Score);
-        const winnerCorrect = (bet && bet.winner === real.winner);
-        
-        if (exactScore) {
-          scoreClass = 'pts-3';
-          rowStatusClass = 'correct';
-          pointsText = '+4 pts';
-        } else if (winnerCorrect) {
-          scoreClass = 'pts-3';
-          rowStatusClass = 'correct';
-          pointsText = '+3 pts';
-        } else {
-          scoreClass = 'pts-0';
-          rowStatusClass = 'incorrect';
-          pointsText = '0 pts';
-        }
-      }
-
-      return `
-        <div class="comp-row ${rowStatusClass}">
-          <div class="comp-match-info">
-            <span class="comp-match-id">#${match.id} - ${match.group}</span>
-            <div class="comp-teams">
-              <span class="comp-team-l">${match.team1}</span>
-              <span style="font-size: 0.75rem; color: var(--color-text-muted); font-style: italic;">vs</span>
-              <span class="comp-team-v">${match.team2}</span>
-            </div>
-          </div>
-
-          <div class="comp-results-block">
-            <div class="comp-bet">
-              <span class="comp-label">Pronóstico</span>
-              <span class="comp-val val-none" style="font-weight: bold;">${betText}</span>
-            </div>
-            <div class="comp-real">
-              <span class="comp-label">Resultado</span>
-              <span class="comp-val val-none" style="font-weight: bold;">${realText}</span>
-            </div>
-            <div class="comp-score-badge ${scoreClass}">
-              ${pointsText}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (error) {
-    console.error("Error loading comparison:", error);
-    showToast("Error de conexión al cargar pronósticos de jugador", "error");
-    closeComparisonModal();
-  }
-}
-
-let currentTrendsDataPhase2 = [];
-
-async function loadVotingTrendsPhase2() {
-  const container = document.getElementById('trends-container-final');
-  const grid = document.getElementById('trends-grid-final');
-  if (!container || !grid) return;
-
-  try {
-    const res = await fetch('/api/phase2/matches/trends', {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    if (!res.ok) throw new Error("Error fetching trends");
-    
-    currentTrendsDataPhase2 = await res.json();
-    
-    if (currentTrendsDataPhase2.length === 0) {
-      container.style.display = 'none';
-      return;
-    }
-    
-    // Render only the first 2 next unplayed matches
-    const next2 = currentTrendsDataPhase2.slice(0, 2);
-    if (next2.length === 0) {
-      container.style.display = 'none';
-    } else {
-      container.style.display = 'block';
-      grid.innerHTML = next2.map((match, idx) => {
-        return `
-          <div class="trend-card">
-            <div class="trend-teams-row">
-              <span>${match.team1}</span>
-              <span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; margin: 0 0.5rem;">vs</span>
-              <span>${match.team2}</span>
-            </div>
-            <div class="trend-votes-row">
-              <div class="trend-vote-box" onclick="showTrendsVotersPhase2(${idx}, 'L')">
-                <span class="trend-vote-label">Local</span>
-                <span class="trend-vote-count">${match.stats.L.count}</span>
-              </div>
-              <div class="trend-vote-box" onclick="showTrendsVotersPhase2(${idx}, 'E')">
-                <span class="trend-vote-label">Empate</span>
-                <span class="trend-vote-count">${match.stats.E.count}</span>
-              </div>
-              <div class="trend-vote-box" onclick="showTrendsVotersPhase2(${idx}, 'V')">
-                <span class="trend-vote-label">Visitante</span>
-                <span class="trend-vote-count">${match.stats.V.count}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Apply collapsed state
-      const isCollapsed = localStorage.getItem('trends_collapsed_final') !== 'false';
-      const toggleIcon = document.getElementById('trends-toggle-icon-final');
-      const titleH3 = container.querySelector('h3');
-      if (isCollapsed) {
-        grid.style.display = 'none';
-        if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
-        if (titleH3) titleH3.style.marginBottom = '0';
-      } else {
-        grid.style.display = 'grid';
-        if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
-        if (titleH3) titleH3.style.marginBottom = '0.55rem';
-      }
-    }
-  } catch (err) {
-    console.error("Error loading Phase 2 trends:", err);
-    container.style.display = 'none';
-  }
-}
-
-window.toggleTrendsGridFinal = function() {
-  const grid = document.getElementById('trends-grid-final');
-  const icon = document.getElementById('trends-toggle-icon-final');
-  const container = document.getElementById('trends-container-final');
-  if (!grid || !container) return;
-  const title = container.querySelector('h3');
-
-  if (grid.style.display === 'none') {
-    grid.style.display = 'grid';
-    if (icon) icon.style.transform = 'rotate(0deg)';
-    if (title) title.style.marginBottom = '0.55rem';
-    localStorage.setItem('trends_collapsed_final', 'false');
-  } else {
-    grid.style.display = 'none';
-    if (icon) icon.style.transform = 'rotate(180deg)';
-    if (title) title.style.marginBottom = '0';
-    localStorage.setItem('trends_collapsed_final', 'true');
-  }
-};
-
-window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
-  const match = currentTrendsDataPhase2[matchIndex];
-  if (!match) return;
-
-  const voters = match.stats[predictionType].voters || [];
-  
-  const modal = document.getElementById('trends-voters-modal');
-  const modalTitle = document.getElementById('trends-modal-title');
-  const modalSubtitle = document.getElementById('trends-modal-subtitle');
-  const votersList = document.getElementById('trends-voters-list');
-  
-  if (!modal || !modalTitle || !votersList) return;
-  
-  const typeText = predictionType === 'L' ? match.team1 : (predictionType === 'V' ? match.team2 : 'Empate');
-  modalTitle.textContent = `${match.team1} vs ${match.team2}`;
-  modalSubtitle.textContent = `Votos por: ${typeText}`;
-  
-  if (voters.length === 0) {
-    votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.9rem; padding: 1rem 0;">Ningún jugador pronosticó esta opción.</li>`;
-  } else {
-    votersList.innerHTML = voters.map(name => `
-      <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
-        <i class="fa-solid fa-user-circle" style="color: var(--gold); opacity: 0.8;"></i> ${name}
-      </li>
-    `).join('');
-  }
-  
-  modal.style.display = 'flex';
-};
-
-async function loadStreaksPhase2() {
-  const container = document.getElementById('streaks-container-final');
-  const content = document.getElementById('streaks-content-final');
-  if (!container || !content) return;
-
-  try {
-    const res = await fetch('/api/phase2/streaks', {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    const data = await res.json();
-    
-    if (!data || !Array.isArray(data.buenaRacha) || !Array.isArray(data.malaRacha)) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'block';
-    let html = '';
-
-    // Buena
-    if (data.buenaRacha.length > 0) {
-      const top = data.buenaRacha[0];
-      html += `
-        <div class="racha-row-container">
-          <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
-            <div class="racha-badge racha-buena" onclick="toggleStreaksTop3Phase2('buena')">${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></div>
-          </div>
-          <div id="top3-buena-final" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
-          </div>
-        </div>`;
-    }
-
-    // Mala
-    if (data.malaRacha.length > 0) {
-      const top = data.malaRacha[0];
-      html += `
-        <div class="racha-row-container">
-          <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
-            <div class="racha-badge racha-mala" onclick="toggleStreaksTop3Phase2('mala')">${top.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></div>
-          </div>
-          <div id="top3-mala-final" class="top3-list">
-            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
-          </div>
-        </div>`;
-    }
-    content.innerHTML = html;
-
-    // Apply collapsed state for streaks
-    const isCollapsed = localStorage.getItem('streaks_collapsed_final') !== 'false';
-    const toggleIcon = document.getElementById('streaks-toggle-icon-final');
-    const titleH3 = container.querySelector('h3');
-    if (isCollapsed) {
-      content.style.display = 'none';
-      if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
-      if (titleH3) titleH3.style.marginBottom = '0';
-    } else {
-      content.style.display = 'flex';
-      if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
-      if (titleH3) titleH3.style.marginBottom = '0.55rem';
-    }
-  } catch (err) {
-    console.error("Error loading Phase 2 streaks:", err);
-    container.style.display = 'none';
-  }
-}
-
-window.toggleStreaksGridFinal = function() {
-  const content = document.getElementById('streaks-content-final');
-  const icon = document.getElementById('streaks-toggle-icon-final');
-  const container = document.getElementById('streaks-container-final');
-  if (!content || !container) return;
-  const title = container.querySelector('h3');
-
-  if (content.style.display === 'none') {
-    content.style.display = 'flex';
-    if (icon) icon.style.transform = 'rotate(0deg)';
-    if (title) title.style.marginBottom = '0.55rem';
-    localStorage.setItem('streaks_collapsed_final', 'false');
-  } else {
-    content.style.display = 'none';
-    if (icon) icon.style.transform = 'rotate(180deg)';
-    if (title) title.style.marginBottom = '0';
-    localStorage.setItem('streaks_collapsed_final', 'true');
-  }
-};
-
-window.toggleStreaksTop3Phase2 = function(type) {
-  const el = document.getElementById(`top3-${type}-final`);
-  if (el) el.classList.toggle('active');
-};
-
-async function loadBonusPhase2() {
-  const container = document.getElementById('bonus-container-final');
-  const content = document.getElementById('bonus-content-final');
-  if (!container || !content) return;
-
-  try {
-    const res = await fetch('/api/phase2/bonus', {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
-    if (!res.ok) throw new Error('Error fetching bonus');
-    const data = await res.json();
-    
-    if (!data || data.length === 0) {
-      container.style.display = 'block';
-      content.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem;">Nadie ha obtenido puntos extra aún.</div>';
-      return;
-    }
-
-    container.style.display = 'block';
-    
-    const renderStars = (bonusDetails) => {
-      if (!bonusDetails) return '';
-      return bonusDetails.map(b => 
-        `<i class="fa-solid fa-star" style="color: var(--gold); cursor: pointer; font-size: 1rem; margin-left: 2px;" onclick="event.stopPropagation(); window.showBonusMatchPhase2(${b.matchId}, ${b.prediction.team1Score}, ${b.prediction.team2Score})"></i>`
-      ).join('');
-    };
-
-    let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.25rem;">';
-    
-    html += data.map((u, i) => `
-      <div class="top3-item" style="justify-content: space-between; padding: 0.5rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span class="top3-rank" style="color: var(--gold);">${i+1}°</span>
-          <span class="top3-username" title="${u.username}" style="font-weight: 600;">${u.username}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 2px;">
-          ${renderStars(u.bonusDetails)}
-        </div>
-      </div>
-    `).join('');
-    
-    html += '</div>';
-    
-    content.innerHTML = html;
-
-    // Apply collapsed state for bonus
-    const isCollapsed = localStorage.getItem('bonus_collapsed_final') !== 'false';
-    const toggleIcon = document.getElementById('bonus-toggle-icon-final');
-    const titleH3 = container.querySelector('h3');
-    if (isCollapsed) {
-      content.style.display = 'none';
-      if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
-      if (titleH3) titleH3.style.marginBottom = '0';
-    } else {
-      content.style.display = 'block';
-      if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
-      if (titleH3) titleH3.style.marginBottom = '0.55rem';
-    }
-  } catch (err) {
-    console.error("Error loading Phase 2 bonus:", err);
-    container.style.display = 'none';
-  }
-}
-
-window.toggleBonusGridFinal = function() {
-  const content = document.getElementById('bonus-content-final');
-  const icon = document.getElementById('bonus-toggle-icon-final');
-  const container = document.getElementById('bonus-container-final');
-  if (!content || !container) return;
-  const title = container.querySelector('h3');
-
-  if (content.style.display === 'none') {
-    content.style.display = 'block';
-    if (icon) icon.style.transform = 'rotate(0deg)';
-    if (title) title.style.marginBottom = '0.55rem';
-    localStorage.setItem('bonus_collapsed_final', 'false');
-  } else {
-    content.style.display = 'none';
-    if (icon) icon.style.transform = 'rotate(180deg)';
-    if (title) title.style.marginBottom = '0';
-    localStorage.setItem('bonus_collapsed_final', 'true');
-  }
-};
-
-window.showBonusMatchPhase2 = function(matchId, s1, s2) {
-  const match = statePhase2.matches.find(m => m.id === parseInt(matchId));
-  if (!match) return;
-  showToast(`Marcador exacto: ${match.team1} ${s1} - ${s2} ${match.team2}`, 'info');
-};

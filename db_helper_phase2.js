@@ -15,14 +15,33 @@ webpush.setVapidDetails(
 );
 
 const dbPath = path.join(__dirname, 'db.json');
-const excelPath = path.join(__dirname, 'Quiniela_Mundial_2026_Fase_Grupos.xlsx');
+const excelPath = path.join(__dirname, 'Proyeccion_Dieciseisavos_Mundial2026.xlsx');
 
 // Database Detection
 let dbType = 'json'; // 'json' or 'firestore'
 let firestoreDb = null;
 
 // --- IN-MEMORY CACHE ---
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function calculatePointsHelper(matchResult, predValue) {
+  if (!matchResult || matchResult.team1Score === undefined || !predValue || predValue.team1Score === undefined) return 0;
+  const r1 = parseInt(matchResult.team1Score);
+  const r2 = parseInt(matchResult.team2Score);
+  const p1 = parseInt(predValue.team1Score);
+  const p2 = parseInt(predValue.team2Score);
+  if (isNaN(r1) || isNaN(r2) || isNaN(p1) || isNaN(p2)) return 0;
+  
+  const realWinner = matchResult.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+  const predWinner = predValue.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+  
+  if (realWinner === predWinner) {
+    if (r1 === p1 && r2 === p2) return 4;
+    return 3;
+  }
+  return 0;
+}
+ // 5 minutes
 const cache = {
   leaderboard: { data: null, timestamp: 0 },
   trends: { data: null, timestamp: 0 },
@@ -76,30 +95,70 @@ try {
 async function initDb() {
   if (dbType === 'firestore') {
     try {
-      // 1. Seed matches if empty
-      const matchesSnap = await firestoreDb.collection('matches').limit(1).get();
-      if (matchesSnap.empty) {
-        console.log("Firestore matches are empty. Loading from Excel...");
-        const excelMatches = loadMatchesFromExcel();
-        if (excelMatches.length > 0) {
-          const batch = firestoreDb.batch();
-          excelMatches.forEach(m => {
-            const docRef = firestoreDb.collection('matches').doc(String(m.id));
-            batch.set(docRef, m);
-          });
-          await batch.commit();
-          console.log(`Loaded ${excelMatches.length} matches into Firestore.`);
+      // 1. Seed matches if count is not 32 (forces recreation if old Excel seeding with 16 matches was present)
+      const matchesSnap = await firestoreDb.collection('phase2_matches').get();
+      if (matchesSnap.size !== 32) {
+        console.log(`Firestore phase2_matches size is ${matchesSnap.size} (not 32). Resetting and seeding 32 matches with 'A definir'...`);
+        
+        // Delete all existing documents in phase2_matches
+        if (matchesSnap.size > 0) {
+          const deleteBatch = firestoreDb.batch();
+          matchesSnap.forEach(doc => deleteBatch.delete(doc.ref));
+          await deleteBatch.commit();
         }
+
+        const matches = [];
+        // 16 Dieciseisavos (1 to 16)
+        for (let i = 1; i <= 16; i++) {
+          matches.push({ id: i, group: 'Dieciseisavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+        }
+        // 8 Octavos (17 to 24)
+        for (let i = 17; i <= 24; i++) {
+          matches.push({ id: i, group: 'Octavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+        }
+        // 4 Cuartos (25 to 28)
+        for (let i = 25; i <= 28; i++) {
+          matches.push({ id: i, group: 'Cuartos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+        }
+        // 2 Semifinales (29 to 30)
+        for (let i = 29; i <= 30; i++) {
+          matches.push({ id: i, group: 'Semifinal', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+        }
+        // 1 Tercer Lugar (31)
+        matches.push({ id: 31, group: 'Tercer Lugar', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+        // 1 Final (32)
+        matches.push({ id: 32, group: 'Final', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+
+        const batch = firestoreDb.batch();
+        matches.forEach(m => {
+          const docRef = firestoreDb.collection('phase2_matches').doc(String(m.id));
+          batch.set(docRef, m);
+        });
+        await batch.commit();
+        console.log("Loaded 32 'A definir' matches successfully into Firestore.");
       }
 
-      // 2. Seed default admin if no users exist
-      const usersSnap = await firestoreDb.collection('users').limit(1).get();
+      // 2. Migrate users from phase 1 if phase2_users is empty
+      const usersSnap = await firestoreDb.collection('phase2_users').limit(1).get();
       if (usersSnap.empty) {
+        console.log("phase2_users is empty. Migrating from phase 1 'users'...");
+        const oldUsersSnap = await firestoreDb.collection('users').get();
+        if (!oldUsersSnap.empty) {
+          const batch = firestoreDb.batch();
+          oldUsersSnap.forEach(doc => {
+            const u = doc.data();
+            u.points = 0; // Reset points for phase 2
+            const docRef = firestoreDb.collection('phase2_users').doc(doc.id);
+            batch.set(docRef, u);
+          });
+          await batch.commit();
+          console.log(`Migrated ${oldUsersSnap.size} users to phase2_users with 0 points.`);
+        } else {
         console.log("No users found in Firestore. Seeding default admin...");
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync('admin2026', salt);
         
-        await firestoreDb.collection('users').doc('admin_id_2026').set({
+        await firestoreDb.collection('phase2_users').doc('admin_id_2026').set({
           id: 'admin_id_2026',
           username: 'admin',
           username_lower: 'admin',
@@ -110,6 +169,7 @@ async function initDb() {
           createdAt: new Date().toISOString()
         });
         console.log("Default admin created in Firestore: admin / admin2026");
+        }
       }
     } catch (err) {
       console.error("Error initializing Firestore DB:", err);
@@ -139,14 +199,33 @@ async function initDb() {
 
   let dbUpdated = false;
 
-  if (db.matches.length === 0) {
-    console.log("Database matches are empty. Loading from Excel...");
-    const excelMatches = loadMatchesFromExcel();
-    if (excelMatches.length > 0) {
-      db.matches = excelMatches;
-      dbUpdated = true;
-      console.log(`Loaded ${excelMatches.length} matches from Excel.`);
+  if (db.matches.length !== 32) {
+    console.log(`Database matches size is ${db.matches.length} (not 32). Resetting and seeding 32 matches with 'A definir'...`);
+    const matches = [];
+    // 16 Dieciseisavos (1 to 16)
+    for (let i = 1; i <= 16; i++) {
+      matches.push({ id: i, group: 'Dieciseisavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
     }
+    // 8 Octavos (17 to 24)
+    for (let i = 17; i <= 24; i++) {
+      matches.push({ id: i, group: 'Octavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+    }
+    // 4 Cuartos (25 to 28)
+    for (let i = 25; i <= 28; i++) {
+      matches.push({ id: i, group: 'Cuartos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+    }
+    // 2 Semifinales (29 to 30)
+    for (let i = 29; i <= 30; i++) {
+      matches.push({ id: i, group: 'Semifinal', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+    }
+    // 1 Tercer Lugar (31)
+    matches.push({ id: 31, group: 'Tercer Lugar', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+    // 1 Final (32)
+    matches.push({ id: 32, group: 'Final', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+
+    db.matches = matches;
+    dbUpdated = true;
+    console.log("Loaded 32 'A definir' matches successfully into local JSON database.");
   }
 
   if (db.users.length === 0) {
@@ -172,6 +251,53 @@ async function initDb() {
   }
 }
 
+async function forceResetMatches32() {
+  cachedMatches = null;
+  invalidateCache();
+
+  const matches = [];
+  // 16 Dieciseisavos (1 to 16)
+  for (let i = 1; i <= 16; i++) {
+    matches.push({ id: i, group: 'Dieciseisavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+  }
+  // 8 Octavos (17 to 24)
+  for (let i = 17; i <= 24; i++) {
+    matches.push({ id: i, group: 'Octavos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+  }
+  // 4 Cuartos (25 to 28)
+  for (let i = 25; i <= 28; i++) {
+    matches.push({ id: i, group: 'Cuartos', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+  }
+  // 2 Semifinales (29 to 30)
+  for (let i = 29; i <= 30; i++) {
+    matches.push({ id: i, group: 'Semifinal', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+  }
+  // 1 Tercer Lugar (31)
+  matches.push({ id: 31, group: 'Tercer Lugar', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+  // 1 Final (32)
+  matches.push({ id: 32, group: 'Final', date: 'TBD', team1: 'A definir', team2: 'A definir', result: null });
+
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('phase2_matches').get();
+    if (snap.size > 0) {
+      const deleteBatch = firestoreDb.batch();
+      snap.forEach(doc => deleteBatch.delete(doc.ref));
+      await deleteBatch.commit();
+    }
+    const batch = firestoreDb.batch();
+    matches.forEach(m => {
+      const docRef = firestoreDb.collection('phase2_matches').doc(String(m.id));
+      batch.set(docRef, m);
+    });
+    await batch.commit();
+  } else {
+    const db = readDb();
+    db.matches = matches;
+    writeDb(db);
+  }
+  return matches;
+}
+
 // Read from Excel file
 function loadMatchesFromExcel() {
   if (!fs.existsSync(excelPath)) {
@@ -181,31 +307,35 @@ function loadMatchesFromExcel() {
 
   try {
     const workbook = xlsx.readFile(excelPath);
-    const sheetName = 'Mi Quiniela';
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) {
-      console.error(`Sheet '${sheetName}' not found in Excel file.`);
+    const ws = workbook.Sheets['Cruces Proyectados'];
+    if (!ws) {
+      console.log("Sheet 'Cruces Proyectados' not found in Excel file.");
       return [];
     }
 
-    const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+    const data = xlsx.utils.sheet_to_json(ws, { header: 1 });
     const matches = [];
 
-    for (let i = 4; i < data.length; i++) {
+    // Start from row 2 (index 1 is where headers are usually, but let's just scan all rows)
+    for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      if (row && row[0] !== undefined) {
-        const matchId = parseInt(row[0]);
-        if (isNaN(matchId)) continue;
-
-        matches.push({
-          id: matchId,
-          group: row[1] ? String(row[1]).trim() : '',
-          date: row[2] ? String(row[2]).trim() : '',
-          team1: row[3] ? String(row[3]).trim() : '',
-          team2: row[5] ? String(row[5]).trim() : '',
-          result: null // 'L', 'E', 'V' or null
-        });
-      }
+      if (!row) continue;
+      
+      // Let's find the Partido ID by checking all columns, usually it's the 1st or 2nd non-empty
+      // Let's just assume row[1] is MatchId, row[2] is Team1, row[3] is 'vs', row[4] is Team2.
+      // Wait, in my test, { __EMPTY_1: 1, __EMPTY_2: "México" } means:
+      // index 0 is probably empty, index 1 is matchId, index 2 is team1, index 3 is 'vs', index 4 is team2, index 5 is sede.
+      const matchId = parseInt(row[1]);
+      if (isNaN(matchId)) continue;
+      
+      matches.push({
+        id: matchId,
+        group: 'Dieciseisavos',
+        date: row[5] ? String(row[5]).trim() : 'TBD', // using venue as date/venue info
+        team1: row[2] ? String(row[2]).trim() : '',
+        team2: row[4] ? String(row[4]).trim() : '',
+        result: null // { team1Score: null, team2Score: null } or null
+      });
     }
     return matches;
   } catch (error) {
@@ -249,7 +379,7 @@ function generateId() {
 // User functions
 async function findUserByUsername(username) {
   if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('users')
+    const snap = await firestoreDb.collection('phase2_users')
       .where('username_lower', '==', username.toLowerCase().trim()).get();
     if (snap.empty) return null;
     return snap.docs[0].data();
@@ -260,7 +390,7 @@ async function findUserByUsername(username) {
 
 async function findUserByEmail(email) {
   if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('users')
+    const snap = await firestoreDb.collection('phase2_users')
       .where('email', '==', email.toLowerCase().trim()).get();
     if (snap.empty) return null;
     return snap.docs[0].data();
@@ -271,7 +401,7 @@ async function findUserByEmail(email) {
 
 async function findUserById(userId) {
   if (dbType === 'firestore') {
-    const doc = await firestoreDb.collection('users').doc(userId).get();
+    const doc = await firestoreDb.collection('phase2_users').doc(userId).get();
     if (!doc.exists) return null;
     return doc.data();
   }
@@ -307,7 +437,7 @@ async function registerUser(username, email, password, isAdmin = false) {
 
   if (dbType === 'firestore') {
     newUser.username_lower = username.trim().toLowerCase();
-    await firestoreDb.collection('users').doc(id).set(newUser);
+    await firestoreDb.collection('phase2_users').doc(id).set(newUser);
     invalidateCache();
   } else {
     const db = readDb();
@@ -317,6 +447,34 @@ async function registerUser(username, email, password, isAdmin = false) {
   
   const { password: _, ...userWithoutPass } = newUser;
   return userWithoutPass;
+}
+
+async function registerSyncedUser(user) {
+  const newUser = {
+    id: user.id,
+    username: user.username,
+    email: user.email || '',
+    password: user.password,
+    points: 0,
+    isAdmin: !!user.isAdmin,
+    createdAt: user.createdAt || new Date().toISOString()
+  };
+
+  if (dbType === 'firestore') {
+    newUser.username_lower = user.username.toLowerCase();
+    await firestoreDb.collection('phase2_users').doc(user.id).set(newUser);
+    invalidateCache();
+  } else {
+    const db = readDb();
+    const existingIdx = db.users.findIndex(u => u.id === user.id);
+    if (existingIdx !== -1) {
+      db.users[existingIdx] = newUser;
+    } else {
+      db.users.push(newUser);
+    }
+    writeDb(db);
+  }
+  return newUser;
 }
 
 async function verifyUserPassword(username, password) {
@@ -357,7 +515,7 @@ async function getMatches() {
     if (cachedMatches) {
       return cachedMatches;
     }
-    const snap = await firestoreDb.collection('matches').orderBy('id', 'asc').get();
+    const snap = await firestoreDb.collection('phase2_matches').orderBy('id', 'asc').get();
     cachedMatches = snap.docs.map(d => d.data());
     return cachedMatches;
   }
@@ -365,9 +523,32 @@ async function getMatches() {
   return db.matches;
 }
 
+async function updateMatchTeams(matchId, team1, team2, date) {
+  cachedMatches = null;
+  invalidateCache(); // INVALIDATE CACHE ON MATCH CHANGE
+
+  if (dbType === 'firestore') {
+    const matchRef = firestoreDb.collection('phase2_matches').doc(String(matchId));
+    const matchDoc = await matchRef.get();
+    if (!matchDoc.exists) throw new Error("Partido no encontrado");
+    
+    await matchRef.update({ team1, team2, date, updatedAt: new Date().toISOString() });
+    return true;
+  }
+
+  const db = readDb();
+  const m = db.matches.find(x => x.id === parseInt(matchId));
+  if (!m) throw new Error("Partido no encontrado");
+
+  m.team1 = team1;
+  m.team2 = team2;
+  writeDb(db);
+  return true;
+}
+
 async function updateMatchResult(matchId, result) {
-  if (result !== null && result !== 'L' && result !== 'E' && result !== 'V') {
-    throw new Error("Resultado inválido. Debe ser 'L', 'E', 'V' o null");
+  if (result !== null && (typeof result !== 'object' || result.team1Score === undefined)) {
+    throw new Error("Resultado inválido. Debe ser un objeto con team1Score/team2Score o null");
   }
 
   cachedMatches = null;
@@ -375,14 +556,14 @@ async function updateMatchResult(matchId, result) {
 
   if (dbType === 'firestore') {
     // 1. Update Match Doc
-    const matchRef = firestoreDb.collection('matches').doc(String(matchId));
+    const matchRef = firestoreDb.collection('phase2_matches').doc(String(matchId));
     const matchDoc = await matchRef.get();
     if (!matchDoc.exists) throw new Error("Partido no encontrado");
     
     await matchRef.update({ result, updatedAt: new Date().toISOString() });
 
     // 2. Fetch all predictions for this match to recalculate points
-    const predsSnap = await firestoreDb.collection('predictions').where('matchId', '==', parseInt(matchId)).get();
+    const predsSnap = await firestoreDb.collection('phase2_predictions').where('matchId', '==', parseInt(matchId)).get();
     
     const batch = firestoreDb.batch();
     const userPointsChange = {};
@@ -391,8 +572,8 @@ async function updateMatchResult(matchId, result) {
       const pred = doc.data();
       const prevPoints = pred.pointsEarned || 0;
       let newPoints = 0;
-      if (result !== null && pred.prediction === result) {
-        newPoints = 3;
+      if (result !== null) {
+        newPoints = calculatePointsHelper(result, pred.prediction);
       }
       
       batch.update(doc.ref, { pointsEarned: newPoints });
@@ -406,7 +587,7 @@ async function updateMatchResult(matchId, result) {
 
     // 3. Update all users' points
     for (const [uId, diff] of Object.entries(userPointsChange)) {
-      const userRef = firestoreDb.collection('users').doc(uId);
+      const userRef = firestoreDb.collection('phase2_users').doc(uId);
       await firestoreDb.runTransaction(async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (userDoc.exists) {
@@ -445,7 +626,7 @@ async function updateMatchResult(matchId, result) {
 // Prediction functions
 async function getPredictionsByUser(userId) {
   if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('predictions').where('userId', '==', userId).get();
+    const snap = await firestoreDb.collection('phase2_predictions').where('userId', '==', userId).get();
     return snap.docs.map(d => d.data());
   }
   const db = readDb();
@@ -458,11 +639,11 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
   // depend on match results. Trends can use the 5-minute cache.
   if (dbType === 'firestore') {
     // Verify user exists
-    const userDoc = await firestoreDb.collection('users').doc(userId).get();
+    const userDoc = await firestoreDb.collection('phase2_users').doc(userId).get();
     if (!userDoc.exists) throw new Error("Usuario no encontrado");
 
     // Check if new predictions would exceed the 72 match limit
-    const predsSnap = await firestoreDb.collection('predictions').where('userId', '==', userId).get();
+    const predsSnap = await firestoreDb.collection('phase2_predictions').where('userId', '==', userId).get();
     const existingCount = predsSnap.size;
     let newCount = 0;
     for (const pred of matchPredictions) {
@@ -483,16 +664,20 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
       const matchId = parseInt(pred.matchId);
       const val = pred.prediction;
 
-      if (val !== null && val !== 'L' && val !== 'E' && val !== 'V') continue;
+      if (val !== null && (typeof val !== 'object' || val.team1Score === undefined)) continue;
 
       // Fetch match result
-      const matchDoc = await firestoreDb.collection('matches').doc(String(matchId)).get();
+      const matchDoc = await firestoreDb.collection('phase2_matches').doc(String(matchId)).get();
       if (!matchDoc.exists) continue;
       const match = matchDoc.data();
 
+      if (!isAdmin && (match.team1 === 'A definir' || match.team2 === 'A definir')) {
+        throw new Error(`El partido #${matchId} está bloqueado porque tiene equipos por definir.`);
+      }
+
       // Check if prediction already exists
       const docId = `${userId}_${matchId}`;
-      const predRef = firestoreDb.collection('predictions').doc(docId);
+      const predRef = firestoreDb.collection('phase2_predictions').doc(docId);
       const existingPredDoc = await predRef.get();
 
       if (existingPredDoc.exists && !isAdmin) {
@@ -511,8 +696,8 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
         }
       } else {
         let pointsEarned = 0;
-        if (match.result !== null && val === match.result) {
-          pointsEarned = 3;
+        if (match.result !== null) {
+          pointsEarned = calculatePointsHelper(match.result, val);
         }
         pointAdjustment += (pointsEarned - prevPoints);
 
@@ -527,7 +712,7 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
     await batch.commit();
 
     if (pointAdjustment !== 0) {
-      const userRef = firestoreDb.collection('users').doc(userId);
+      const userRef = firestoreDb.collection('phase2_users').doc(userId);
       await firestoreDb.runTransaction(async (transaction) => {
         const userDocSnapshot = await transaction.get(userRef);
         if (userDocSnapshot.exists) {
@@ -560,10 +745,14 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
       const matchId = parseInt(pred.matchId);
       const predictionVal = pred.prediction;
 
-      if (predictionVal !== null && predictionVal !== 'L' && predictionVal !== 'E' && predictionVal !== 'V') continue;
+      if (predictionVal !== null && (typeof predictionVal !== 'object' || predictionVal.team1Score === undefined)) continue;
 
       const match = db.matches.find(m => m.id === matchId);
       if (!match) continue;
+
+      if (!isAdmin && (match.team1 === 'A definir' || match.team2 === 'A definir')) {
+        throw new Error(`El partido #${matchId} está bloqueado porque tiene equipos por definir.`);
+      }
 
       const existingIndex = db.predictions.findIndex(p => p.userId === userId && p.matchId === matchId);
       if (existingIndex > -1 && !isAdmin) {
@@ -602,14 +791,10 @@ function recalculateScoresSync(db) {
 
   db.predictions.forEach(pred => {
     const match = db.matches.find(m => m.id === pred.matchId);
+    pred.pointsEarned = 0;
+    
     if (match && match.result !== null) {
-      if (pred.prediction === match.result) {
-        pred.pointsEarned = 3;
-      } else {
-        pred.pointsEarned = 0;
-      }
-    } else {
-      pred.pointsEarned = 0;
+      pred.pointsEarned = calculatePointsHelper(match.result, pred.prediction);
     }
 
     const user = db.users.find(u => u.id === pred.userId);
@@ -630,7 +815,7 @@ async function getLeaderboard() {
       return cache.leaderboard.data;
     }
 
-    const snap = await firestoreDb.collection('users').orderBy('points', 'desc').get();
+    const snap = await firestoreDb.collection('phase2_users').orderBy('points', 'desc').get();
     const leaderboard = [];
     
     for (const doc of snap.docs) {
@@ -638,7 +823,7 @@ async function getLeaderboard() {
       if (u.isAdmin || u.username === 'invitado') continue;
       
       // Fast count aggregation
-      const countSnap = await firestoreDb.collection('predictions')
+      const countSnap = await firestoreDb.collection('phase2_predictions')
         .where('userId', '==', u.id).count().get();
       
       leaderboard.push({
@@ -674,11 +859,11 @@ async function getLeaderboard() {
 // Get comparison predictions for user
 async function getUserPredictionsDetail(userId) {
   if (dbType === 'firestore') {
-    const userDoc = await firestoreDb.collection('users').doc(userId).get();
+    const userDoc = await firestoreDb.collection('phase2_users').doc(userId).get();
     if (!userDoc.exists) throw new Error("Usuario no encontrado");
     const user = userDoc.data();
 
-    const predsSnap = await firestoreDb.collection('predictions').where('userId', '==', userId).get();
+    const predsSnap = await firestoreDb.collection('phase2_predictions').where('userId', '==', userId).get();
     const predictionsMap = {};
     predsSnap.docs.forEach(d => {
       const p = d.data();
@@ -886,7 +1071,7 @@ async function savePushSubscription(userId, subscription) {
   if (!subscription || !subscription.endpoint) return;
 
   if (dbType === 'firestore') {
-    const userRef = firestoreDb.collection('users').doc(userId);
+    const userRef = firestoreDb.collection('phase2_users').doc(userId);
     await firestoreDb.runTransaction(async (transaction) => {
       const doc = await transaction.get(userRef);
       if (doc.exists) {
@@ -968,7 +1153,7 @@ async function notifyUsersForMatch(matchId, result, matchDetails) {
   const resultDesc = result === 'E' ? 'Empate' : (result === 'L' ? 'Ganó ' + matchDetails.team1 : 'Ganó ' + matchDetails.team2);
 
   if (dbType === 'firestore') {
-    const predsSnap = await firestoreDb.collection('predictions').where('matchId', '==', parseInt(matchId)).get();
+    const predsSnap = await firestoreDb.collection('phase2_predictions').where('matchId', '==', parseInt(matchId)).get();
     
     for (const doc of predsSnap.docs) {
       const pred = doc.data();
@@ -1003,7 +1188,7 @@ async function notifyUsersForMatch(matchId, result, matchDetails) {
       await firestoreDb.collection('notifications').doc(notificationId).set(notification);
 
       // Send Web Push notification
-      const userDoc = await firestoreDb.collection('users').doc(userId).get();
+      const userDoc = await firestoreDb.collection('phase2_users').doc(userId).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
         if (userData.pushSubscriptions && userData.pushSubscriptions.length > 0) {
@@ -1029,7 +1214,7 @@ async function notifyUsersForMatch(matchId, result, matchDetails) {
           }
 
           if (subChanged) {
-            await firestoreDb.collection('users').doc(userId).update({ pushSubscriptions: updatedSubscriptions });
+            await firestoreDb.collection('phase2_users').doc(userId).update({ pushSubscriptions: updatedSubscriptions });
           }
         }
       }
@@ -1102,7 +1287,7 @@ async function notifyUsersForMatch(matchId, result, matchDetails) {
 async function deleteUser(userId) {
   if (dbType === 'firestore') {
     // 1. Check if user exists and is an admin
-    const userRef = firestoreDb.collection('users').doc(userId);
+    const userRef = firestoreDb.collection('phase2_users').doc(userId);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
       throw new Error("Usuario no encontrado.");
@@ -1113,7 +1298,7 @@ async function deleteUser(userId) {
     }
 
     // 2. Delete user predictions
-    const predsSnap = await firestoreDb.collection('predictions').where('userId', '==', userId).get();
+    const predsSnap = await firestoreDb.collection('phase2_predictions').where('userId', '==', userId).get();
     if (!predsSnap.empty) {
       const batch = firestoreDb.batch();
       predsSnap.docs.forEach(doc => batch.delete(doc.ref));
@@ -1227,6 +1412,53 @@ async function deleteNotification(notificationId, userId) {
   }
 }
 
+
+async function getBonusUsers() {
+  if (dbType === 'firestore') {
+    const now = Date.now();
+    if (cache.bonus && cache.bonus.data && (now - cache.bonus.timestamp) < CACHE_TTL_MS) {
+      console.log("Serving bonus users from cache.");
+      return cache.bonus.data;
+    }
+  }
+
+  let users = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('phase2_users').get();
+    users = snap.docs.map(doc => doc.data());
+  } else {
+    users = readDb().users;
+  }
+  const nonAdminUsers = users.filter(u => !u.isAdmin && u.username !== 'invitado');
+  
+  let allPredictions = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('phase2_predictions').get();
+    allPredictions = snap.docs.map(doc => doc.data());
+  } else {
+    allPredictions = readDb().predictions || [];
+  }
+
+  const bonusPoints = nonAdminUsers.map(user => {
+    const userPreds = allPredictions.filter(p => p.userId === user.id);
+    const bonusPreds = userPreds.filter(p => p.pointsEarned === 4);
+    return {
+      id: user.id,
+      username: user.username,
+      bonus: bonusPreds.length,
+      bonusDetails: bonusPreds.map(p => ({ matchId: p.matchId, prediction: p.prediction }))
+    };
+  }).filter(u => u.bonus > 0).sort((a, b) => b.bonus - a.bonus || a.username.localeCompare(b.username));
+
+  if (dbType === 'firestore') {
+    if (!cache.bonus) cache.bonus = {};
+    cache.bonus.data = bonusPoints;
+    cache.bonus.timestamp = Date.now();
+  }
+
+  return bonusPoints;
+}
+
 async function getMatchTrends() {
   if (dbType === 'firestore') {
     const now = Date.now();
@@ -1256,7 +1488,7 @@ async function getMatchTrends() {
   
   if (dbType === 'firestore') {
     // Fetch users to map userId -> username
-    const usersSnap = await firestoreDb.collection('users').get();
+    const usersSnap = await firestoreDb.collection('phase2_users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
@@ -1266,7 +1498,7 @@ async function getMatchTrends() {
     
     // Fetch predictions for the matchIds
     for (const mId of matchIds) {
-      const predsSnap = await firestoreDb.collection('predictions')
+      const predsSnap = await firestoreDb.collection('phase2_predictions')
         .where('matchId', '==', mId).get();
       predsSnap.docs.forEach(doc => {
         predictions.push(doc.data());
@@ -1343,7 +1575,7 @@ async function getStreaks() {
 
   let users = [];
   if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('users').get();
+    const snap = await firestoreDb.collection('phase2_users').get();
     users = snap.docs.map(doc => doc.data());
   } else {
     users = readDb().users;
@@ -1352,7 +1584,7 @@ async function getStreaks() {
   
   let allPredictions = [];
   if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('predictions').get();
+    const snap = await firestoreDb.collection('phase2_predictions').get();
     allPredictions = snap.docs.map(doc => doc.data());
   } else {
     allPredictions = readDb().predictions || [];
@@ -1416,152 +1648,12 @@ async function getStreaks() {
   return resultData;
 }
 
-async function calculateWinningProbabilities() {
-  // 1. Fetch matches
-  const matches = await getMatches();
-  const remainingMatches = matches.filter(m => m.result === null);
-  
-  // 2. Fetch users (non-admin, excluding guest user 'invitado')
-  let users = [];
-  if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('users').get();
-    users = snap.docs.map(doc => doc.data());
-  } else {
-    users = readDb().users || [];
-  }
-  const participants = users.filter(u => !u.isAdmin && u.username !== 'invitado');
-
-  // 3. Fetch all predictions
-  let allPredictions = [];
-  if (dbType === 'firestore') {
-    const snap = await firestoreDb.collection('predictions').get();
-    allPredictions = snap.docs.map(doc => doc.data());
-  } else {
-    allPredictions = readDb().predictions || [];
-  }
-
-  // 4. If there are no remaining matches, the leader wins with 100%
-  if (remainingMatches.length === 0) {
-    const sorted = [...participants].sort((a, b) => (b.points || 0) - (a.points || 0));
-    const maxPoints = sorted.length > 0 ? (sorted[0].points || 0) : 0;
-    const leaders = sorted.filter(u => (u.points || 0) === maxPoints);
-    return participants.map(u => {
-      const isLeader = leaders.some(l => l.id === u.id);
-      return {
-        id: u.id,
-        username: u.username,
-        points: u.points || 0,
-        probability: isLeader ? parseFloat((100 / leaders.length).toFixed(2)) : 0,
-        hasChance: isLeader
-      };
-    });
-  }
-
-  // 5. Deterministic feasibility check for each participant
-  const predMap = {};
-  participants.forEach(u => {
-    predMap[u.id] = {};
-  });
-  allPredictions.forEach(p => {
-    if (predMap[p.userId]) {
-      predMap[p.userId][p.matchId] = p.prediction;
-    }
-  });
-
-  const hasChanceMap = {};
-  participants.forEach(u => {
-    const currentPointsU = u.points || 0;
-    let predictedRemainingCountU = 0;
-    remainingMatches.forEach(m => {
-      if (predMap[u.id][m.id] !== undefined && predMap[u.id][m.id] !== null) {
-        predictedRemainingCountU++;
-      }
-    });
-    const maxScoreU = currentPointsU + 3 * predictedRemainingCountU;
-
-    let canWin = true;
-    for (const v of participants) {
-      if (v.id === u.id) continue;
-      const currentPointsV = v.points || 0;
-      let sharedPredictionsCount = 0;
-      remainingMatches.forEach(m => {
-        const predU = predMap[u.id][m.id];
-        const predV = predMap[v.id][m.id];
-        if (predU !== undefined && predU !== null && predV === predU) {
-          sharedPredictionsCount++;
-        }
-      });
-      const scoreVUnderUBest = currentPointsV + 3 * sharedPredictionsCount;
-      if (maxScoreU < scoreVUnderUBest) {
-        canWin = false;
-        break;
-      }
-    }
-    hasChanceMap[u.id] = canWin;
-  });
-
-  // 6. Monte Carlo Simulation
-  const numSimulations = 10000;
-  const winCounts = {};
-  participants.forEach(u => {
-    winCounts[u.id] = 0;
-  });
-
-  const remainingPredsList = {};
-  participants.forEach(u => {
-    remainingPredsList[u.id] = remainingMatches.map(m => predMap[u.id][m.id]);
-  });
-
-  const outcomes = ['L', 'E', 'V'];
-
-  for (let sim = 0; sim < numSimulations; sim++) {
-    const simulatedOutcomes = remainingMatches.map(() => outcomes[Math.floor(Math.random() * 3)]);
-
-    let maxScore = -1;
-    let leaders = [];
-
-    participants.forEach(u => {
-      let simScore = u.points || 0;
-      const uPreds = remainingPredsList[u.id];
-      for (let i = 0; i < simulatedOutcomes.length; i++) {
-        if (uPreds[i] === simulatedOutcomes[i]) {
-          simScore += 3;
-        }
-      }
-
-      if (simScore > maxScore) {
-        maxScore = simScore;
-        leaders = [u.id];
-      } else if (simScore === maxScore) {
-        leaders.push(u.id);
-      }
-    });
-
-    const tieCount = leaders.length;
-    leaders.forEach(leadId => {
-      winCounts[leadId] += 1 / tieCount;
-    });
-  }
-
-  // 7. Compile results
-  return participants.map(u => {
-    const probability = (winCounts[u.id] / numSimulations) * 100;
-    return {
-      id: u.id,
-      username: u.username,
-      points: u.points || 0,
-      probability: parseFloat(probability.toFixed(2)),
-      hasChance: hasChanceMap[u.id]
-    };
-  }).sort((a, b) => b.probability - a.probability || b.points - a.points || a.username.localeCompare(b.username));
-}
-
 async function resetUserPassword(userId, newPassword) {
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(newPassword, salt);
 
   if (dbType === 'firestore') {
-    const userRef = firestoreDb.collection('users').doc(userId);
+    const userRef = firestoreDb.collection('phase2_users').doc(userId);
     const userDoc = await userRef.get();
     if (!userDoc.exists) throw new Error("Usuario no encontrado.");
     
@@ -1576,22 +1668,76 @@ async function resetUserPassword(userId, newPassword) {
   }
 }
 
+async function addMatchesBulk(newMatches) {
+  if (dbType === 'firestore') {
+    const batch = firestoreDb.batch();
+    newMatches.forEach(m => {
+      const docRef = firestoreDb.collection('phase2_matches').doc(String(m.id));
+      batch.set(docRef, m);
+    });
+    await batch.commit();
+    cache.matches.data = null;
+  } else {
+    let db = readDb();
+    db.matches = db.matches.concat(newMatches);
+    writeDb(db);
+  }
+}
+
+
+async function getConfig() {
+  if (dbType === 'firestore') {
+    const doc = await firestoreDb.collection('phase2_config').doc('global').get();
+    if (!doc.exists) {
+      await firestoreDb.collection('phase2_config').doc('global').set({ predictionsPaused: false });
+      return { predictionsPaused: false };
+    }
+    return doc.data();
+  }
+  const db = readDb();
+  if (!db.config) {
+    db.config = { predictionsPaused: false };
+    writeDb(db);
+  }
+  return db.config;
+}
+
+async function togglePredictionsPaused() {
+  const current = await getConfig();
+  const newVal = !current.predictionsPaused;
+  if (dbType === 'firestore') {
+    await firestoreDb.collection('phase2_config').doc('global').set({ predictionsPaused: newVal });
+    return { predictionsPaused: newVal };
+  }
+  const db = readDb();
+  if (!db.config) db.config = {};
+  db.config.predictionsPaused = newVal;
+  writeDb(db);
+  return db.config;
+}
+
 module.exports = {
+  getConfig,
+  togglePredictionsPaused,
+  addMatchesBulk,
   initDb,
+  forceResetMatches32,
   getUsers: async () => {
     if (dbType === 'firestore') {
-      const snap = await firestoreDb.collection('users').get();
+      const snap = await firestoreDb.collection('phase2_users').get();
       return snap.docs.map(doc => doc.data());
     }
     return readDb().users;
   },
   getMatches,
+  updateMatchTeams,
   updateMatchResult,
   getPredictionsByUser,
   savePredictions,
   getLeaderboard,
   getUserPredictionsDetail,
   registerUser,
+  registerSyncedUser,
   verifyUserPassword,
   findUserByUsername,
   findUserByEmail,
@@ -1605,7 +1751,7 @@ module.exports = {
   deleteNotification,
   getMatchTrends,
   getStreaks,
-  calculateWinningProbabilities,
+  getBonusUsers,
   resetUserPassword,
   getDbType: () => dbType
 };
