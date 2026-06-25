@@ -96,16 +96,7 @@
     <main class="app-main">
       <!-- Tabs Selector (moved to bottom navigation bar) -->
 
-      <!-- View 1: Groups Dashboard -->
-      <section id="view-groups" class="tab-view">
-        <div style="margin-top: 1.5rem;"></div>
-        
-        <div id="groups-grid" class="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-          <div class="loading-spinner">
-            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando grupos del mundial...
-          </div>
-        </div>
-      </section>
+
 
       <!-- View 2: Leaderboard -->
       <section id="view-leaderboard" class="tab-view active">
@@ -169,27 +160,7 @@
         </div>
       </section>
 
-      <!-- View 4: Goleadores -->
-      <section id="view-goleadores" class="tab-view">
-        <!-- Spacer -->
-        <div style="margin-top: 1.5rem;"></div>
 
-        <!-- Goleadores Table Card -->
-        <div class="table-card glass-panel">
-          <table class="leaderboard-table">
-            <thead>
-              <tr>
-                <th>Goleador</th>
-                <th>Equipo</th>
-                <th style="width: 90px; text-align: center;">Goles</th>
-              </tr>
-            </thead>
-            <tbody id="goleadores-body">
-              <!-- Injected dynamically via app.js -->
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       <!-- View 5: Notifications -->
       <section id="view-notifications" class="tab-view">
@@ -225,13 +196,6 @@
             <h3>Resultados Oficiales</h3>
             <p>Ingresa los resultados reales de los partidos de la Fase de Grupos. Las puntuaciones de todos los participantes se recalcularán al instante.</p>
           </div>
-          <div class="admin-sync-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-width: 280px; box-sizing: border-box;">
-            <h4 style="margin: 0; color: var(--gold); display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;"><i class="fa-solid fa-arrows-spin"></i> Sincronización FIFA</h4>
-            <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.3;">Sincroniza los partidos jugados en tiempo real usando los resultados oficiales de la FIFA.</p>
-            <button id="sync-fifa-btn" class="btn btn-primary" onclick="syncFifaScores()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1rem; font-size: 0.85rem; cursor: pointer;">
-              <i class="fa-solid fa-arrows-rotate"></i> Sincronizar Ahora
-            </button>
-          </div>
         </div>
 
         <!-- Admin Matches List -->
@@ -266,10 +230,6 @@
 
     <!-- Bottom Navigation Bar -->
     <nav id="bottom-nav-bar" class="bottom-nav">
-      <button id="tab-groups" class="tab-btn" onclick="switchTab('groups')">
-        <i class="fa-solid fa-table"></i>
-        <span>Grupos</span>
-      </button>
       <button id="tab-leaderboard" class="tab-btn active" onclick="switchTab('leaderboard')">
         <i class="fa-solid fa-ranking-star"></i>
         <span>Posición</span>
@@ -277,10 +237,6 @@
       <button id="tab-trends" class="tab-btn" onclick="switchTab('trends')">
         <i class="fa-solid fa-chart-simple"></i>
         <span>Tendencia</span>
-      </button>
-      <button id="tab-goleadores" class="tab-btn" onclick="switchTab('goleadores')">
-        <i class="fa-solid fa-medal"></i>
-        <span>Goles</span>
       </button>
       <button id="tab-notifications" class="tab-btn" onclick="switchTab('notifications')">
         <div style="position: relative; display: inline-flex; align-items: center; justify-content: center;">

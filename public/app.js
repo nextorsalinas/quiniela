@@ -248,7 +248,8 @@ function showAppDashboard() {
     document.getElementById('admin-badge').style.display = 'none';
     document.getElementById('tab-admin').style.display = 'none';
   }
-  document.getElementById('tab-groups').style.display = 'flex';
+  const tabGroups = document.getElementById('tab-groups');
+  if (tabGroups) tabGroups.style.display = 'flex';
 
   // Show persistent predict win floating button
   const predictBtn = document.getElementById('floating-predict-btn');
@@ -413,17 +414,16 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-view').forEach(view => {
     view.classList.remove('active');
   });
-  document.getElementById(`view-${tabId}`).classList.add('active');
+  const targetView = document.getElementById(`view-${tabId}`);
+  if (targetView) {
+    targetView.classList.add('active');
+  }
 
   // Fetch data depending on tab
-  if (tabId === 'groups') {
-    loadGroupsDashboard();
-  } else if (tabId === 'leaderboard') {
+  if (tabId === 'leaderboard') {
     loadLeaderboard();
   } else if (tabId === 'trends') {
     loadVotingTrends();
-  } else if (tabId === 'goleadores') {
-    loadGoleadores();
   } else if (tabId === 'notifications') {
     loadNotifications();
   } else if (tabId === 'admin') {
