@@ -375,6 +375,17 @@ app.get('/api/matches/trends', authenticate, async (req, res) => {
   }
 });
 
+// Get ALL matches voting trends (Phase 1 from beginning)
+app.get('/api/matches/trends/all', authenticate, async (req, res) => {
+  try {
+    const trends = await dbHelper.getMatchTrendsAll();
+    res.json(trends);
+  } catch (error) {
+    console.error("Error getting all match trends:", error);
+    res.status(500).json({ error: "Error al obtener todas las tendencias de votación." });
+  }
+});
+
 app.get('/api/streaks', authenticate, async (req, res) => {
   try {
     const streaks = await dbHelper.getStreaks();

@@ -1318,6 +1318,71 @@ async function getMatchTrends() {
   return trends;
 }
 
+async function getMatchTrendsAll() {
+  const matches = await getMatches();
+  const sortedMatches = matches.sort((a, b) => a.id - b.id);
+  if (sortedMatches.length === 0) {
+    return [];
+  }
+  
+  const matchIds = sortedMatches.map(m => m.id);
+  let predictions = [];
+  let usersMap = {};
+  
+  if (dbType === 'firestore') {
+    const usersSnap = await firestoreDb.collection('users').get();
+    usersSnap.docs.forEach(doc => {
+      const u = doc.data();
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    
+    const predsSnap = await firestoreDb.collection('predictions').get();
+    predsSnap.docs.forEach(doc => {
+      predictions.push(doc.data());
+    });
+  } else {
+    const db = readDb();
+    (db.users || []).forEach(u => {
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    predictions = (db.predictions || []);
+  }
+  
+  const trends = sortedMatches.map(match => {
+    const matchPreds = predictions.filter(p => p.matchId === match.id);
+    
+    const stats = {
+      L: { count: 0, users: [] },
+      E: { count: 0, users: [] },
+      V: { count: 0, users: [] }
+    };
+    
+    matchPreds.forEach(p => {
+      const username = usersMap[p.userId];
+      if (username && stats[p.prediction]) {
+        stats[p.prediction].count++;
+        stats[p.prediction].users.push(username);
+      }
+    });
+    
+    return {
+      matchId: match.id,
+      team1: match.team1,
+      team2: match.team2,
+      group: match.group,
+      date: match.date,
+      result: match.result,
+      stats
+    };
+  });
+  
+  return trends;
+}
+
 async function getStreaks() {
   if (dbType === 'firestore') {
     const now = Date.now();
@@ -1604,6 +1669,7 @@ module.exports = {
   getTopScorers,
   deleteNotification,
   getMatchTrends,
+  getMatchTrendsAll,
   getStreaks,
   calculateWinningProbabilities,
   resetUserPassword,

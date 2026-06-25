@@ -2284,3 +2284,45 @@ input[type=number] { -moz-appearance: textfield; }
 .auth-card.register-mode .btn-primary:hover {
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
 }
+
+/* FLOATING TRENDS BUTTON (Leaderboard view only) */
+.floating-trends-btn {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1400;
+  background: linear-gradient(135deg, var(--gold), #7F00B2);
+  color: #070913;
+  border: 1px solid rgba(249, 136, 255, 0.4);
+  border-right: none;
+  border-radius: 20px 0 0 20px;
+  padding: 0.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: -4px 0 20px rgba(249, 136, 255, 0.35);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.floating-trends-btn:hover {
+  transform: translateY(-50%) scale(1.05);
+  padding-left: 1.5rem;
+  box-shadow: -6px 0 25px rgba(249, 136, 255, 0.5);
+  filter: brightness(1.15);
+}
+
+.floating-trends-btn i {
+  font-size: 1.1rem;
+}
+
+.floating-trends-btn .btn-label {
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
