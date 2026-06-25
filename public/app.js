@@ -250,6 +250,10 @@ function showAppDashboard() {
   }
   document.getElementById('tab-groups').style.display = 'flex';
 
+  // Show persistent predict win floating button
+  const predictBtn = document.getElementById('floating-predict-btn');
+  if (predictBtn) predictBtn.style.display = 'flex';
+
   // Initial data fetch
   switchTab('leaderboard');
   checkAnnouncementModal();
@@ -2188,4 +2192,80 @@ async function adminResetUserPassword(userId, username) {
     console.error("Error reseting password:", error);
     showToast("Error de conexión al restablecer contraseña", "error");
   }
+}
+
+async function openProbabilityModal() {
+  const modal = document.getElementById('probability-modal');
+  const loading = document.getElementById('probability-loading');
+  const list = document.getElementById('probability-list');
+  if (!modal || !loading || !list) return;
+
+  list.innerHTML = '';
+  loading.style.display = 'block';
+  modal.style.display = 'flex';
+
+  try {
+    const response = await fetch(`${API_URL}/predictions/probability`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+
+    const data = await response.json();
+    loading.style.display = 'none';
+
+    if (!response.ok) {
+      showToast(data.error || "No se pudieron calcular las probabilidades", "error");
+      closeProbabilityModal();
+      return;
+    }
+
+    if (data.length === 0) {
+      list.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 1.5rem;">No hay usuarios suficientes.</li>`;
+      return;
+    }
+
+    list.innerHTML = data.map((user, idx) => {
+      let colorClass = '';
+      let badgeStyle = '';
+      let pctText = '';
+
+      if (user.hasChance) {
+        colorClass = 'color: #34d399; font-weight: 700;';
+        badgeStyle = 'background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399;';
+        if (user.probability === 0) {
+          pctText = '<0.01%';
+        } else {
+          pctText = `${user.probability.toFixed(2)}%`;
+        }
+      } else {
+        colorClass = 'color: #f87171;';
+        badgeStyle = 'background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171;';
+        pctText = '0.00%';
+      }
+
+      return `
+        <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.04); transition: transform 0.2s ease;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-family: var(--font-title); font-weight: 800; font-size: 0.85rem; color: var(--gold); width: 22px; text-align: center;">${idx + 1}°</span>
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: white;">${user.username}</span>
+              <span style="font-size: 0.7rem; color: var(--color-text-muted);">${user.points} pts</span>
+            </div>
+          </div>
+          <span style="font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 20px; font-weight: 800; font-family: var(--font-title); ${badgeStyle}">
+            ${pctText}
+          </span>
+        </li>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error("Error fetching winning probabilities:", error);
+    showToast("Error de conexión al obtener las probabilidades", "error");
+    closeProbabilityModal();
+  }
+}
+
+function closeProbabilityModal() {
+  const modal = document.getElementById('probability-modal');
+  if (modal) modal.style.display = 'none';
 }

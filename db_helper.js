@@ -1414,6 +1414,146 @@ async function getStreaks() {
   return resultData;
 }
 
+async function calculateWinningProbabilities() {
+  // 1. Fetch matches
+  const matches = await getMatches();
+  const remainingMatches = matches.filter(m => m.result === null);
+  
+  // 2. Fetch users (non-admin, excluding guest user 'invitado')
+  let users = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('users').get();
+    users = snap.docs.map(doc => doc.data());
+  } else {
+    users = readDb().users || [];
+  }
+  const participants = users.filter(u => !u.isAdmin && u.username !== 'invitado');
+
+  // 3. Fetch all predictions
+  let allPredictions = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('predictions').get();
+    allPredictions = snap.docs.map(doc => doc.data());
+  } else {
+    allPredictions = readDb().predictions || [];
+  }
+
+  // 4. If there are no remaining matches, the leader wins with 100%
+  if (remainingMatches.length === 0) {
+    const sorted = [...participants].sort((a, b) => (b.points || 0) - (a.points || 0));
+    const maxPoints = sorted.length > 0 ? (sorted[0].points || 0) : 0;
+    const leaders = sorted.filter(u => (u.points || 0) === maxPoints);
+    return participants.map(u => {
+      const isLeader = leaders.some(l => l.id === u.id);
+      return {
+        id: u.id,
+        username: u.username,
+        points: u.points || 0,
+        probability: isLeader ? parseFloat((100 / leaders.length).toFixed(2)) : 0,
+        hasChance: isLeader
+      };
+    });
+  }
+
+  // 5. Deterministic feasibility check for each participant
+  const predMap = {};
+  participants.forEach(u => {
+    predMap[u.id] = {};
+  });
+  allPredictions.forEach(p => {
+    if (predMap[p.userId]) {
+      predMap[p.userId][p.matchId] = p.prediction;
+    }
+  });
+
+  const hasChanceMap = {};
+  participants.forEach(u => {
+    const currentPointsU = u.points || 0;
+    let predictedRemainingCountU = 0;
+    remainingMatches.forEach(m => {
+      if (predMap[u.id][m.id] !== undefined && predMap[u.id][m.id] !== null) {
+        predictedRemainingCountU++;
+      }
+    });
+    const maxScoreU = currentPointsU + 3 * predictedRemainingCountU;
+
+    let canWin = true;
+    for (const v of participants) {
+      if (v.id === u.id) continue;
+      const currentPointsV = v.points || 0;
+      let sharedPredictionsCount = 0;
+      remainingMatches.forEach(m => {
+        const predU = predMap[u.id][m.id];
+        const predV = predMap[v.id][m.id];
+        if (predU !== undefined && predU !== null && predV === predU) {
+          sharedPredictionsCount++;
+        }
+      });
+      const scoreVUnderUBest = currentPointsV + 3 * sharedPredictionsCount;
+      if (maxScoreU < scoreVUnderUBest) {
+        canWin = false;
+        break;
+      }
+    }
+    hasChanceMap[u.id] = canWin;
+  });
+
+  // 6. Monte Carlo Simulation
+  const numSimulations = 10000;
+  const winCounts = {};
+  participants.forEach(u => {
+    winCounts[u.id] = 0;
+  });
+
+  const remainingPredsList = {};
+  participants.forEach(u => {
+    remainingPredsList[u.id] = remainingMatches.map(m => predMap[u.id][m.id]);
+  });
+
+  const outcomes = ['L', 'E', 'V'];
+
+  for (let sim = 0; sim < numSimulations; sim++) {
+    const simulatedOutcomes = remainingMatches.map(() => outcomes[Math.floor(Math.random() * 3)]);
+
+    let maxScore = -1;
+    let leaders = [];
+
+    participants.forEach(u => {
+      let simScore = u.points || 0;
+      const uPreds = remainingPredsList[u.id];
+      for (let i = 0; i < simulatedOutcomes.length; i++) {
+        if (uPreds[i] === simulatedOutcomes[i]) {
+          simScore += 3;
+        }
+      }
+
+      if (simScore > maxScore) {
+        maxScore = simScore;
+        leaders = [u.id];
+      } else if (simScore === maxScore) {
+        leaders.push(u.id);
+      }
+    });
+
+    const tieCount = leaders.length;
+    leaders.forEach(leadId => {
+      winCounts[leadId] += 1 / tieCount;
+    });
+  }
+
+  // 7. Compile results
+  return participants.map(u => {
+    const probability = (winCounts[u.id] / numSimulations) * 100;
+    return {
+      id: u.id,
+      username: u.username,
+      points: u.points || 0,
+      probability: parseFloat(probability.toFixed(2)),
+      hasChance: hasChanceMap[u.id]
+    };
+  }).sort((a, b) => b.probability - a.probability || b.points - a.points || a.username.localeCompare(b.username));
+}
+
 async function resetUserPassword(userId, newPassword) {
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(newPassword, salt);
@@ -1463,6 +1603,7 @@ module.exports = {
   deleteNotification,
   getMatchTrends,
   getStreaks,
+  calculateWinningProbabilities,
   resetUserPassword,
   getDbType: () => dbType
 };

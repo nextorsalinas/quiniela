@@ -321,6 +321,17 @@ app.get('/api/leaderboard', authenticate, async (req, res) => {
   }
 });
 
+// Get winning probabilities
+app.get('/api/predictions/probability', authenticate, async (req, res) => {
+  try {
+    const probability = await dbHelper.calculateWinningProbabilities();
+    res.json(probability);
+  } catch (error) {
+    console.error("Error calculating probability:", error);
+    res.status(500).json({ error: "Error al calcular las probabilidades de ganar: " + error.message });
+  }
+});
+
 // Get matches voting trends (next 2 unplayed matches)
 app.get('/api/matches/trends', authenticate, async (req, res) => {
   try {
