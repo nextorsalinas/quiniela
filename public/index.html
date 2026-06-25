@@ -170,12 +170,6 @@
         <!-- Spacer -->
         <div style="margin-top: 1.5rem;"></div>
 
-        <!-- Floating Trends Button -->
-        <button id="floating-trends-btn" class="floating-trends-btn" onclick="openCompleteTrendsModal()" aria-label="Ver tendencias de votación de Fase 1">
-          <i class="fa-solid fa-chart-pie"></i>
-          <span class="btn-label">Tendencias</span>
-        </button>
-
         <!-- Voting Trends Section -->
         <div id="trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none;">
           <h3 onclick="toggleTrendsGrid()" style="margin: 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none;">
@@ -424,6 +418,11 @@
         <span>Admin-2</span>
       </button>
     </nav>
+    <!-- Floating Trends Button -->
+    <button id="floating-trends-btn" class="floating-trends-btn" onclick="openCompleteTrendsModal()" aria-label="Ver tendencias de votación de Fase 1" style="display: none;">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span class="btn-label">Tendencias</span>
+    </button>
   </div>
 
   <!-- PWA INSTALL MODAL -->
@@ -603,6 +602,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=3.30"></script>
+  <script src="app.js?v=3.31"></script>
 </body>
 </html>

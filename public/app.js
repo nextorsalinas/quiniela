@@ -432,6 +432,12 @@ function switchTab(tabId) {
     targetView.classList.add('active');
   }
 
+  // Toggle floating trends button visibility (only show on leaderboard)
+  const trendsBtn = document.getElementById('floating-trends-btn');
+  if (trendsBtn) {
+    trendsBtn.style.display = (tabId === 'leaderboard') ? 'flex' : 'none';
+  }
+
   // Fetch data depending on tab
   if (tabId === 'leaderboard') {
     loadLeaderboard();
