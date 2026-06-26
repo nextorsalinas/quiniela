@@ -1453,10 +1453,8 @@ window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
 };
 
 function checkAnnouncementModal() {
-  if (state.currentUser) {
-    const modal = document.getElementById('info-announcement-modal');
-    if (modal) modal.style.display = 'flex';
-  }
+  // Modal desactivado
+  return;
 }
 
 function closeAnnouncementModal() {
