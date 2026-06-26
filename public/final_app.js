@@ -2239,12 +2239,12 @@ window.openCompleteTrendsModal = async function() {
 
   modal.style.display = 'flex';
   grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-muted);">
-    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #10b981; margin-bottom: 0.5rem;"></i>
-    <p>Cargando tendencias de la Quiniela...</p>
+    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--gold); margin-bottom: 0.5rem;"></i>
+    <p>Cargando tendencias...</p>
   </div>`;
 
   try {
-    const res = await fetch(`/api/matches/trends/all`, {
+    const res = await fetch(`${API_URL}/matches/trends/all`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
     if (!res.ok) throw new Error("Error loading complete trends");
@@ -2259,7 +2259,7 @@ window.openCompleteTrendsModal = async function() {
       return `
         <div class="trend-card" style="${isPlayed ? 'opacity: 0.8;' : ''}">
           <div class="trend-teams-row" style="justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
-            <span style="font-weight: 700; font-size: 0.75rem; color: #10b981;">${match.group} - Partido ${match.matchId} ${resultBadge}</span>
+            <span style="font-weight: 700; font-size: 0.75rem; color: var(--gold);">${match.group} - Partido ${match.matchId} ${resultBadge}</span>
           </div>
           <div class="trend-teams-row" style="font-size: 0.8rem; font-weight: 600;">
             <span>${match.team1 || 'Por definir'}</span>
@@ -2318,7 +2318,7 @@ window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
   } else {
     votersList.innerHTML = voters.map(username => `
       <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize;">
-        <i class="fa-solid fa-user" style="color: #10b981; margin-right: 0.4rem; font-size: 0.8rem;"></i> ${username}
+        <i class="fa-solid fa-user" style="color: var(--gold); margin-right: 0.4rem; font-size: 0.8rem;"></i> ${username}
       </li>
     `).join('');
   }
