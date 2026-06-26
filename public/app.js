@@ -2705,8 +2705,20 @@ function renderFinalMatchesGrid() {
   const grid = document.getElementById('matches-grid-final');
   if (!grid) return;
 
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+
   const matchesHtml = statePhase2.matches.map(match => {
     const userPrediction = statePhase2.predictions[match.id] || null;
+    const isSaved = !!userPrediction;
+    
+    if (!isSaved && !statePhase2.tempPredictions[match.id]) {
+      statePhase2.tempPredictions[match.id] = { team1Score: '', team2Score: '', winner: null };
+    }
+    const temp = statePhase2.tempPredictions[match.id] || {};
+    const activePrediction = isSaved ? userPrediction : temp;
+
     const isCompleted = match.result !== null;
     const flag1 = match.team1.substring(0, 3);
     const flag2 = match.team2.substring(0, 3);
@@ -2739,33 +2751,54 @@ function renderFinalMatchesGrid() {
 
     const hasTBD = match.team1 === 'A definir' || match.team2 === 'A definir';
     const isPaused = statePhase2.config && statePhase2.config.predictionsPaused;
-    const disabled = isCompleted || isPaused || hasTBD ? 'disabled' : '';
-    const val1 = userPrediction ? userPrediction.team1Score : '';
-    const val2 = userPrediction ? userPrediction.team2Score : '';
-    const selL = (userPrediction && userPrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-    const selV = (userPrediction && userPrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    const disabled = isSaved || isCompleted || isPaused || hasTBD ? 'disabled' : '';
+    const val1 = activePrediction.team1Score !== undefined ? activePrediction.team1Score : '';
+    const val2 = activePrediction.team2Score !== undefined ? activePrediction.team2Score : '';
+    const selL = (activePrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    const selV = (activePrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
     if (!isCompleted && hasTBD) {
       resultBannerHtml = `<div class="real-result-banner pending" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #f87171;"><span><i class="fa-solid fa-lock"></i> Bloqueado (Equipos por definir)</span></div>`;
     }
 
+    const clickL = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'L')"` : '';
+    const clickV = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'V')"` : '';
+
+    let confirmBtnHtml = '';
+    if (!isSaved && !isCompleted && !isPaused && !hasTBD) {
+      confirmBtnHtml = `
+        <div style="margin-top: 1rem; text-align: center;">
+          <button class="btn btn-primary" onclick="confirmFinalPrediction(${match.id})" style="width: 100%; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #d97706;">
+            <i class="fa-solid fa-circle-check"></i> Confirmar Pronóstico
+          </button>
+        </div>
+      `;
+    } else if (isSaved && !isCompleted) {
+      confirmBtnHtml = `
+        <div style="margin-top: 0.75rem; text-align: center; color: var(--gold); font-size: 0.8rem; font-weight: 600; background: rgba(245, 158, 11, 0.08); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+          <i class="fa-solid fa-lock"></i> Pronóstico Confirmado (Bloqueado)
+        </div>
+      `;
+    }
+
     return `
-      <div class="match-card ${userPrediction ? 'completed' : ''}" id="match-card-final-${match.id}">
+      <div class="match-card ${isSaved ? 'completed' : ''}" id="match-card-final-${match.id}">
         <div class="match-meta"><span class="match-group">${match.group}</span><span class="match-date">${match.date}</span></div>
         <div class="match-teams-layout" style="margin-bottom: 1rem;">
           <div class="team-row" style="justify-content: space-between;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'L')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selL}">
+            <div class="team-info" ${clickL} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selL}">
               <div class="team-flag-mock">${flag1}</div><span class="team-name">${match.team1}</span>
             </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" oninput="updateTempScore(${match.id}, 1, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
           <div class="team-row" style="justify-content: space-between; margin-top: 0.5rem;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'V')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selV}">
+            <div class="team-info" ${clickV} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selV}">
               <div class="team-flag-mock">${flag2}</div><span class="team-name">${match.team2}</span>
             </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" oninput="updateTempScore(${match.id}, 2, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
         </div>
+        ${confirmBtnHtml}
         ${resultBannerHtml}
       </div>
     `;
@@ -2782,36 +2815,77 @@ function renderFinalMatchesGrid() {
 }
 
 window.selectFinalWinner = function(matchId, winner) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
-  if (!statePhase2.predictions[matchId]) statePhase2.predictions[matchId] = {};
-  statePhase2.predictions[matchId].winner = winner;
-  if (v1 !== '' && v2 !== '') {
-      saveFinalPrediction(matchId);
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+  if (!statePhase2.tempPredictions[matchId]) {
+    statePhase2.tempPredictions[matchId] = { team1Score: '', team2Score: '', winner: null };
+  }
+  statePhase2.tempPredictions[matchId].winner = winner;
+  renderFinalMatchesGrid();
+};
+
+window.updateTempScore = function(matchId, teamIndex, value) {
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+  if (!statePhase2.tempPredictions[matchId]) {
+    statePhase2.tempPredictions[matchId] = { team1Score: '', team2Score: '', winner: null };
+  }
+  if (teamIndex === 1) {
+    statePhase2.tempPredictions[matchId].team1Score = value;
   } else {
-      renderFinalMatchesGrid();
+    statePhase2.tempPredictions[matchId].team2Score = value;
+  }
+  
+  // Auto-select winner if clear (not a draw)
+  const t1 = statePhase2.tempPredictions[matchId].team1Score;
+  const t2 = statePhase2.tempPredictions[matchId].team2Score;
+  if (t1 !== '' && t2 !== '') {
+    const s1 = parseInt(t1);
+    const s2 = parseInt(t2);
+    if (!isNaN(s1) && !isNaN(s2)) {
+      if (s1 > s2) {
+        statePhase2.tempPredictions[matchId].winner = 'L';
+      } else if (s1 < s2) {
+        statePhase2.tempPredictions[matchId].winner = 'V';
+      }
+    }
   }
 };
 
-async function saveFinalPrediction(matchId) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
+window.confirmFinalPrediction = async function(matchId) {
+  const v1 = document.getElementById(`pred1-final-${matchId}`).value.trim();
+  const v2 = document.getElementById(`pred2-final-${matchId}`).value.trim();
   
-  if (v1 === '' || v2 === '') return;
+  if (v1 === '' || v2 === '') {
+    showToast("Debes ingresar el marcador de ambos equipos.", "warning");
+    return;
+  }
   
   const score1 = parseInt(v1);
   const score2 = parseInt(v2);
-  if (isNaN(score1) || isNaN(score2)) return;
+  if (isNaN(score1) || isNaN(score2)) {
+    showToast("Los marcadores deben ser números válidos.", "warning");
+    return;
+  }
 
-  const pred = statePhase2.predictions[matchId] || {};
-  const winner = pred.winner || (score1 > score2 ? 'L' : (score1 < score2 ? 'V' : null));
+  const temp = (statePhase2.tempPredictions && statePhase2.tempPredictions[matchId]) || {};
+  let winner = temp.winner;
+  
+  if (score1 > score2) {
+    winner = 'L';
+  } else if (score1 < score2) {
+    winner = 'V';
+  }
   
   if (score1 === score2 && !winner) {
     showToast("Para empates, debes tocar el nombre del equipo que avanza.", "warning");
     return;
   }
 
-  const finalWinner = score1 > score2 ? 'L' : (score1 < score2 ? 'V' : winner);
+  const confirmSave = confirm("¿Estás seguro de confirmar este pronóstico? Una vez confirmado, no se podrá modificar.");
+  if (!confirmSave) return;
 
   try {
     const res = await fetch('/api/phase2/predictions', {
@@ -2827,7 +2901,7 @@ async function saveFinalPrediction(matchId) {
             prediction: {
               team1Score: score1,
               team2Score: score2,
-              winner: finalWinner
+              winner: winner
             }
           }
         ]
@@ -2840,15 +2914,19 @@ async function saveFinalPrediction(matchId) {
     statePhase2.predictions[matchId] = {
       team1Score: score1,
       team2Score: score2,
-      winner: finalWinner
+      winner: winner
     };
     
-    showToast("Pronóstico guardado", "success");
+    if (statePhase2.tempPredictions) {
+      delete statePhase2.tempPredictions[matchId];
+    }
+    
+    showToast("¡Pronóstico confirmado y guardado!", "success");
     renderFinalMatchesGrid();
   } catch (err) {
-    showToast(err.message || "Error al guardar el pronóstico", "error");
+    showToast(err.message || "Error al confirmar el pronóstico", "error");
   }
-}
+};
 
 async function loadAdmin2Dashboard() {
   const list = document.getElementById('admin-2-matches-list');
