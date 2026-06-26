@@ -1526,9 +1526,19 @@ async function getMatchTrends() {
     
     matchPreds.forEach(p => {
       const username = usersMap[p.userId];
-      if (username && stats[p.prediction]) {
-        stats[p.prediction].count++;
-        stats[p.prediction].users.push(username);
+      if (username && p.prediction) {
+        let predWinner = null;
+        if (typeof p.prediction === 'object') {
+          const p1 = parseInt(p.prediction.team1Score);
+          const p2 = parseInt(p.prediction.team2Score);
+          predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        } else if (typeof p.prediction === 'string') {
+          predWinner = p.prediction;
+        }
+        if (predWinner && stats[predWinner]) {
+          stats[predWinner].count++;
+          stats[predWinner].users.push(username);
+        }
       }
     });
     
@@ -1595,9 +1605,19 @@ async function getMatchTrendsAll() {
     
     matchPreds.forEach(p => {
       const username = usersMap[p.userId];
-      if (username && stats[p.prediction]) {
-        stats[p.prediction].count++;
-        stats[p.prediction].users.push(username);
+      if (username && p.prediction) {
+        let predWinner = null;
+        if (typeof p.prediction === 'object') {
+          const p1 = parseInt(p.prediction.team1Score);
+          const p2 = parseInt(p.prediction.team2Score);
+          predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        } else if (typeof p.prediction === 'string') {
+          predWinner = p.prediction;
+        }
+        if (predWinner && stats[predWinner]) {
+          stats[predWinner].count++;
+          stats[predWinner].users.push(username);
+        }
       }
     });
     

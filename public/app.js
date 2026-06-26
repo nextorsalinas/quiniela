@@ -432,10 +432,10 @@ function switchTab(tabId) {
     targetView.classList.add('active');
   }
 
-  // Toggle floating trends button visibility (only show on leaderboard)
+  // Toggle floating trends button visibility (show on leaderboard or new-panel)
   const trendsBtn = document.getElementById('floating-trends-btn');
   if (trendsBtn) {
-    trendsBtn.style.display = (tabId === 'leaderboard') ? 'flex' : 'none';
+    trendsBtn.style.display = (tabId === 'leaderboard' || tabId === 'new-panel') ? 'flex' : 'none';
   }
 
   // Fetch data depending on tab
@@ -1323,6 +1323,8 @@ function closeTrendsVotersModal() {
 window.openCompleteTrendsModal = async function() {
   const modal = document.getElementById('complete-trends-modal');
   const grid = document.getElementById('complete-trends-grid');
+  const title = modal ? modal.querySelector('h3') : null;
+  const desc = modal ? modal.querySelector('p') : null;
   if (!modal || !grid) return;
 
   modal.style.display = 'flex';
@@ -1331,8 +1333,22 @@ window.openCompleteTrendsModal = async function() {
     <p>Cargando tendencias...</p>
   </div>`;
 
+  const isPhase2 = (state.activeTab === 'new-panel');
+  const url = isPhase2 ? '/api/phase2/matches/trends/all' : `${API_URL}/matches/trends/all`;
+
+  if (title) {
+    title.innerHTML = isPhase2 
+      ? `<i class="fa-solid fa-chart-line"></i> Tendencias Completas (Fase Final)` 
+      : `<i class="fa-solid fa-chart-line"></i> Tendencias Completas (Fase 1)`;
+  }
+  if (desc) {
+    desc.textContent = isPhase2 
+      ? "Porcentaje y cantidad de votos por cada encuentro de la Fase Final" 
+      : "Porcentaje y cantidad de votos por cada encuentro";
+  }
+
   try {
-    const res = await fetch(`${API_URL}/matches/trends/all`, {
+    const res = await fetch(url, {
       headers: { 'x-user-id': state.currentUser.id }
     });
     if (!res.ok) throw new Error("Error loading complete trends");
@@ -1343,16 +1359,17 @@ window.openCompleteTrendsModal = async function() {
     grid.innerHTML = data.map((match, idx) => {
       const isPlayed = match.result !== null;
       const resultBadge = isPlayed ? `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-left: 0.5rem;">Jugado</span>` : '';
+      const groupLabel = match.group || 'Fase Final';
 
       return `
         <div class="trend-card" style="${isPlayed ? 'opacity: 0.8;' : ''}">
           <div class="trend-teams-row" style="justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
-            <span style="font-weight: 700; font-size: 0.75rem; color: var(--gold);">Grupo ${match.group} - Partido ${match.matchId} ${resultBadge}</span>
+            <span style="font-weight: 700; font-size: 0.75rem; color: var(--gold);">${groupLabel} - Partido ${match.matchId} ${resultBadge}</span>
           </div>
           <div class="trend-teams-row" style="font-size: 0.8rem; font-weight: 600;">
-            <span>${match.team1}</span>
+            <span>${match.team1 || 'Por definir'}</span>
             <span style="color: var(--color-text-muted); font-size: 0.7rem; font-style: italic; margin: 0 0.4rem;">vs</span>
-            <span>${match.team2}</span>
+            <span>${match.team2 || 'Por definir'}</span>
           </div>
           <div class="trend-votes-row" style="margin-top: 0.4rem;">
             <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'L')">
@@ -3013,7 +3030,7 @@ window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
   const match = currentTrendsDataPhase2[matchIndex];
   if (!match) return;
 
-  const voters = match.stats[predictionType].voters || [];
+  const voters = match.stats[predictionType].users || [];
   
   const modal = document.getElementById('trends-voters-modal');
   const modalTitle = document.getElementById('trends-modal-title');
