@@ -1487,8 +1487,8 @@ async function getMatchTrends() {
   let usersMap = {}; // id -> username
   
   if (dbType === 'firestore') {
-    // Fetch users to map userId -> username
-    const usersSnap = await firestoreDb.collection('phase2_users').get();
+    // Fetch users to map userId -> username from main users collection
+    const usersSnap = await firestoreDb.collection('users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
@@ -1537,7 +1537,8 @@ async function getMatchTrends() {
         }
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          stats[predWinner].users.push(username);
+          const scoreStr = typeof p.prediction === 'object' ? ` (${p.prediction.team1Score}-${p.prediction.team2Score})` : '';
+          stats[predWinner].users.push(`${username}${scoreStr}`);
         }
       }
     });
@@ -1572,7 +1573,7 @@ async function getMatchTrendsAll() {
   let usersMap = {};
   
   if (dbType === 'firestore') {
-    const usersSnap = await firestoreDb.collection('phase2_users').get();
+    const usersSnap = await firestoreDb.collection('users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
@@ -1616,7 +1617,8 @@ async function getMatchTrendsAll() {
         }
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          stats[predWinner].users.push(username);
+          const scoreStr = typeof p.prediction === 'object' ? ` (${p.prediction.team1Score}-${p.prediction.team2Score})` : '';
+          stats[predWinner].users.push(`${username}${scoreStr}`);
         }
       }
     });
