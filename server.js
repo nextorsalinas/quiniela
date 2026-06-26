@@ -771,6 +771,17 @@ app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
   }
 });
 
+app.get('/api/phase2/matches/trends/all', authenticatePhase2, async (req, res) => {
+  try {
+    const trends = await dbHelperPhase2.getMatchTrendsAll();
+    res.json(trends);
+  } catch (error) {
+    console.error("Error getting all match trends for Phase 2:", error);
+    res.status(500).json({ error: "Error al obtener todas las tendencias de votación de Fase 2." });
+  }
+});
+
+
 app.get('/api/phase2/bonus', authenticatePhase2, async (req, res) => {
   try {
     const bonus = await dbHelperPhase2.getBonusUsers();

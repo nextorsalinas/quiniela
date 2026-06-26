@@ -453,6 +453,12 @@ function switchTab(tabId) {
   });
   document.getElementById(`view-${tabId}`).classList.add('active');
 
+  // Toggle floating trends button visibility (only show on leaderboard)
+  const trendsBtn = document.getElementById('floating-trends-btn');
+  if (trendsBtn) {
+    trendsBtn.style.display = (tabId === 'leaderboard') ? 'flex' : 'none';
+  }
+
   // Fetch data depending on tab
   if (tabId === 'predictions') {
     loadPredictionsDashboard();
@@ -1055,6 +1061,7 @@ window.onclick = function(event) {
   const pwaModal = document.getElementById('pwa-install-modal');
   const trendsModal = document.getElementById('trends-voters-modal');
   const announcementModal = document.getElementById('info-announcement-modal');
+  const completeTrendsModal = document.getElementById('complete-trends-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
@@ -1065,6 +1072,8 @@ window.onclick = function(event) {
     closeTrendsVotersModal();
   } else if (event.target === announcementModal) {
     closeAnnouncementModal();
+  } else if (event.target === completeTrendsModal) {
+    closeCompleteTrendsModal();
   }
 };
 
@@ -2222,3 +2231,98 @@ async function adminResetUserPassword(userId, username) {
     showToast("Error de conexión al restablecer contraseña", "error");
   }
 }
+
+window.openCompleteTrendsModal = async function() {
+  const modal = document.getElementById('complete-trends-modal');
+  const grid = document.getElementById('complete-trends-grid');
+  if (!modal || !grid) return;
+
+  modal.style.display = 'flex';
+  grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-muted);">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--gold); margin-bottom: 0.5rem;"></i>
+    <p>Cargando tendencias...</p>
+  </div>`;
+
+  try {
+    const res = await fetch(`${API_URL}/matches/trends/all`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!res.ok) throw new Error("Error loading complete trends");
+    const data = await res.json();
+    
+    window.completeTrendsData = data;
+
+    grid.innerHTML = data.map((match, idx) => {
+      const isPlayed = match.result !== null;
+      const resultBadge = isPlayed ? `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-left: 0.5rem;">Jugado</span>` : '';
+
+      return `
+        <div class="trend-card" style="${isPlayed ? 'opacity: 0.8;' : ''}">
+          <div class="trend-teams-row" style="justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
+            <span style="font-weight: 700; font-size: 0.75rem; color: var(--gold);">${match.group} - Partido ${match.matchId} ${resultBadge}</span>
+          </div>
+          <div class="trend-teams-row" style="font-size: 0.8rem; font-weight: 600;">
+            <span>${match.team1 || 'Por definir'}</span>
+            <span style="color: var(--color-text-muted); font-size: 0.7rem; font-style: italic; margin: 0 0.4rem;">vs</span>
+            <span>${match.team2 || 'Por definir'}</span>
+          </div>
+          <div class="trend-votes-row" style="margin-top: 0.4rem;">
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'L')">
+              <span class="trend-vote-label">Local</span>
+              <span class="trend-vote-count">${match.stats.L.count}</span>
+            </div>
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'E')">
+              <span class="trend-vote-label">Empate</span>
+              <span class="trend-vote-count">${match.stats.E.count}</span>
+            </div>
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'V')">
+              <span class="trend-vote-label">Visitante</span>
+              <span class="trend-vote-count">${match.stats.V.count}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error("Error fetching all trends:", error);
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--red);">Error al cargar tendencias.</div>`;
+  }
+};
+
+window.closeCompleteTrendsModal = function() {
+  const modal = document.getElementById('complete-trends-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
+  const match = window.completeTrendsData[matchIndex];
+  if (!match) return;
+
+  const optionName = predictionType === 'L' ? 'Local' : (predictionType === 'E' ? 'Empate' : 'Visitante');
+  const predictionStats = match.stats[predictionType];
+  if (!predictionStats) return;
+
+  const modal = document.getElementById('trends-voters-modal');
+  const modalTitle = document.getElementById('trends-modal-title');
+  const modalSubtitle = document.getElementById('trends-modal-subtitle');
+  const votersList = document.getElementById('trends-voters-list');
+
+  if (!modal || !modalTitle || !modalSubtitle || !votersList) return;
+
+  modalTitle.textContent = `${match.team1 || 'Por definir'} vs ${match.team2 || 'Por definir'}`;
+  modalSubtitle.textContent = `Votaron por ${optionName} (${predictionStats.count} personas)`;
+
+  const voters = predictionStats.users || [];
+  if (voters.length === 0) {
+    votersList.innerHTML = '<li style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">Nadie votó por esta opción</li>';
+  } else {
+    votersList.innerHTML = voters.map(username => `
+      <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize;">
+        <i class="fa-solid fa-user" style="color: var(--gold); margin-right: 0.4rem; font-size: 0.8rem;"></i> ${username}
+      </li>
+    `).join('');
+  }
+
+  modal.style.zIndex = '1800';
+  modal.style.display = 'flex';
+};
