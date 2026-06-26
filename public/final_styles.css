@@ -2326,3 +2326,14 @@ input[type=number] { -moz-appearance: textfield; }
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+
+.floating-trends-btn.quiniela-color {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: -4px 0 20px rgba(16, 185, 129, 0.35);
+}
+
+.floating-trends-btn.quiniela-color:hover {
+  box-shadow: -6px 0 25px rgba(16, 185, 129, 0.55);
+}
