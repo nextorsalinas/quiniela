@@ -1804,6 +1804,23 @@ async function togglePredictionsPaused() {
   return db.config;
 }
 
+async function updateProfilePic(userId, profilePic) {
+  if (dbType === 'firestore') {
+    const userRef = firestoreDb.collection('phase2_users').doc(userId);
+    const userDoc = await userRef.get();
+    if (userDoc.exists) {
+      await userRef.update({ profilePic });
+    }
+  } else {
+    const db = readDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) throw new Error("Usuario no encontrado.");
+    
+    db.users[userIndex].profilePic = profilePic;
+    writeDb(db);
+  }
+}
+
 module.exports = {
   getConfig,
   togglePredictionsPaused,
@@ -1842,5 +1859,6 @@ module.exports = {
   getStreaks,
   getBonusUsers,
   resetUserPassword,
+  updateProfilePic,
   getDbType: () => dbType
 };

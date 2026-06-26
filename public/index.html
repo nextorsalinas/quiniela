@@ -90,8 +90,9 @@
   <div id="app-section" class="app-container" style="display: none;">
     <!-- Navigation Bar -->
     <header class="app-header" style="flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; gap: 1rem;">
-      <div class="header-logo" style="margin: 0 1.5rem 0 0; justify-content: flex-start; gap: 0;">
-        <h2 id="user-display-name" style="font-family: var(--font-body); font-weight: 800; font-size: 1.7rem; letter-spacing: -0.5px; color: var(--gold); text-transform: capitalize;">Cargando...</h2>
+      <div class="header-logo" style="margin: 0 1.5rem 0 0; justify-content: flex-start; gap: 0.5rem; display: flex; align-items: center;">
+        <img id="user-header-avatar" src="avatar.png" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
+        <h2 id="user-display-name" style="font-family: var(--font-body); font-weight: 800; font-size: 1.7rem; letter-spacing: -0.5px; color: var(--gold); text-transform: capitalize; margin: 0;">Cargando...</h2>
       </div>
 
       <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end;">
@@ -316,7 +317,7 @@
         <div class="view-header" style="margin-bottom: 1rem;">
           <div class="view-title-group" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
             <div>
-              <h3>Nuevos Pronósticos (Fase Final)</h3>
+              <h3>Pronósticos (Fase Final)</h3>
               <p id="predictions-instruction-final" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--color-text-muted);">
                 Pronostica los marcadores de la Fase Final. Elige el equipo que avanza tocando su nombre.
               </p>
@@ -384,13 +385,77 @@
           </ul>
         </div>
       </section>
+
+      <!-- View 9: Perfil -->
+      <section id="view-profile" class="tab-view">
+        <!-- Spacer -->
+        <div style="margin-top: 1.5rem;"></div>
+
+        <div class="table-card glass-panel" style="padding: 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+          <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem; margin-bottom: 0.5rem; width: 100%;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              <i class="fa-solid fa-user-gear"></i> Mi Perfil
+            </h3>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--color-text-muted);">Administra tu avatar y consulta tus estadísticas globales</p>
+          </div>
+
+          <!-- Avatar Upload Area -->
+          <div style="position: relative; display: inline-block; cursor: pointer;" onclick="document.getElementById('profile-pic-input').click()">
+            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); transition: transform 0.2s ease;">
+            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #111827; color: #111827; font-size: 0.95rem;">
+              <i class="fa-solid fa-camera"></i>
+            </div>
+            <input type="file" id="profile-pic-input" accept="image/*" style="display: none;" onchange="handleProfilePicUpload(event)">
+          </div>
+
+          <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
+
+          <!-- Stats Table -->
+          <div style="width: 100%; overflow-x: auto; margin-top: 0.5rem;">
+            <table class="leaderboard-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                  <th style="padding: 0.75rem 1rem; color: var(--gold); font-weight: 700;">Estadística</th>
+                  <th style="padding: 0.75rem 1rem; color: var(--gold); font-weight: 700; text-align: right;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-square-poll-vertical" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Pronósticos realizados</td>
+                  <td id="profile-stat-predictions" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700;">0 / 104</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-circle-check" style="margin-right: 0.5rem; color: var(--success); width: 16px;"></i> Aciertos</td>
+                  <td id="profile-stat-hits" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--success);">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-circle-xmark" style="margin-right: 0.5rem; color: var(--red); width: 16px;"></i> Fallados</td>
+                  <td id="profile-stat-misses" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--red);">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-clock" style="margin-right: 0.5rem; color: var(--color-text-muted); width: 16px;"></i> Restantes (por jugar)</td>
+                  <td id="profile-stat-remaining" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--color-text-muted);">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-crystal-ball" style="margin-right: 0.5rem; color: #a78bfa; width: 16px;"></i> Probabilidad</td>
+                  <td id="profile-stat-probability" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: #a78bfa;">0.00%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-star" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Bonus</td>
+                  <td id="profile-stat-bonus" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--gold);">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Bottom Navigation Bar -->
     <nav id="bottom-nav-bar" class="bottom-nav">
       <button id="tab-final-predictions" class="tab-btn" onclick="switchTab('final-predictions')">
         <i class="fa-solid fa-square-poll-vertical"></i>
-        <span>Nuevos Pronósticos</span>
+        <span>Pronósticos</span>
       </button>
       <button id="tab-new-panel" class="tab-btn" onclick="switchTab('new-panel')">
         <i class="fa-solid fa-trophy"></i>
@@ -407,6 +472,10 @@
       <button id="tab-policies" class="tab-btn" onclick="switchTab('policies')">
         <i class="fa-solid fa-circle-info"></i>
         <span>Políticas</span>
+      </button>
+      <button id="tab-profile" class="tab-btn" onclick="switchTab('profile')">
+        <i class="fa-solid fa-user"></i>
+        <span>Perfil</span>
       </button>
 
       <button id="tab-admin" class="tab-btn" style="display: none;" onclick="switchTab('admin')">

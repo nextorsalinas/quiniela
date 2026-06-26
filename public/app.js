@@ -248,6 +248,12 @@ function showAppDashboard() {
   document.getElementById('welcome-username').textContent = displayUsername;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
+  // Set header avatar
+  const headerAvatar = document.getElementById('user-header-avatar');
+  if (headerAvatar) {
+    headerAvatar.src = state.currentUser.profilePic || 'avatar.png';
+  }
+  
   // Show admin tab/badge if admin
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
@@ -451,6 +457,8 @@ function switchTab(tabId) {
     loadFinalPredictionsDashboard();
   } else if (tabId === 'admin-2') {
     loadAdmin2Dashboard();
+  } else if (tabId === 'profile') {
+    loadProfileDashboard();
   }
 }
 
@@ -2395,6 +2403,202 @@ async function loadProbabilityDashboard() {
     console.error("Error fetching winning probabilities:", error);
     showToast("Error de conexión al obtener las probabilidades", "error");
   }
+}
+
+async function loadProfileDashboard() {
+  const predictionsEl = document.getElementById('profile-stat-predictions');
+  const hitsEl = document.getElementById('profile-stat-hits');
+  const missesEl = document.getElementById('profile-stat-misses');
+  const remainingEl = document.getElementById('profile-stat-remaining');
+  const probabilityEl = document.getElementById('profile-stat-probability');
+  const bonusEl = document.getElementById('profile-stat-bonus');
+  const usernameEl = document.getElementById('profile-username');
+  const picDisplay = document.getElementById('profile-pic-display');
+
+  if (usernameEl) usernameEl.textContent = state.currentUser.username;
+  if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+
+  // Mostrar spinners de carga temporalmente en la tabla
+  const loader = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+  if (predictionsEl) predictionsEl.innerHTML = loader;
+  if (hitsEl) hitsEl.innerHTML = loader;
+  if (missesEl) missesEl.innerHTML = loader;
+  if (remainingEl) remainingEl.innerHTML = loader;
+  if (probabilityEl) probabilityEl.innerHTML = loader;
+  if (bonusEl) bonusEl.innerHTML = loader;
+
+  try {
+    // Fetches paralelos para tener todos los datos consistentes
+    const [matchesRes, predictionsRes, p2MatchesRes, p2PredictionsRes, probRes] = await Promise.all([
+      // Fase 1 partidos y predicciones
+      state.matches.length === 0 
+        ? fetch(`${API_URL}/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+        : Promise.resolve(state.matches),
+      fetch(`${API_URL}/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+      
+      // Fase 2 partidos y predicciones
+      statePhase2.matches.length === 0 
+        ? fetch(`/api/phase2/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+        : Promise.resolve(statePhase2.matches),
+      fetch(`/api/phase2/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+
+      // Probabilidades de ganar
+      fetch(`${API_URL}/predictions/probability`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+    ]);
+
+    // Actualizar estados locales si es necesario
+    if (state.matches.length === 0) state.matches = matchesRes;
+    state.predictions = {};
+    predictionsRes.forEach(p => {
+      state.predictions[p.matchId] = p.prediction;
+    });
+
+    if (statePhase2.matches.length === 0) statePhase2.matches = p2MatchesRes;
+    statePhase2.predictions = {};
+    p2PredictionsRes.forEach(p => {
+      statePhase2.predictions[p.matchId] = p.prediction;
+    });
+
+    // --- CÁLCULOS ---
+    
+    // 1. Pronósticos realizados
+    const p1Count = Object.keys(state.predictions).length;
+    const p2Count = Object.keys(statePhase2.predictions).length;
+    const totalPredictions = p1Count + p2Count;
+    const totalPossibleMatches = 72 + 32; // 72 de Grupos, 32 de Fase Final
+
+    // 2. Aciertos y fallas de Fase 1
+    let hitsP1 = 0;
+    let missesP1 = 0;
+    state.matches.forEach(match => {
+      if (match.result !== null) {
+        const pred = state.predictions[match.id];
+        if (pred !== undefined && pred !== null) {
+          if (pred === match.result) {
+            hitsP1++;
+          } else {
+            missesP1++;
+          }
+        }
+      }
+    });
+
+    // 3. Aciertos y fallas de Fase 2, y conteo de Bonus
+    let hitsP2 = 0;
+    let missesP2 = 0;
+    let bonusCount = 0;
+    statePhase2.matches.forEach(match => {
+      if (match.result !== null) {
+        const pred = statePhase2.predictions[match.id];
+        if (pred) {
+          const r1 = parseInt(match.result.team1Score);
+          const r2 = parseInt(match.result.team2Score);
+          const p1 = parseInt(pred.team1Score);
+          const p2 = parseInt(pred.team2Score);
+          const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+          const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+
+          if (realWinner === predWinner) {
+            hitsP2++;
+            if (r1 === p1 && r2 === p2) {
+              bonusCount++; // Marcador exacto en Fase 2 equivale a Bonus (4 pts)
+            }
+          } else {
+            missesP2++;
+          }
+        }
+      }
+    });
+
+    // 4. Totales
+    const totalHits = hitsP1 + hitsP2;
+    const totalMisses = missesP1 + missesP2;
+
+    // 5. Restantes por jugar
+    const remainingP1 = state.matches.filter(m => m.result === null).length;
+    const remainingP2 = statePhase2.matches.filter(m => m.result === null).length;
+    const totalRemaining = remainingP1 + remainingP2;
+
+    // 6. Buscar probabilidad del usuario en la simulación
+    let userProb = 0;
+    const myProbData = probRes.find(u => u.id === state.currentUser.id);
+    if (myProbData) {
+      userProb = myProbData.probability;
+    }
+
+    // Render en la interfaz
+    if (predictionsEl) predictionsEl.textContent = `${totalPredictions} / ${totalPossibleMatches}`;
+    if (hitsEl) hitsEl.textContent = totalHits;
+    if (missesEl) missesEl.textContent = totalMisses;
+    if (remainingEl) remainingEl.textContent = totalRemaining;
+    if (probabilityEl) probabilityEl.textContent = `${userProb.toFixed(2)}%`;
+    if (bonusEl) bonusEl.textContent = bonusCount;
+
+  } catch (err) {
+    console.error("Error al cargar el dashboard del perfil:", err);
+    showToast("Error de conexión al cargar estadísticas del perfil.", "error");
+  }
+}
+
+async function handleProfilePicUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validar tipo de archivo
+  if (!file.type.startsWith('image/')) {
+    showToast("Por favor selecciona un archivo de imagen válido.", "error");
+    return;
+  }
+
+  // Validar tamaño de archivo (limitar a 2MB para evitar Base64 gigantescos)
+  if (file.size > 2 * 1024 * 1024) {
+    showToast("La imagen es muy pesada. Selecciona una de menos de 2MB.", "error");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64Image = e.target.result;
+    
+    // Mostrar preview local inmediato
+    const picDisplay = document.getElementById('profile-pic-display');
+    if (picDisplay) picDisplay.src = base64Image;
+
+    try {
+      showToast("Subiendo foto de perfil...", "info");
+      const response = await fetch('/api/user/profile-pic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': state.currentUser.id
+        },
+        body: JSON.stringify({ profilePic: base64Image })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        showToast(data.error || "Error al subir la imagen", "error");
+        // Revertir al original si falla
+        if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+        return;
+      }
+
+      // Actualizar estado del usuario
+      state.currentUser.profilePic = base64Image;
+      localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+
+      // Actualizar en el header
+      const headerAvatar = document.getElementById('user-header-avatar');
+      if (headerAvatar) headerAvatar.src = base64Image;
+
+      showToast("¡Foto de perfil actualizada con éxito!", "success");
+    } catch (err) {
+      console.error("Error al subir foto de perfil:", err);
+      showToast("Error de red al subir la imagen.", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ====================================================

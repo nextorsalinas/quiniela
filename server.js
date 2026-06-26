@@ -470,6 +470,29 @@ app.delete('/api/notifications/:notificationId', authenticate, async (req, res) 
   }
 });
 
+// Update profile pic
+app.post('/api/user/profile-pic', authenticate, async (req, res) => {
+  const { profilePic } = req.body;
+  if (!profilePic) {
+    return res.status(400).json({ error: "Foto de perfil es requerida." });
+  }
+
+  try {
+    await dbHelper.updateProfilePic(req.user.id, profilePic);
+    
+    try {
+      await dbHelperPhase2.updateProfilePic(req.user.id, profilePic);
+    } catch (e2) {
+      console.log("Error actualizando foto de perfil en Fase 2:", e2.message);
+    }
+
+    res.json({ message: "Foto de perfil actualizada con éxito.", profilePic });
+  } catch (error) {
+    console.error("Error al actualizar la foto de perfil:", error);
+    res.status(500).json({ error: "Error al guardar la foto de perfil en el servidor: " + error.message });
+  }
+});
+
 // Get all users (Admin only)
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   try {
