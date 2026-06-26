@@ -1146,6 +1146,7 @@ window.onclick = function(event) {
   const trendsModal = document.getElementById('trends-voters-modal');
   const announcementModal = document.getElementById('info-announcement-modal');
   const completeTrendsModal = document.getElementById('complete-trends-modal');
+  const cropperModal = document.getElementById('cropper-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
@@ -1158,6 +1159,8 @@ window.onclick = function(event) {
     closeAnnouncementModal();
   } else if (event.target === completeTrendsModal) {
     closeCompleteTrendsModal();
+  } else if (event.target === cropperModal) {
+    closeCropperModal();
   }
 };
 
@@ -2540,6 +2543,78 @@ async function loadProfileDashboard() {
   }
 }
 
+let cropperInstance = null;
+
+function closeCropperModal() {
+  const modal = document.getElementById('cropper-modal');
+  if (modal) modal.style.display = 'none';
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+  const fileInput = document.getElementById('profile-pic-input');
+  if (fileInput) fileInput.value = '';
+}
+
+async function applyImageCrop() {
+  if (!cropperInstance) return;
+  
+  const saveBtn = document.getElementById('cropper-save-btn');
+  const originalHtml = saveBtn.innerHTML;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...`;
+
+  try {
+    // Generar canvas con tamaño de 200x200 (para optimizar espacio en base de datos)
+    const canvas = cropperInstance.getCroppedCanvas({
+      width: 200,
+      height: 200,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high'
+    });
+
+    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+    // Mostrar preview local inmediato
+    const picDisplay = document.getElementById('profile-pic-display');
+    if (picDisplay) picDisplay.src = croppedBase64;
+
+    showToast("Subiendo foto de perfil recortada...", "info");
+    const response = await fetch('/api/user/profile-pic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ profilePic: croppedBase64 })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al subir la imagen", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+      return;
+    }
+
+    // Actualizar estado local
+    state.currentUser.profilePic = croppedBase64;
+    localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+
+    // Actualizar en el header
+    const headerAvatar = document.getElementById('user-header-avatar');
+    if (headerAvatar) headerAvatar.src = croppedBase64;
+
+    showToast("¡Foto de perfil recortada y guardada con éxito!", "success");
+    closeCropperModal();
+  } catch (err) {
+    console.error("Error al recortar/subir imagen:", err);
+    showToast("Error al procesar la imagen recortada.", "error");
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalHtml;
+  }
+}
+
 async function handleProfilePicUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2550,53 +2625,37 @@ async function handleProfilePicUpload(event) {
     return;
   }
 
-  // Validar tamaño de archivo (limitar a 2MB para evitar Base64 gigantescos)
-  if (file.size > 2 * 1024 * 1024) {
-    showToast("La imagen es muy pesada. Selecciona una de menos de 2MB.", "error");
+  // Validar tamaño de archivo (limitar a 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("La imagen es muy pesada. Selecciona una de menos de 5MB.", "error");
     return;
   }
 
   const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64Image = e.target.result;
-    
-    // Mostrar preview local inmediato
-    const picDisplay = document.getElementById('profile-pic-display');
-    if (picDisplay) picDisplay.src = base64Image;
+  reader.onload = function (e) {
+    const modal = document.getElementById('cropper-modal');
+    const image = document.getElementById('cropper-image');
+    if (!modal || !image) return;
 
-    try {
-      showToast("Subiendo foto de perfil...", "info");
-      const response = await fetch('/api/user/profile-pic', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': state.currentUser.id
-        },
-        body: JSON.stringify({ profilePic: base64Image })
-      });
+    image.src = e.target.result;
+    modal.style.display = 'flex';
 
-      const data = await response.json();
-      if (!response.ok) {
-        showToast(data.error || "Error al subir la imagen", "error");
-        // Revertir al original si falla
-        if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
-        return;
-      }
-
-      // Actualizar estado del usuario
-      state.currentUser.profilePic = base64Image;
-      localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
-
-      // Actualizar en el header
-      const headerAvatar = document.getElementById('user-header-avatar');
-      if (headerAvatar) headerAvatar.src = base64Image;
-
-      showToast("¡Foto de perfil actualizada con éxito!", "success");
-    } catch (err) {
-      console.error("Error al subir foto de perfil:", err);
-      showToast("Error de red al subir la imagen.", "error");
-      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+    // Destruir instancia anterior si existiera
+    if (cropperInstance) {
+      cropperInstance.destroy();
     }
+
+    // Inicializar Cropper.js
+    cropperInstance = new Cropper(image, {
+      aspectRatio: 1, // Relación de aspecto cuadrada (1:1)
+      viewMode: 1, // Mantener el recuadro dentro de la imagen
+      autoCropArea: 0.8,
+      responsive: true,
+      background: false,
+      ready() {
+        console.log("Cropper.js listo para usar.");
+      }
+    });
   };
   reader.readAsDataURL(file);
 }
