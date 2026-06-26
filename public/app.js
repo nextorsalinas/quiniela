@@ -940,8 +940,8 @@ function renderLeaderboardTables() {
             <div class="rank-badge ${rankBadgeClass}">${position}</div>
           </td>
           <td>
-            <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
-              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
+            <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}" style="display: flex; align-items: center; gap: 0.5rem;">
+              <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
                 <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
                 ${adminBadge}
@@ -977,7 +977,8 @@ function renderLeaderboardTables() {
             <div class="rank-badge ${rankBadgeClass}">${position}</div>
           </td>
           <td>
-            <div class="player-info-cell" style="gap: 0.4rem;">
+            <div class="player-info-cell" style="display: flex; align-items: center; gap: 0.5rem;">
+              <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <span class="player-name" style="font-weight: ${isMe ? '700' : '600'}; color: ${isMe ? 'var(--gold)' : 'inherit'};">
                 ${player.username} ${isMe ? '(Tú)' : ''}
               </span>
@@ -1313,11 +1314,13 @@ function showTrendsVoters(matchIndex, predictionType) {
   if (predictionStats.users.length === 0) {
     votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); padding: 1rem 0; font-size: 0.85rem;">Nadie pronosticó esta opción.</li>`;
   } else {
-    votersList.innerHTML = predictionStats.users.map(username => {
+    votersList.innerHTML = predictionStats.users.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
       return `
         <li style="padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-user-check" style="color: var(--gold); font-size: 0.75rem;"></i>
-          ${username}
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          ${name}
         </li>
       `;
     }).join('');
@@ -1432,11 +1435,17 @@ window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
   if (voters.length === 0) {
     votersList.innerHTML = '<li style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">Nadie votó por esta opción</li>';
   } else {
-    votersList.innerHTML = voters.map(username => `
-      <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize;">
-        <i class="fa-solid fa-user" style="color: var(--gold); margin-right: 0.4rem; font-size: 0.8rem;"></i> ${username}
-      </li>
-    `).join('');
+    votersList.innerHTML = voters.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
+      const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      return `
+        <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 0.5rem;">
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          <span>${name}${scoreSuffix}</span>
+        </li>
+      `;
+    }).join('');
   }
 
   modal.style.zIndex = '1800';
@@ -1511,8 +1520,8 @@ async function loadAdminUsers() {
       return `
         <tr>
           <td>
-            <div class="player-info-cell" style="justify-content: flex-start; gap: 0.75rem;">
-              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}" style="font-size: 1.25rem;"></i>
+            <div class="player-info-cell" style="justify-content: flex-start; gap: 0.75rem; display: flex; align-items: center;">
+              <img src="${user.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <div style="text-align: left;">
                 <span class="player-name" style="display: block; font-weight: 600;">${user.username} ${isMe ? '(Tú)' : ''}</span>
                 <span class="player-email" style="display: block; font-size: 0.75rem; color: var(--color-text-muted);">${user.email || 'Sin correo'}</span>
@@ -3065,8 +3074,8 @@ function renderPhase2Leaderboard() {
           <div class="rank-badge ${rankBadgeClass}">${position}</div>
         </td>
         <td>
-          <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
-            <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
+          <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}" style="display: flex; align-items: center; gap: 0.5rem;">
+            <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
             <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
               <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
               ${adminBadge}
@@ -3309,11 +3318,17 @@ window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
   if (voters.length === 0) {
     votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.9rem; padding: 1rem 0;">Ningún jugador pronosticó esta opción.</li>`;
   } else {
-    votersList.innerHTML = voters.map(name => `
-      <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
-        <i class="fa-solid fa-user-circle" style="color: var(--gold); opacity: 0.8;"></i> ${name}
-      </li>
-    `).join('');
+    votersList.innerHTML = voters.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
+      const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      return `
+        <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          <span>${name}${scoreSuffix}</span>
+        </li>
+      `;
+    }).join('');
   }
   
   modal.style.display = 'flex';

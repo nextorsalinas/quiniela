@@ -832,6 +832,7 @@ async function getLeaderboard() {
         points: u.points,
         isAdmin: u.isAdmin,
         createdAt: u.createdAt,
+        profilePic: u.profilePic || '',
         predictionCount: countSnap.data().count
       });
     }
@@ -850,6 +851,7 @@ async function getLeaderboard() {
       points: u.points,
       isAdmin: u.isAdmin,
       createdAt: u.createdAt,
+      profilePic: u.profilePic || '',
       predictionCount: db.predictions.filter(p => p.userId === u.id).length
     }));
 
@@ -1484,15 +1486,15 @@ async function getMatchTrends() {
   
   // 3. Fetch all predictions for these match IDs
   let predictions = [];
-  let usersMap = {}; // id -> username
+  let usersMap = {}; // id -> { username, profilePic }
   
   if (dbType === 'firestore') {
-    // Fetch users to map userId -> username from main users collection
+    // Fetch users to map userId -> { username, profilePic } from main users collection
     const usersSnap = await firestoreDb.collection('users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     
@@ -1508,7 +1510,7 @@ async function getMatchTrends() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1525,20 +1527,25 @@ async function getMatchTrends() {
     };
     
     matchPreds.forEach(p => {
-      const username = usersMap[p.userId];
-      if (username && p.prediction) {
+      const userData = usersMap[p.userId];
+      if (userData && p.prediction) {
         let predWinner = null;
+        let scoreStr = '';
         if (typeof p.prediction === 'object') {
           const p1 = parseInt(p.prediction.team1Score);
           const p2 = parseInt(p.prediction.team2Score);
           predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+          scoreStr = `${p.prediction.team1Score}-${p.prediction.team2Score}`;
         } else if (typeof p.prediction === 'string') {
           predWinner = p.prediction;
         }
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          const scoreStr = typeof p.prediction === 'object' ? ` (${p.prediction.team1Score}-${p.prediction.team2Score})` : '';
-          stats[predWinner].users.push(`${username}${scoreStr}`);
+          stats[predWinner].users.push({
+            username: userData.username,
+            profilePic: userData.profilePic,
+            score: scoreStr
+          });
         }
       }
     });
@@ -1577,7 +1584,7 @@ async function getMatchTrendsAll() {
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     
@@ -1589,7 +1596,7 @@ async function getMatchTrendsAll() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1605,20 +1612,25 @@ async function getMatchTrendsAll() {
     };
     
     matchPreds.forEach(p => {
-      const username = usersMap[p.userId];
-      if (username && p.prediction) {
+      const userData = usersMap[p.userId];
+      if (userData && p.prediction) {
         let predWinner = null;
+        let scoreStr = '';
         if (typeof p.prediction === 'object') {
           const p1 = parseInt(p.prediction.team1Score);
           const p2 = parseInt(p.prediction.team2Score);
           predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+          scoreStr = `${p.prediction.team1Score}-${p.prediction.team2Score}`;
         } else if (typeof p.prediction === 'string') {
           predWinner = p.prediction;
         }
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          const scoreStr = typeof p.prediction === 'object' ? ` (${p.prediction.team1Score}-${p.prediction.team2Score})` : '';
-          stats[predWinner].users.push(`${username}${scoreStr}`);
+          stats[predWinner].users.push({
+            username: userData.username,
+            profilePic: userData.profilePic,
+            score: scoreStr
+          });
         }
       }
     });

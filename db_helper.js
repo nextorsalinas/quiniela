@@ -647,6 +647,7 @@ async function getLeaderboard() {
         points: u.points,
         isAdmin: u.isAdmin,
         createdAt: u.createdAt,
+        profilePic: u.profilePic || '',
         predictionCount: countSnap.data().count
       });
     }
@@ -665,6 +666,7 @@ async function getLeaderboard() {
       points: u.points,
       isAdmin: u.isAdmin,
       createdAt: u.createdAt,
+      profilePic: u.profilePic || '',
       predictionCount: db.predictions.filter(p => p.userId === u.id).length
     }));
 
@@ -1252,15 +1254,15 @@ async function getMatchTrends() {
   
   // 3. Fetch all predictions for these match IDs
   let predictions = [];
-  let usersMap = {}; // id -> username
+  let usersMap = {}; // id -> { username, profilePic }
   
   if (dbType === 'firestore') {
-    // Fetch users to map userId -> username
+    // Fetch users to map userId -> { username, profilePic }
     const usersSnap = await firestoreDb.collection('users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     
@@ -1276,7 +1278,7 @@ async function getMatchTrends() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1293,10 +1295,13 @@ async function getMatchTrends() {
     };
     
     matchPreds.forEach(p => {
-      const username = usersMap[p.userId];
-      if (username && stats[p.prediction]) {
+      const userData = usersMap[p.userId];
+      if (userData && stats[p.prediction]) {
         stats[p.prediction].count++;
-        stats[p.prediction].users.push(username);
+        stats[p.prediction].users.push({
+          username: userData.username,
+          profilePic: userData.profilePic
+        });
       }
     });
     
@@ -1334,7 +1339,7 @@ async function getMatchTrendsAll() {
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     
@@ -1346,7 +1351,7 @@ async function getMatchTrendsAll() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = u.username;
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
       }
     });
     predictions = (db.predictions || []);
@@ -1362,10 +1367,13 @@ async function getMatchTrendsAll() {
     };
     
     matchPreds.forEach(p => {
-      const username = usersMap[p.userId];
-      if (username && stats[p.prediction]) {
+      const userData = usersMap[p.userId];
+      if (userData && stats[p.prediction]) {
         stats[p.prediction].count++;
-        stats[p.prediction].users.push(username);
+        stats[p.prediction].users.push({
+          username: userData.username,
+          profilePic: userData.profilePic
+        });
       }
     });
     
