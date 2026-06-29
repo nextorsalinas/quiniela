@@ -794,11 +794,17 @@ function normalizeTeam(name) {
 }
 
 async function syncFifaResults() {
+  console.log("Sincronización de marcadores con la API externa deshabilitada.");
+  return { checked: 0, updated: 0, message: "Sincronización deshabilitada por configuración." };
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches from openfootball GitHub repository...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch World Cup matches: ${response.statusText}`);
   }
+  */
   
   const data = await response.json();
   const apiMatches = data.matches || [];
@@ -1177,11 +1183,17 @@ function translateTeamToSpanish(engName) {
 }
 
 async function getTopScorers() {
+  console.log("Obtención de goleadores desde la API externa deshabilitada.");
+  return [];
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches for top scorers from openfootball...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch scorers: ${response.statusText}`);
   }
+  */
   const data = await response.json();
   const matches = data.matches || [];
   
@@ -1254,15 +1266,15 @@ async function getMatchTrends() {
   
   // 3. Fetch all predictions for these match IDs
   let predictions = [];
-  let usersMap = {}; // id -> { username, profilePic }
+  let usersMap = {}; // id -> username
   
   if (dbType === 'firestore') {
-    // Fetch users to map userId -> { username, profilePic }
+    // Fetch users to map userId -> username
     const usersSnap = await firestoreDb.collection('users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = u.username;
       }
     });
     
@@ -1278,7 +1290,7 @@ async function getMatchTrends() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = u.username;
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1295,13 +1307,10 @@ async function getMatchTrends() {
     };
     
     matchPreds.forEach(p => {
-      const userData = usersMap[p.userId];
-      if (userData && stats[p.prediction]) {
+      const username = usersMap[p.userId];
+      if (username && stats[p.prediction]) {
         stats[p.prediction].count++;
-        stats[p.prediction].users.push({
-          username: userData.username,
-          profilePic: userData.profilePic
-        });
+        stats[p.prediction].users.push(username);
       }
     });
     
@@ -1339,7 +1348,7 @@ async function getMatchTrendsAll() {
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = u.username;
       }
     });
     
@@ -1351,7 +1360,7 @@ async function getMatchTrendsAll() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = u.username;
       }
     });
     predictions = (db.predictions || []);
@@ -1367,13 +1376,10 @@ async function getMatchTrendsAll() {
     };
     
     matchPreds.forEach(p => {
-      const userData = usersMap[p.userId];
-      if (userData && stats[p.prediction]) {
+      const username = usersMap[p.userId];
+      if (username && stats[p.prediction]) {
         stats[p.prediction].count++;
-        stats[p.prediction].users.push({
-          username: userData.username,
-          profilePic: userData.profilePic
-        });
+        stats[p.prediction].users.push(username);
       }
     });
     

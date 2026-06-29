@@ -1,7 +1,17 @@
+window.onerror = function(message, source, lineno, colno, error) {
+  const errText = "Error: " + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno;
+  alert(errText);
+  console.error(errText);
+};
+
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
   document.body.classList.add('dark-theme');
-  localStorage.setItem('theme', 'dark');
+  try {
+    localStorage.setItem('theme', 'dark');
+  } catch (e) {
+    console.warn("Storage access denied:", e);
+  }
 }
 
 function toggleTheme() {
@@ -34,7 +44,7 @@ let state = {
   matches: [],
   predictions: {}, // Key: matchId, Value: prediction string ('L', 'E', 'V')
   leaderboard: [],
-  activeTab: 'leaderboard',
+  activeTab: 'profile',
   authTab: 'login'
 };
 
@@ -272,7 +282,7 @@ function showAppDashboard() {
 
 
   // Initial data fetch
-  switchTab('leaderboard');
+  switchTab('profile');
   checkAnnouncementModal();
 
   // Notifications init
@@ -417,6 +427,9 @@ function handleLogout() {
 // --- DASHBOARD ROUTING & TABS ---
 
 function switchTab(tabId) {
+  if (tabId === 'leaderboard') {
+    tabId = 'profile';
+  }
   state.activeTab = tabId;
   
   // Update Tab buttons styling
@@ -438,10 +451,10 @@ function switchTab(tabId) {
     targetView.classList.add('active');
   }
 
-  // Toggle floating trends button visibility (show on leaderboard or new-panel)
-  const trendsBtn = document.getElementById('floating-trends-btn');
+  // Toggle tab trends button visibility.
+  const trendsBtn = document.getElementById('tab-trends');
   if (trendsBtn) {
-    trendsBtn.style.display = (tabId === 'leaderboard' || tabId === 'new-panel') ? 'flex' : 'none';
+    trendsBtn.style.display = (tabId === 'new-panel' || tabId === 'profile') ? 'flex' : 'none';
   }
 
   // Fetch data depending on tab
@@ -1347,7 +1360,7 @@ window.openCompleteTrendsModal = async function() {
     <p>Cargando tendencias...</p>
   </div>`;
 
-  const isPhase2 = (state.activeTab === 'new-panel');
+  const isPhase2 = true; // Always Phase 2 for trends as we ignore Phase 1 (72 matches)
   const url = isPhase2 ? '/api/phase2/matches/trends/all' : `${API_URL}/matches/trends/all`;
 
   if (title) {
@@ -1439,10 +1452,11 @@ window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
       const name = typeof u === 'object' ? u.username : u;
       const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
       const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      const winnerTeamText = (typeof u === 'object' && u.winnerTeam) ? ` - Avanza: ${u.winnerTeam}` : '';
       return `
         <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 0.5rem;">
           <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
-          <span>${name}${scoreSuffix}</span>
+          <span>${name}${scoreSuffix}${winnerTeamText}</span>
         </li>
       `;
     }).join('');
@@ -1533,7 +1547,7 @@ async function loadAdminUsers() {
             <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
               <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
             </button>
-            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: #3b82f6; border-color: #3b82f6;">
+            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: var(--gold); border-color: var(--gold);">
               <i class="fa-solid fa-key"></i> Nueva Contraseña
             </button>
             <button class="btn btn-outline" onclick="deleteUser('${user.id}', '${user.username}')" ${deleteBtnDisabled} title="${deleteBtnTitle}" style="padding: 0.4rem 0.6rem; border-color: var(--red); color: var(--red); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
@@ -1593,22 +1607,28 @@ async function deleteUser(userId, username) {
 function renderAdminMatchesList() {
   const list = document.getElementById('admin-matches-list');
 
-  // Ocultar los resultados registrados (matches that already have a result)
-  let filtered = state.matches.filter(m => !m.result);
-
-  list.innerHTML = filtered.map(match => {
+  // Mostrar todos los partidos, pero deshabilitar la edición para los que ya tienen resultado
+  list.innerHTML = state.matches.map(match => {
+    const isCaptured = match.result !== null && match.result !== undefined;
     const actL = match.result === 'L' ? 'active-L' : '';
     const actE = match.result === 'E' ? 'active-E' : '';
     const actV = match.result === 'V' ? 'active-V' : '';
 
+    const disabledAttr = isCaptured ? 'disabled' : '';
+    const disabledStyle = isCaptured ? 'opacity: 0.5; cursor: not-allowed;' : '';
+    const clickL = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'L')"`;
+    const clickE = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'E')"`;
+    const clickV = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'V')"`;
+
     return `
-      <div class="admin-match-row">
+      <div class="admin-match-row" style="${isCaptured ? 'background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.03);' : ''}">
         <div class="admin-match-info">
           <span class="admin-match-id">${match.id}</span>
           <div class="admin-match-teams">
             <span class="admin-team-l">${match.team1}</span>
             <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">vs</span>
             <span class="admin-team-v">${match.team2}</span>
+            ${isCaptured ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; margin-left: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Capturado</span>' : ''}
           </div>
         </div>
 
@@ -1619,12 +1639,12 @@ function renderAdminMatchesList() {
 
         <div class="admin-controls">
           <div class="admin-result-buttons">
-            <button class="admin-opt-btn ${actL}" onclick="saveAdminResult(${match.id}, 'L')">L</button>
-            <button class="admin-opt-btn ${actE}" onclick="saveAdminResult(${match.id}, 'E')">E</button>
-            <button class="admin-opt-btn ${actV}" onclick="saveAdminResult(${match.id}, 'V')">V</button>
+            <button class="admin-opt-btn ${actL}" ${clickL} style="${disabledStyle}" ${disabledAttr}>L</button>
+            <button class="admin-opt-btn ${actE}" ${clickE} style="${disabledStyle}" ${disabledAttr}>E</button>
+            <button class="admin-opt-btn ${actV}" ${clickV} style="${disabledStyle}" ${disabledAttr}>V</button>
           </div>
           ${match.result !== null ? `
-            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado">
+            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado" style="${disabledStyle}" ${disabledAttr}>
               <i class="fa-solid fa-trash-can"></i>
             </button>
           ` : ''}
@@ -2417,10 +2437,13 @@ async function loadProbabilityDashboard() {
 
 async function loadProfileDashboard() {
   const predictionsEl = document.getElementById('profile-stat-predictions');
+  const pointsEl = document.getElementById('profile-stat-points');
   const hitsEl = document.getElementById('profile-stat-hits');
   const missesEl = document.getElementById('profile-stat-misses');
   const remainingEl = document.getElementById('profile-stat-remaining');
-  const probabilityEl = document.getElementById('profile-stat-probability');
+  const effectivenessEl = document.getElementById('profile-stat-effectiveness');
+  const goodStreakEl = document.getElementById('profile-stat-good-streak');
+  const badStreakEl = document.getElementById('profile-stat-bad-streak');
   const bonusEl = document.getElementById('profile-stat-bonus');
   const usernameEl = document.getElementById('profile-username');
   const picDisplay = document.getElementById('profile-pic-display');
@@ -2431,10 +2454,13 @@ async function loadProfileDashboard() {
   // Mostrar spinners de carga temporalmente en la tabla
   const loader = `<i class="fa-solid fa-spinner fa-spin"></i>`;
   if (predictionsEl) predictionsEl.innerHTML = loader;
+  if (pointsEl) pointsEl.innerHTML = loader;
   if (hitsEl) hitsEl.innerHTML = loader;
   if (missesEl) missesEl.innerHTML = loader;
   if (remainingEl) remainingEl.innerHTML = loader;
-  if (probabilityEl) probabilityEl.innerHTML = loader;
+  if (effectivenessEl) effectivenessEl.innerHTML = loader;
+  if (goodStreakEl) goodStreakEl.innerHTML = loader;
+  if (badStreakEl) badStreakEl.innerHTML = loader;
   if (bonusEl) bonusEl.innerHTML = loader;
 
   try {
@@ -2469,31 +2495,13 @@ async function loadProfileDashboard() {
       statePhase2.predictions[p.matchId] = p.prediction;
     });
 
-    // --- CÁLCULOS ---
+    // --- CÁLCULOS (Solo Fase Final - 32 partidos, sin contemplar la primera fase de 72 partidos) ---
     
-    // 1. Pronósticos realizados
-    const p1Count = Object.keys(state.predictions).length;
-    const p2Count = Object.keys(statePhase2.predictions).length;
-    const totalPredictions = p1Count + p2Count;
-    const totalPossibleMatches = 72 + 32; // 72 de Grupos, 32 de Fase Final
+    // 1. Pronósticos realizados (Solo Fase Final)
+    const totalPredictions = Object.keys(statePhase2.predictions).length;
+    const totalPossibleMatches = 32; // 32 de Fase Final
 
-    // 2. Aciertos y fallas de Fase 1
-    let hitsP1 = 0;
-    let missesP1 = 0;
-    state.matches.forEach(match => {
-      if (match.result !== null) {
-        const pred = state.predictions[match.id];
-        if (pred !== undefined && pred !== null) {
-          if (pred === match.result) {
-            hitsP1++;
-          } else {
-            missesP1++;
-          }
-        }
-      }
-    });
-
-    // 3. Aciertos y fallas de Fase 2, y conteo de Bonus
+    // 2. Aciertos y fallas de Fase 2, y conteo de Bonus
     let hitsP2 = 0;
     let missesP2 = 0;
     let bonusCount = 0;
@@ -2520,35 +2528,111 @@ async function loadProfileDashboard() {
       }
     });
 
-    // 4. Totales
-    const totalHits = hitsP1 + hitsP2;
-    const totalMisses = missesP1 + missesP2;
+    // 3. Totales (Solo Fase Final)
+    const totalHits = hitsP2;
+    const totalMisses = missesP2;
 
-    // 5. Restantes por jugar
-    const remainingP1 = state.matches.filter(m => m.result === null).length;
-    const remainingP2 = statePhase2.matches.filter(m => m.result === null).length;
-    const totalRemaining = remainingP1 + remainingP2;
+    // 4. Restantes por jugar (Solo Fase Final)
+    const totalRemaining = statePhase2.matches.filter(m => m.result === null).length;
 
-    // 6. Buscar probabilidad del usuario en la simulación
-    let userProb = 0;
-    const myProbData = probRes.find(u => u.id === state.currentUser.id);
-    if (myProbData) {
-      userProb = myProbData.probability;
-    }
+    // Calculate active streaks for the current user in Phase 2
+    // 1. Filter and sort finished matches
+    const finishedP2Matches = statePhase2.matches
+      .filter(m => m.result !== null && m.result !== undefined)
+      .sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) {
+          return new Date(a.updatedAt) - new Date(b.updatedAt);
+        } else if (a.updatedAt) return 1;
+        else if (b.updatedAt) return -1;
+        return a.id - b.id;
+      });
+
+    let currentHits = 0;
+    let currentMisses = 0;
+
+    finishedP2Matches.forEach(match => {
+      const pred = statePhase2.predictions[match.id];
+      let isHit = false;
+      if (pred) {
+        const r1 = parseInt(match.result.team1Score);
+        const r2 = parseInt(match.result.team2Score);
+        const p1 = parseInt(pred.team1Score);
+        const p2 = parseInt(pred.team2Score);
+        const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+        const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        isHit = (realWinner === predWinner);
+      }
+
+      if (isHit) {
+        currentHits++;
+        currentMisses = 0;
+      } else {
+        currentHits = 0;
+        currentMisses++;
+      }
+    });
+
+    const effectiveness = totalPredictions > 0 ? (totalHits / totalPredictions * 100) : 0;
 
     // Render en la interfaz
+    const totalPoints = (totalHits - bonusCount) * 3 + bonusCount * 4;
+    if (pointsEl) pointsEl.textContent = `${totalPoints} pts`;
     if (predictionsEl) predictionsEl.textContent = `${totalPredictions} / ${totalPossibleMatches}`;
     if (hitsEl) hitsEl.textContent = totalHits;
     if (missesEl) missesEl.textContent = totalMisses;
     if (remainingEl) remainingEl.textContent = totalRemaining;
-    if (probabilityEl) probabilityEl.textContent = `${userProb.toFixed(2)}%`;
+    if (effectivenessEl) effectivenessEl.textContent = `${effectiveness.toFixed(1)}%`;
+    if (goodStreakEl) goodStreakEl.textContent = currentHits;
+    if (badStreakEl) badStreakEl.textContent = currentMisses;
     if (bonusEl) bonusEl.textContent = bonusCount;
+
+    // Actualizar puntos en el header
+    const headerPoints = document.getElementById('user-display-points');
+    if (headerPoints) headerPoints.textContent = `${totalPoints} pts`;
 
   } catch (err) {
     console.error("Error al cargar el dashboard del perfil:", err);
     showToast("Error de conexión al cargar estadísticas del perfil.", "error");
   }
 }
+
+window.selectPresetProfilePic = async function(path) {
+  const picDisplay = document.getElementById('profile-pic-display');
+  if (picDisplay) picDisplay.src = path;
+
+  showToast("Actualizando foto de perfil...", "info");
+  try {
+    const response = await fetch('/api/user/profile-pic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ profilePic: path })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al actualizar la foto de perfil", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+      return;
+    }
+
+    // Actualizar estado local
+    state.currentUser.profilePic = path;
+    localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+
+    // Actualizar en el header
+    const headerAvatar = document.getElementById('user-header-avatar');
+    if (headerAvatar) headerAvatar.src = path;
+
+    showToast("¡Foto de perfil actualizada con éxito!", "success");
+  } catch (err) {
+    console.error("Error updating preset avatar:", err);
+    showToast("Error de conexión al actualizar la foto de perfil", "error");
+    if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+  }
+};
 
 let cropperInstance = null;
 
@@ -2963,6 +3047,7 @@ function renderAdmin2MatchesList() {
   if (!window.admin2Winners) window.admin2Winners = {};
   
   const html = statePhase2.matches.map(match => {
+    const isCaptured = match.result !== null && match.result !== undefined;
     let r1 = match.result ? match.result.team1Score : '';
     let r2 = match.result ? match.result.team2Score : '';
     let win = window.admin2Winners[match.id] || (match.result ? match.result.winner : null);
@@ -2970,32 +3055,38 @@ function renderAdmin2MatchesList() {
     let selL = win === 'L' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
     let selV = win === 'V' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
+    const disabledAttr = isCaptured ? 'disabled' : '';
+    const disabledStyle = isCaptured ? 'opacity: 0.5; cursor: not-allowed;' : '';
+    const clickL = isCaptured ? '' : `onclick="selectAdmin2Winner(${match.id}, 'L')"`;
+    const clickV = isCaptured ? '' : `onclick="selectAdmin2Winner(${match.id}, 'V')"`;
+    const pointerStyle = isCaptured ? 'cursor: default;' : 'cursor: pointer;';
+
     return `
-      <div class="admin-user-card" style="margin-bottom: 1rem;">
+      <div class="admin-user-card" style="margin-bottom: 1rem; ${isCaptured ? 'border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.01);' : ''}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <strong>#${match.id} - ${match.group || 'Partido'}</strong>
-          <input type="text" id="admin-2-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;" placeholder="Fecha/Sede">
+          <strong>#${match.id} - ${match.group || 'Partido'} ${isCaptured ? '<span class="badge badge-success" style="margin-left: 0.5rem; font-size: 0.7rem; padding: 0.15rem 0.35rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Capturado</span>' : ''}</strong>
+          <input type="text" id="admin-2-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;" placeholder="Fecha/Sede" ${disabledAttr}>
         </div>
         
         <!-- Team Editing -->
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
-          <input type="text" id="admin-2-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1">
+          <input type="text" id="admin-2-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1" ${disabledAttr}>
           <span>vs</span>
-          <input type="text" id="admin-2-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2">
-          <button class="btn btn-secondary" onclick="saveAdmin2Teams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem;">Guardar Datos</button>
+          <input type="text" id="admin-2-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2" ${disabledAttr}>
+          <button class="btn btn-secondary" onclick="saveAdmin2Teams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem; ${disabledStyle}" ${disabledAttr}>Guardar Datos</button>
         </div>
 
         <!-- Result Editing -->
         <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-          <div onclick="selectAdmin2Winner(${match.id}, 'L')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
+          <div ${clickL} style="${pointerStyle} padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G" ${disabledAttr}>
           <span>-</span>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
-          <div onclick="selectAdmin2Winner(${match.id}, 'V')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G" ${disabledAttr}>
+          <div ${clickV} style="${pointerStyle} padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
         </div>
         <div style="display: flex; gap: 1rem;">
-          <button class="btn btn-primary" style="flex:1;" onclick="saveAdmin2Result(${match.id})">Guardar Marcador</button>
-          <button class="btn btn-danger" onclick="saveAdmin2Result(${match.id}, true)">Borrar Marcador</button>
+          <button class="btn btn-primary" style="flex:1; ${disabledStyle}" onclick="saveAdmin2Result(${match.id})" ${disabledAttr}>Guardar Marcador</button>
+          <button class="btn btn-danger" style="${disabledStyle}" onclick="saveAdmin2Result(${match.id}, true)" ${disabledAttr}>Borrar Marcador</button>
         </div>
       </div>
     `;
@@ -3132,7 +3223,7 @@ function renderPhase2Leaderboard() {
   const tbody = document.getElementById('new-panel-leaderboard-body');
   if (!tbody) return;
 
-  tbody.innerHTML = statePhase2.leaderboard.filter(player => player.username !== 'invitado').map((player, index) => {
+  tbody.innerHTML = statePhase2.leaderboard.filter(player => player.username !== 'invitado' && player.predictionCount > 0).map((player, index) => {
     const position = index + 1;
     let rankBadgeClass = 'rank-other';
     if (position === 1) rankBadgeClass = 'rank-1';
@@ -3398,10 +3489,11 @@ window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
       const name = typeof u === 'object' ? u.username : u;
       const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
       const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      const winnerTeamText = (typeof u === 'object' && u.winnerTeam) ? ` - Avanza: ${u.winnerTeam}` : '';
       return `
         <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
           <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
-          <span>${name}${scoreSuffix}</span>
+          <span>${name}${scoreSuffix}${winnerTeamText}</span>
         </li>
       `;
     }).join('');
@@ -3435,11 +3527,11 @@ async function loadStreaksPhase2() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-label-group"><img src="${top.profilePic || 'avatar.png'}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);"><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
             <div class="racha-badge racha-buena" onclick="toggleStreaksTop3Phase2('buena')">${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></div>
           </div>
           <div id="top3-buena-final" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -3450,11 +3542,11 @@ async function loadStreaksPhase2() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-label-group"><img src="${top.profilePic || 'avatar.png'}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);"><div class="racha-info"><span class="racha-title">El Mala Racha</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
             <div class="racha-badge racha-mala" onclick="toggleStreaksTop3Phase2('mala')">${top.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></div>
           </div>
           <div id="top3-mala-final" class="top3-list">
-            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
+            ${data.malaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }

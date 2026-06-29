@@ -1,13 +1,24 @@
+window.onerror = function(message, source, lineno, colno, error) {
+  const errText = "Error: " + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno;
+  alert(errText);
+  console.error(errText);
+};
+
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
-  const saved = localStorage.getItem('theme');
-  if (saved === 'light') {
-    document.body.classList.remove('dark-theme');
-    updateThemeButtonUI('light');
-  } else {
+  try {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+      document.body.classList.remove('dark-theme');
+      updateThemeButtonUI('light');
+    } else {
+      document.body.classList.add('dark-theme');
+      localStorage.setItem('theme', 'dark');
+      updateThemeButtonUI('dark');
+    }
+  } catch (e) {
+    console.warn("Storage access denied:", e);
     document.body.classList.add('dark-theme');
-    localStorage.setItem('theme', 'dark');
-    updateThemeButtonUI('dark');
   }
 }
 
@@ -1329,7 +1340,7 @@ async function loadAdminUsers() {
             <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
               <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
             </button>
-            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: #3b82f6; border-color: #3b82f6;">
+            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: var(--gold); border-color: var(--gold);">
               <i class="fa-solid fa-key"></i> Nueva Contraseña
             </button>
             <button class="btn btn-outline" onclick="deleteUser('${user.id}', '${user.username}')" ${deleteBtnDisabled} title="${deleteBtnTitle}" style="padding: 0.4rem 0.6rem; border-color: var(--red); color: var(--red); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">

@@ -394,21 +394,28 @@
         <!-- Spacer -->
         <div style="margin-top: 1.5rem;"></div>
 
-        <div class="table-card glass-panel" style="padding: 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
-          <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem; margin-bottom: 0.5rem; width: 100%;">
-            <h3 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              <i class="fa-solid fa-user-gear"></i> Mi Perfil
-            </h3>
-            <p style="margin: 0.2rem 0 0 0; font-size: 0.78rem; color: var(--color-text-muted);">Administra tu avatar y consulta tus estadísticas globales</p>
-          </div>
+        <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
 
           <!-- Avatar Upload Area -->
           <div style="position: relative; display: inline-block; cursor: pointer;" onclick="document.getElementById('profile-pic-input').click()">
-            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); transition: transform 0.2s ease;">
-            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #111827; color: #111827; font-size: 0.95rem;">
+            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); transition: transform 0.2s ease;">
+            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #111827; color: #111827; font-size: 0.8rem;">
               <i class="fa-solid fa-camera"></i>
             </div>
             <input type="file" id="profile-pic-input" accept="image/*" style="display: none;" onchange="handleProfilePicUpload(event)">
+          </div>
+
+          <!-- Preset Avatars Gallery -->
+          <div style="width: 100%;">
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600;">O elige un avatar predeterminado:</p>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+              <img src="perfil/mexico.png" alt="México" onclick="selectPresetProfilePic('perfil/mexico.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+              <img src="perfil/america.png" alt="América" onclick="selectPresetProfilePic('perfil/america.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+              <img src="perfil/chivas.png" alt="Chivas" onclick="selectPresetProfilePic('perfil/chivas.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+              <img src="perfil/crua azul.png" alt="Cruz Azul" onclick="selectPresetProfilePic('perfil/crua azul.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+              <img src="perfil/pumas.png" alt="Pumas" onclick="selectPresetProfilePic('perfil/pumas.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+              <img src="perfil/real.png" alt="Real Madrid" onclick="selectPresetProfilePic('perfil/real.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
+            </div>
           </div>
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
@@ -425,7 +432,11 @@
               <tbody>
                 <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
                   <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-square-poll-vertical" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Pronósticos realizados</td>
-                  <td id="profile-stat-predictions" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700;">0 / 104</td>
+                  <td id="profile-stat-predictions" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700;">0 / 32</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-trophy" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Puntos obtenidos</td>
+                  <td id="profile-stat-points" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--gold);">0</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
                   <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-circle-check" style="margin-right: 0.5rem; color: var(--success); width: 16px;"></i> Aciertos</td>
@@ -436,12 +447,20 @@
                   <td id="profile-stat-misses" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--red);">0</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
-                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-clock" style="margin-right: 0.5rem; color: var(--color-text-muted); width: 16px;"></i> Restantes (por jugar)</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-clock" style="margin-right: 0.5rem; color: var(--color-text-muted); width: 16px;"></i> Juegos restantes</td>
                   <td id="profile-stat-remaining" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--color-text-muted);">0</td>
                 </tr>
                 <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
-                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-crystal-ball" style="margin-right: 0.5rem; color: #a78bfa; width: 16px;"></i> Probabilidad</td>
-                  <td id="profile-stat-probability" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: #a78bfa;">0.00%</td>
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-percent" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Efectividad</td>
+                  <td id="profile-stat-effectiveness" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--gold);">0.0%</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-fire" style="margin-right: 0.5rem; color: var(--success); width: 16px;"></i> Buena racha activa</td>
+                  <td id="profile-stat-good-streak" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--success);">0</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                  <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-circle-exclamation" style="margin-right: 0.5rem; color: var(--red); width: 16px;"></i> Mala racha activa</td>
+                  <td id="profile-stat-bad-streak" style="padding: 0.75rem 1rem; text-align: right; font-weight: 700; color: var(--red);">0</td>
                 </tr>
                 <tr>
                   <td style="padding: 0.75rem 1rem; font-weight: 600;"><i class="fa-solid fa-star" style="margin-right: 0.5rem; color: var(--gold); width: 16px;"></i> Bonus</td>
@@ -454,13 +473,12 @@
       </section>
     </main>
 
-    <!-- Bottom Navigation Bar -->
     <nav id="bottom-nav-bar" class="bottom-nav">
-      <button id="tab-profile" class="tab-btn" onclick="switchTab('profile')">
+      <button id="tab-profile" class="tab-btn active" onclick="switchTab('profile')">
         <i class="fa-solid fa-user"></i>
         <span>Perfil</span>
       </button>
-      <button id="tab-leaderboard" class="tab-btn active" onclick="switchTab('leaderboard')">
+      <button id="tab-leaderboard" class="tab-btn" style="display: none;" onclick="switchTab('leaderboard')">
         <i class="fa-solid fa-ranking-star"></i>
         <span>Posición</span>
       </button>
@@ -472,7 +490,11 @@
         <i class="fa-solid fa-trophy"></i>
         <span>Panel final</span>
       </button>
-      <button id="tab-policies" class="tab-btn" onclick="switchTab('policies')">
+      <button id="tab-trends" class="tab-btn" onclick="openCompleteTrendsModal()">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Tendencias</span>
+      </button>
+      <button id="tab-policies" class="tab-btn" style="display: none !important;" onclick="switchTab('policies')">
         <i class="fa-solid fa-circle-info"></i>
         <span>Políticas</span>
       </button>
@@ -670,6 +692,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=4.04"></script>
+  <script src="app.js?v=4.32"></script>
 </body>
 </html>

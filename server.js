@@ -27,13 +27,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize DB and load Excel matches on startup
-console.log("Initializing database...");
-Promise.all([
-  dbHelper.initDb().then(() => console.log("Phase 1 database initialized successfully.")),
-  dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully."))
-]).catch(err => {
-  console.error("Error during database initialization:", err);
+// Initialize DB lazily. Firebase CLI loads this file during deploy analysis without
+// production credentials, so Firestore reads must not run at module load time.
+let dbInitPromise = null;
+function ensureDbInitialized() {
+  if (!dbInitPromise) {
+    console.log("Initializing database...");
+    dbInitPromise = Promise.all([
+      dbHelper.initDb().then(() => console.log("Phase 1 database initialized successfully.")),
+      dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully."))
+    ]).catch(err => {
+      dbInitPromise = null;
+      console.error("Error during database initialization:", err);
+      throw err;
+    });
+  }
+  return dbInitPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Error al inicializar la base de datos." });
+  }
 });
 
 // Simple authentication middleware
@@ -681,11 +699,11 @@ app.post('/api/phase2/admin/matches', requireAdminPhase2, async (req, res) => {
 // Admin update teams
 app.post('/api/phase2/admin/matches/teams', requireAdminPhase2, async (req, res) => {
   const { matchId, team1, team2, date } = req.body;
-  if (matchId === undefined || !team1 || !team2 || !date) {
-    return res.status(400).json({ error: "Faltan datos (matchId, team1, team2, date)." });
+  if (matchId === undefined || !team1 || !team2) {
+    return res.status(400).json({ error: "Faltan datos (matchId, team1, team2)." });
   }
   try {
-    await dbHelperPhase2.updateMatchTeams(matchId, team1, team2, date);
+    await dbHelperPhase2.updateMatchTeams(matchId, String(team1).trim(), String(team2).trim(), String(date || 'TBD').trim() || 'TBD');
     res.json({ message: "Datos del partido actualizados correctamente." });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -1065,13 +1083,15 @@ if (process.env.FIREBASE_CONFIG) {
 
   exports.api = onRequest(app);
   
-  // Scheduled Cloud Function running at 5 and 55 minutes past the hour (PM 13-23) to automatically pull FIFA results
+  // Sincronización automática de marcadores deshabilitada (Cloud Function programada inactiva)
+  /*
   exports.scheduledFifaSync = onSchedule({
     schedule: "5 12-23/2 * * *",
     timeZone: "America/Mexico_City"
   }, async (event) => {
     console.log("Starting scheduled FIFA match results synchronization...");
     try {
+      await ensureDbInitialized();
       const stats = await dbHelper.syncFifaResults();
       console.log(`FIFA Sincronización automática terminada con éxito: ${JSON.stringify(stats)}`);
       return null;
@@ -1080,6 +1100,7 @@ if (process.env.FIREBASE_CONFIG) {
       throw err;
     }
   });
+  */
 } else {
   // Running locally
   app.listen(PORT, () => {

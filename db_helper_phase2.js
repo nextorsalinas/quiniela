@@ -91,6 +91,37 @@ try {
   console.log("Firebase Admin SDK failed to initialize. USING LOCAL JSON!", e.message);
 }
 
+function getTrendBucketFromPrediction(prediction) {
+  if (!prediction) return null;
+  if (typeof prediction === 'string') return prediction;
+  if (typeof prediction !== 'object') return null;
+
+  const p1 = parseInt(prediction.team1Score);
+  const p2 = parseInt(prediction.team2Score);
+
+  if (!Number.isFinite(p1) || !Number.isFinite(p2)) return null;
+  if (p1 === p2) return 'E';
+  return p1 > p2 ? 'L' : 'V';
+}
+
+function formatTrendUserLabel(user, prediction, match, trendBucket) {
+  const userInfo = typeof user === 'object' ? user : { username: user };
+  const score = prediction && typeof prediction === 'object'
+    ? `${prediction.team1Score}-${prediction.team2Score}`
+    : '';
+  const chosenWinner = prediction && typeof prediction === 'object' && prediction.winner === 'L'
+    ? match.team1
+    : (prediction && typeof prediction === 'object' && prediction.winner === 'V' ? match.team2 : null);
+  const fallbackWinner = trendBucket === 'L' ? match.team1 : (trendBucket === 'V' ? match.team2 : null);
+
+  return {
+    username: userInfo.username,
+    profilePic: userInfo.profilePic || null,
+    score,
+    winnerTeam: chosenWinner || fallbackWinner
+  };
+}
+
 // Initialize database with default structure and seed data if empty
 async function initDb() {
   if (dbType === 'firestore') {
@@ -457,6 +488,7 @@ async function registerSyncedUser(user) {
     password: user.password,
     points: 0,
     isAdmin: !!user.isAdmin,
+    profilePic: user.profilePic || '',
     createdAt: user.createdAt || new Date().toISOString()
   };
 
@@ -512,12 +544,8 @@ let cachedMatches = null;
 
 async function getMatches() {
   if (dbType === 'firestore') {
-    if (cachedMatches) {
-      return cachedMatches;
-    }
     const snap = await firestoreDb.collection('phase2_matches').orderBy('id', 'asc').get();
-    cachedMatches = snap.docs.map(d => d.data());
-    return cachedMatches;
+    return snap.docs.map(d => d.data());
   }
   const db = readDb();
   return db.matches;
@@ -809,12 +837,6 @@ function recalculateScoresSync(db) {
 // Leaderboard
 async function getLeaderboard() {
   if (dbType === 'firestore') {
-    const now = Date.now();
-    if (cache.leaderboard.data && (now - cache.leaderboard.timestamp) < CACHE_TTL_MS) {
-      console.log("Serving leaderboard from cache.");
-      return cache.leaderboard.data;
-    }
-
     const snap = await firestoreDb.collection('phase2_users').orderBy('points', 'desc').get();
     const leaderboard = [];
     
@@ -836,9 +858,6 @@ async function getLeaderboard() {
         predictionCount: countSnap.data().count
       });
     }
-    
-    cache.leaderboard.data = leaderboard;
-    cache.leaderboard.timestamp = now;
     return leaderboard;
   }
 
@@ -979,11 +998,17 @@ function normalizeTeam(name) {
 }
 
 async function syncFifaResults() {
+  console.log("Sincronización de marcadores con la API externa deshabilitada.");
+  return { checked: 0, updated: 0, message: "Sincronización deshabilitada por configuración." };
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches from openfootball GitHub repository...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch World Cup matches: ${response.statusText}`);
   }
+  */
   
   const data = await response.json();
   const apiMatches = data.matches || [];
@@ -1362,11 +1387,17 @@ function translateTeamToSpanish(engName) {
 }
 
 async function getTopScorers() {
+  console.log("Obtención de goleadores desde la API externa deshabilitada.");
+  return [];
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches for top scorers from openfootball...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch scorers: ${response.statusText}`);
   }
+  */
   const data = await response.json();
   const matches = data.matches || [];
   
@@ -1416,14 +1447,6 @@ async function deleteNotification(notificationId, userId) {
 
 
 async function getBonusUsers() {
-  if (dbType === 'firestore') {
-    const now = Date.now();
-    if (cache.bonus && cache.bonus.data && (now - cache.bonus.timestamp) < CACHE_TTL_MS) {
-      console.log("Serving bonus users from cache.");
-      return cache.bonus.data;
-    }
-  }
-
   let users = [];
   if (dbType === 'firestore') {
     const snap = await firestoreDb.collection('phase2_users').get();
@@ -1451,12 +1474,6 @@ async function getBonusUsers() {
       bonusDetails: bonusPreds.map(p => ({ matchId: p.matchId, prediction: p.prediction }))
     };
   }).filter(u => u.bonus > 0).sort((a, b) => b.bonus - a.bonus || a.username.localeCompare(b.username));
-
-  if (dbType === 'firestore') {
-    if (!cache.bonus) cache.bonus = {};
-    cache.bonus.data = bonusPoints;
-    cache.bonus.timestamp = Date.now();
-  }
 
   return bonusPoints;
 }
@@ -1489,12 +1506,12 @@ async function getMatchTrends() {
   let usersMap = {}; // id -> { username, profilePic }
   
   if (dbType === 'firestore') {
-    // Fetch users to map userId -> { username, profilePic } from main users collection
-    const usersSnap = await firestoreDb.collection('users').get();
+    // Fetch phase 2 users to map userId -> visible profile data
+    const usersSnap = await firestoreDb.collection('phase2_users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || null };
       }
     });
     
@@ -1510,7 +1527,7 @@ async function getMatchTrends() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || null };
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1527,25 +1544,12 @@ async function getMatchTrends() {
     };
     
     matchPreds.forEach(p => {
-      const userData = usersMap[p.userId];
-      if (userData && p.prediction) {
-        let predWinner = null;
-        let scoreStr = '';
-        if (typeof p.prediction === 'object') {
-          const p1 = parseInt(p.prediction.team1Score);
-          const p2 = parseInt(p.prediction.team2Score);
-          predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
-          scoreStr = `${p.prediction.team1Score}-${p.prediction.team2Score}`;
-        } else if (typeof p.prediction === 'string') {
-          predWinner = p.prediction;
-        }
+      const user = usersMap[p.userId];
+      if (user && p.prediction) {
+        const predWinner = getTrendBucketFromPrediction(p.prediction);
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          stats[predWinner].users.push({
-            username: userData.username,
-            profilePic: userData.profilePic,
-            score: scoreStr
-          });
+          stats[predWinner].users.push(formatTrendUserLabel(user, p.prediction, match, predWinner));
         }
       }
     });
@@ -1580,11 +1584,11 @@ async function getMatchTrendsAll() {
   let usersMap = {};
   
   if (dbType === 'firestore') {
-    const usersSnap = await firestoreDb.collection('users').get();
+    const usersSnap = await firestoreDb.collection('phase2_users').get();
     usersSnap.docs.forEach(doc => {
       const u = doc.data();
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || null };
       }
     });
     
@@ -1596,7 +1600,7 @@ async function getMatchTrendsAll() {
     const db = readDb();
     (db.users || []).forEach(u => {
       if (!u.isAdmin) {
-        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || '' };
+        usersMap[u.id] = { username: u.username, profilePic: u.profilePic || null };
       }
     });
     predictions = (db.predictions || []).filter(p => matchIds.includes(p.matchId));
@@ -1612,25 +1616,12 @@ async function getMatchTrendsAll() {
     };
     
     matchPreds.forEach(p => {
-      const userData = usersMap[p.userId];
-      if (userData && p.prediction) {
-        let predWinner = null;
-        let scoreStr = '';
-        if (typeof p.prediction === 'object') {
-          const p1 = parseInt(p.prediction.team1Score);
-          const p2 = parseInt(p.prediction.team2Score);
-          predWinner = p.prediction.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
-          scoreStr = `${p.prediction.team1Score}-${p.prediction.team2Score}`;
-        } else if (typeof p.prediction === 'string') {
-          predWinner = p.prediction;
-        }
+      const user = usersMap[p.userId];
+      if (user && p.prediction) {
+        const predWinner = getTrendBucketFromPrediction(p.prediction);
         if (predWinner && stats[predWinner]) {
           stats[predWinner].count++;
-          stats[predWinner].users.push({
-            username: userData.username,
-            profilePic: userData.profilePic,
-            score: scoreStr
-          });
+          stats[predWinner].users.push(formatTrendUserLabel(user, p.prediction, match, predWinner));
         }
       }
     });
@@ -1680,8 +1671,6 @@ async function getStreaks() {
   } else {
     users = readDb().users;
   }
-  const nonAdminUsers = users.filter(u => !u.isAdmin && u.username !== 'invitado');
-  
   let allPredictions = [];
   if (dbType === 'firestore') {
     const snap = await firestoreDb.collection('phase2_predictions').get();
@@ -1690,18 +1679,30 @@ async function getStreaks() {
     allPredictions = readDb().predictions || [];
   }
 
-  const userStreaks = nonAdminUsers.map(user => {
+  const activeUsers = users.filter(u => {
+    if (u.isAdmin || u.username === 'invitado') return false;
+    return allPredictions.some(p => p.userId === u.id);
+  });
+
+  const userStreaks = activeUsers.map(user => {
     let currentHits = 0;
     let currentMisses = 0;
+    let bonusCount = 0;
 
     finishedMatches.forEach(match => {
       const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
-      if (!pred || pred.prediction !== match.result) {
+      if (!pred || calculatePointsHelper(match.result, pred.prediction) === 0) {
         currentHits = 0;
         currentMisses++;
       } else {
         currentHits++;
         currentMisses = 0;
+        if (pred && pred.prediction) {
+          const pts = calculatePointsHelper(match.result, pred.prediction);
+          if (pts === 4) {
+            bonusCount++;
+          }
+        }
       }
     });
 
@@ -1710,13 +1711,15 @@ async function getStreaks() {
       username: user.username,
       points: user.points || 0,
       activeHits: currentHits,
-      activeMisses: currentMisses
+      activeMisses: currentMisses,
+      profilePic: user.profilePic || '',
+      bonusCount: bonusCount
     };
   });
 
   let buenaRacha = [...userStreaks]
     .filter(u => u.activeHits > 0)
-    .sort((a, b) => b.activeHits - a.activeHits || a.username.localeCompare(b.username))
+    .sort((a, b) => b.activeHits - a.activeHits || b.bonusCount - a.bonusCount || a.username.localeCompare(b.username))
     .slice(0, 3);
 
   if (buenaRacha.length === 0 && userStreaks.length > 0) {
