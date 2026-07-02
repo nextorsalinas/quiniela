@@ -396,29 +396,17 @@
 
         <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
 
-          <!-- Avatar Upload Area -->
-          <div style="position: relative; display: inline-block; cursor: pointer;" onclick="document.getElementById('profile-pic-input').click()">
-            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); transition: transform 0.2s ease;">
-            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #111827; color: #111827; font-size: 0.8rem;">
-              <i class="fa-solid fa-camera"></i>
-            </div>
-            <input type="file" id="profile-pic-input" accept="image/*" style="display: none;" onchange="handleProfilePicUpload(event)">
-          </div>
-
-          <!-- Preset Avatars Gallery -->
-          <div style="width: 100%;">
-            <p style="margin: 0 0 0.5rem 0; font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600;">O elige un avatar predeterminado:</p>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
-              <img src="perfil/mexico.png" alt="México" onclick="selectPresetProfilePic('perfil/mexico.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-              <img src="perfil/america.png" alt="América" onclick="selectPresetProfilePic('perfil/america.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-              <img src="perfil/chivas.png" alt="Chivas" onclick="selectPresetProfilePic('perfil/chivas.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-              <img src="perfil/crua azul.png" alt="Cruz Azul" onclick="selectPresetProfilePic('perfil/crua azul.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-              <img src="perfil/pumas.png" alt="Pumas" onclick="selectPresetProfilePic('perfil/pumas.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-              <img src="perfil/real.png" alt="Real Madrid" onclick="selectPresetProfilePic('perfil/real.png')" style="width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); cursor: pointer; object-fit: cover; transition: transform 0.2s, border-color 0.2s; background: rgba(0,0,0,0.3);" onmouseover="this.style.transform='scale(1.15)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,255,255,0.15)';">
-            </div>
+          <!-- Static Profile Image (Avatar Selection Hidden) -->
+          <div style="position: relative; display: inline-block;">
+            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
           </div>
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
+
+          <!-- Button to navigate to Octavos predictions -->
+          <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.4rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); font-size: 0.9rem;">
+            <i class="fa-solid fa-square-poll-vertical"></i> Pronostica Octavos
+          </button>
 
           <!-- Stats Table -->
           <div style="width: 100%; overflow-x: auto; margin-top: 0.5rem;">
@@ -686,6 +674,26 @@
         <button class="btn btn-outline" onclick="closeCropperModal()">Cancelar</button>
         <button id="cropper-save-btn" class="btn btn-primary" onclick="applyImageCrop()">
           <i class="fa-solid fa-circle-check"></i> Recortar y Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCOMPLETE PREDICTIONS WARNING MODAL -->
+  <div id="incomplete-predictions-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 2300;">
+    <div class="modal-content glass-panel" style="max-width: 420px; text-align: center; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; border: 1px solid rgba(255, 215, 0, 0.25);">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+        <div style="width: 70px; height: 70px; background: rgba(255, 215, 0, 0.1); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);">
+          <i class="fa-solid fa-lock" style="font-size: 2rem;"></i>
+        </div>
+        <h3 style="font-family: var(--font-title); font-weight: 800; font-size: 1.4rem; margin-top: 0.5rem; color: var(--gold);">Consulta Restringida</h3>
+        <p id="incomplete-modal-message" style="font-size: 0.9rem; color: var(--color-text-main); line-height: 1.5; margin: 0;">
+          Solo lo podrás consultar al completar los pronósticos de la fase de octavos.
+        </p>
+      </div>
+      <div style="width: 100%;">
+        <button class="btn btn-primary" onclick="closeIncompletePredictionsModal()" style="width: 100%; padding: 0.8rem; font-weight: 600; font-size: 0.9rem; border-radius: 10px;">
+          Entendido
         </button>
       </div>
     </div>

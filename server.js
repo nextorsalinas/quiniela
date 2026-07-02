@@ -120,6 +120,55 @@ async function requireAdminPhase2(req, res, next) {
   });
 }
 
+async function checkPhase2PredictionsComplete(userId) {
+  try {
+    const matches = await dbHelperPhase2.getMatches();
+    const predictions = await dbHelperPhase2.getPredictionsByUser(userId);
+
+    // Find matches that require prediction (only octavos)
+    const requiredMatches = matches.filter(match => {
+      const g = match.group ? match.group.toLowerCase().trim() : '';
+      return g === 'octavos';
+    });
+
+    const predMatchIds = new Set(predictions.map(p => parseInt(p.matchId)));
+
+    for (const match of requiredMatches) {
+      if (!predMatchIds.has(parseInt(match.id))) {
+        return false;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in checkPhase2PredictionsComplete:", err);
+    return false;
+  }
+}
+
+async function requireCompletePredictions(req, res, next) {
+  // Admin is exempt
+  if (req.user && req.user.isAdmin) {
+    return next();
+  }
+
+  // If requesting own predictions, exempt
+  const targetUserId = req.params.userId;
+  if (targetUserId && req.user && req.user.id === targetUserId) {
+    return next();
+  }
+
+  try {
+    const isComplete = await checkPhase2PredictionsComplete(req.user.id || req.headers['x-user-id']);
+    if (!isComplete) {
+      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de la fase de octavos." });
+    }
+    next();
+  } catch (error) {
+    console.error("Error in requireCompletePredictions middleware:", error);
+    res.status(500).json({ error: "Error al validar el estado de tus pronósticos." });
+  }
+}
+
 // --- API ROUTES ---
 
 // 1. AUTHENTICATION
@@ -383,7 +432,7 @@ app.get('/api/predictions/probability', authenticate, async (req, res) => {
 });
 
 // Get matches voting trends (next 2 unplayed matches)
-app.get('/api/matches/trends', authenticate, async (req, res) => {
+app.get('/api/matches/trends', authenticate, requireCompletePredictions, async (req, res) => {
   try {
     const trends = await dbHelper.getMatchTrends();
     res.json(trends);
@@ -394,7 +443,7 @@ app.get('/api/matches/trends', authenticate, async (req, res) => {
 });
 
 // Get ALL matches voting trends (Phase 1 from beginning)
-app.get('/api/matches/trends/all', authenticate, async (req, res) => {
+app.get('/api/matches/trends/all', authenticate, requireCompletePredictions, async (req, res) => {
   try {
     const trends = await dbHelper.getMatchTrendsAll();
     res.json(trends);
@@ -425,7 +474,7 @@ app.get('/api/top-scorers', authenticate, async (req, res) => {
 });
 
 // Get another user's predictions details
-app.get('/api/predictions/user/:userId', authenticate, async (req, res) => {
+app.get('/api/predictions/user/:userId', authenticate, requireCompletePredictions, async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -805,7 +854,12 @@ app.get('/api/phase2/leaderboard', authenticatePhase2, async (req, res) => {
 app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
   try {
     const trends = await dbHelperPhase2.getMatchTrends();
-    res.json(trends);
+    const filteredTrends = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
+    res.json(filteredTrends);
   } catch (error) {
     console.error("Error getting match trends:", error);
     res.status(500).json({ error: "Error al obtener las tendencias de votación." });
@@ -815,7 +869,12 @@ app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
 app.get('/api/phase2/matches/trends/all', authenticatePhase2, async (req, res) => {
   try {
     const trends = await dbHelperPhase2.getMatchTrendsAll();
-    res.json(trends);
+    const filteredTrends = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
+    res.json(filteredTrends);
   } catch (error) {
     console.error("Error getting all match trends for Phase 2:", error);
     res.status(500).json({ error: "Error al obtener todas las tendencias de votación de Fase 2." });
@@ -852,7 +911,7 @@ app.get('/api/phase2/top-scorers', authenticatePhase2, async (req, res) => {
   }
 });
 
-app.get('/api/phase2/predictions/user/:userId', authenticatePhase2, async (req, res) => {
+app.get('/api/phase2/predictions/user/:userId', authenticatePhase2, requireCompletePredictions, async (req, res) => {
   const { userId } = req.params;
   try {
     const details = await dbHelperPhase2.getUserPredictionsDetail(userId);

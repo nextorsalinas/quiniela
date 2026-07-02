@@ -35,6 +35,42 @@ function truncateName(name, maxLength = 10) {
   return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
 }
 
+function checkPredictionsComplete() {
+  if (state.currentUser && state.currentUser.isAdmin) {
+    return true;
+  }
+  if (!statePhase2.matches || statePhase2.matches.length === 0) {
+    return true;
+  }
+  const requiredMatches = statePhase2.matches.filter(match => {
+    const g = match.group ? match.group.toLowerCase().trim() : '';
+    return g === 'octavos';
+  });
+
+  if (requiredMatches.length === 0) return true;
+
+  for (const match of requiredMatches) {
+    if (!statePhase2.predictions[match.id]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function showIncompletePredictionsModal() {
+  const modal = document.getElementById('incomplete-predictions-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeIncompletePredictionsModal() {
+  const modal = document.getElementById('incomplete-predictions-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 // Initialize theme immediately
 initTheme();
 
@@ -1058,6 +1094,11 @@ async function loadGoleadores() {
 
 // Open comparison details of user
 async function viewPlayerPredictions(targetUserId) {
+  if (targetUserId !== state.currentUser.id && !checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   // If target matches are empty, load matches first
   if (state.matches.length === 0) {
     const matchesRes = await fetch(`${API_URL}/matches`, {
@@ -1161,6 +1202,7 @@ window.onclick = function(event) {
   const announcementModal = document.getElementById('info-announcement-modal');
   const completeTrendsModal = document.getElementById('complete-trends-modal');
   const cropperModal = document.getElementById('cropper-modal');
+  const incompleteModal = document.getElementById('incomplete-predictions-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
@@ -1175,6 +1217,8 @@ window.onclick = function(event) {
     closeCompleteTrendsModal();
   } else if (event.target === cropperModal) {
     closeCropperModal();
+  } else if (event.target === incompleteModal) {
+    closeIncompletePredictionsModal();
   }
 };
 
@@ -1186,6 +1230,12 @@ async function loadVotingTrends() {
   
   const tabTrendsContainer = document.getElementById('tab-trends-container');
   const tabTrendsGrid = document.getElementById('tab-trends-grid');
+
+  if (!checkPredictionsComplete()) {
+    if (container) container.style.display = 'none';
+    if (tabTrendsContainer) tabTrendsContainer.style.display = 'none';
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/matches/trends`, {
@@ -1287,6 +1337,11 @@ async function loadVotingTrends() {
 }
 
 function toggleTrendsGrid() {
+  if (!checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   const grid = document.getElementById('trends-grid');
   const icon = document.getElementById('trends-toggle-icon');
   const title = document.querySelector('.trends-section h3');
@@ -1381,9 +1436,18 @@ window.openCompleteTrendsModal = async function() {
     if (!res.ok) throw new Error("Error loading complete trends");
     const data = await res.json();
     
-    window.completeTrendsData = data;
+    // Filter to only show dieciseisavos trends if Phase 2
+    const filteredData = isPhase2 
+      ? data.filter(match => {
+          if (!match.group) return false;
+          const g = match.group.toLowerCase().trim();
+          return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+        })
+      : data;
 
-    grid.innerHTML = data.map((match, idx) => {
+    window.completeTrendsData = filteredData;
+
+    grid.innerHTML = filteredData.map((match, idx) => {
       const isPlayed = match.result !== null;
       const resultBadge = isPlayed ? `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-left: 0.5rem;">Jugado</span>` : '';
       const groupLabel = match.group || 'Fase Final';
@@ -2793,7 +2857,25 @@ function renderFinalMatchesGrid() {
     statePhase2.tempPredictions = {};
   }
 
-  const matchesHtml = statePhase2.matches.map(match => {
+  const sortedMatches = [...statePhase2.matches].sort((a, b) => {
+    const aCompleted = a.result !== null && a.result !== undefined;
+    const bCompleted = b.result !== null && b.result !== undefined;
+    
+    // 1. Uncompleted matches go first
+    if (aCompleted && !bCompleted) return 1;
+    if (!aCompleted && bCompleted) return -1;
+    
+    // 2. Octavos matches go first within their group
+    const aIsOctavos = a.group && a.group.toLowerCase().trim() === 'octavos';
+    const bIsOctavos = b.group && b.group.toLowerCase().trim() === 'octavos';
+    if (aIsOctavos && !bIsOctavos) return -1;
+    if (!aIsOctavos && bIsOctavos) return 1;
+    
+    // 3. Retain original ID ordering
+    return a.id - b.id;
+  });
+
+  const matchesHtml = sortedMatches.map(match => {
     const userPrediction = statePhase2.predictions[match.id] || null;
     const isSaved = !!userPrediction;
     
@@ -3258,6 +3340,11 @@ function renderPhase2Leaderboard() {
 }
 
 async function viewPlayerPredictionsPhase2(targetUserId) {
+  if (targetUserId !== state.currentUser.id && !checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   if (statePhase2.matches.length === 0) {
     try {
       const matchesRes = await fetch('/api/phase2/matches', {
@@ -3386,7 +3473,12 @@ async function loadVotingTrendsPhase2() {
     });
     if (!res.ok) throw new Error("Error fetching trends");
     
-    currentTrendsDataPhase2 = await res.json();
+    const trends = await res.json();
+    currentTrendsDataPhase2 = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
     
     if (currentTrendsDataPhase2.length === 0) {
       container.style.display = 'none';
