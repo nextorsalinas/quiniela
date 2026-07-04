@@ -901,12 +901,10 @@ async function loadStreaks() {
         <div class="racha-row-container">
           <div class="racha-row">
             <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
-            <div class="racha-badge racha-buena" onclick="toggleStreaksTop3('buena')">
-              ${renderStreakStars(top.activeHits, top.recentHits)}
-            </div>
+              ${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span>
           </div>
           <div id="top3-buena" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val" onclick="event.stopPropagation()">${renderStreakStars(u.activeHits, u.recentHits)}</span></div>`).join('')}
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -933,57 +931,51 @@ async function loadStreaks() {
 }
 
 // Global functions for streak stars
-window.renderStreakStars = function(hits, recentHits) {
+window.renderBonusStars = function(bonusDetails) {
+  if (!bonusDetails || bonusDetails.length === 0) return '';
   let html = '';
-  const blueStar = '<i class="fa-solid fa-star" style="color: #4da3ff; font-size: 0.8rem; margin: 0 1px;"></i>';
-  const normalCheck = '<i class="fa-solid fa-check"></i>';
+  const goldCount = Math.floor(bonusDetails.length / 5);
+  const blueCount = bonusDetails.length % 5;
+  const blueStarHtml = (b) => `<i class="fa-solid fa-star" style="color: #4da3ff; cursor: pointer; font-size: 1rem; margin-left: 2px;" onclick="event.stopPropagation(); window.showBonusMatchPhase2(${b.matchId}, ${b.prediction.team1Score}, ${b.prediction.team2Score})" title="Bonus: marcador exacto"></i>`;
+
+  for (let i = 0; i < goldCount; i++) {
+    const chunk = bonusDetails.slice(i * 5, i * 5 + 5);
+    const chunkJson = encodeURIComponent(JSON.stringify(chunk));
+    html += `<i class="fa-solid fa-star gold-super-star" onclick="event.stopPropagation(); window.showBonusDetails('${chunkJson}')" title="Ver detalle de Súper Bonus (5 aciertos exactos)"></i>`;
+  }
   
-  if (hits > 0) {
-    const goldCount = Math.floor(hits / 5);
-    const blueCount = hits % 5;
-    
-    // Render gold stars first
-    if (goldCount > 0) {
-      const hitsJson = encodeURIComponent(JSON.stringify(recentHits || []));
-      for (let i = 0; i < goldCount; i++) {
-        html += `<i class="fa-solid fa-star gold-super-star" onclick="event.stopPropagation(); window.showStreakDetails('${hitsJson}')" title="Ver detalle de racha"></i>`;
-      }
-    }
-    
-    // Render remaining blue stars
-    for (let i = 0; i < blueCount; i++) {
-      html += blueStar;
-    }
-  } else {
-    html = `${hits} <span class="seguidos-text">${normalCheck}</span>`;
+  for (let i = 0; i < blueCount; i++) {
+    const b = bonusDetails[goldCount * 5 + i];
+    html += blueStarHtml(b);
   }
   return html;
 };
 
-window.showStreakDetails = function(hitsJson) {
+window.showBonusDetails = function(bonusJson) {
   try {
-    const hits = JSON.parse(decodeURIComponent(hitsJson));
-    const modal = document.getElementById('streak-details-modal');
-    const body = document.getElementById('streak-details-body');
+    const bonuses = JSON.parse(decodeURIComponent(bonusJson));
+    const modal = document.getElementById('bonus-details-modal');
+    const body = document.getElementById('bonus-details-body');
     
     if (!modal || !body) return;
     
     let html = '<div style="display: flex; flex-direction: column; gap: 0.8rem;">';
     
-    if (hits.length === 0) {
+    if (bonuses.length === 0) {
       html += '<div style="text-align: center; color: var(--color-text-muted);">No hay información de marcadores.</div>';
     } else {
-      hits.forEach((h, index) => {
+      bonuses.forEach((b, index) => {
+        // Find match in state
+        const match = state.matches.find(m => m.id == b.matchId) || { team1: 'Local', team2: 'Visitante', resultTeam1: '?', resultTeam2: '?' };
         html += `
           <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-size: 0.75rem; color: var(--gold); font-weight: bold; margin-bottom: 0.4rem;">Acierto #${index + 1}</div>
+            <div style="font-size: 0.75rem; color: var(--gold); font-weight: bold; margin-bottom: 0.4rem;">Súper Bonus #${index + 1}</div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 600;">${h.team1} <span style="color: var(--color-text-muted);">vs</span> ${h.team2}</span>
+              <span style="font-weight: 600;">${match.team1} <span style="color: var(--color-text-muted);">vs</span> ${match.team2}</span>
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.2rem;">
-              <div><span style="color: var(--color-text-muted);">Pronóstico:</span> <strong style="color: #4da3ff;">${h.prediction}</strong></div>
-              <div><span style="color: var(--color-text-muted);">Resultado Real:</span> <strong>${h.result}</strong></div>
-              <div><span style="color: var(--color-text-muted);">Puntos:</span> <span style="color: #4CAF50; font-weight: bold;">+${h.points} pts</span></div>
+              <div><span style="color: var(--color-text-muted);">Pronóstico:</span> <strong style="color: #4da3ff;">${b.prediction.team1Score} - ${b.prediction.team2Score}</strong></div>
+              <div><span style="color: var(--color-text-muted);">Resultado Real:</span> <strong>${match.resultTeam1 !== null ? match.resultTeam1 : '?'} - ${match.resultTeam2 !== null ? match.resultTeam2 : '?'}</strong></div>
             </div>
           </div>
         `;
@@ -994,12 +986,12 @@ window.showStreakDetails = function(hitsJson) {
     body.innerHTML = html;
     modal.style.display = 'block';
   } catch(e) {
-    console.error("Error parsing streak details", e);
+    console.error("Error parsing bonus details", e);
   }
 };
 
-window.closeStreakDetails = function() {
-  const modal = document.getElementById('streak-details-modal');
+window.closeBonusDetails = function() {
+  const modal = document.getElementById('bonus-details-modal');
   if (modal) modal.style.display = 'none';
 };
 
@@ -3695,11 +3687,11 @@ async function loadStreaksPhase2() {
           <div class="racha-row">
             <div class="racha-label-group"><img src="${top.profilePic || 'avatar.png'}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);"><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
             <div class="racha-badge racha-buena" onclick="toggleStreaksTop3Phase2('buena')">
-              ${window.renderStreakStars(top.activeHits, top.recentHits)}
+              ${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span>
             </div>
           </div>
           <div id="top3-buena-final" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;" onclick="event.stopPropagation()">${window.renderStreakStars(u.activeHits, u.recentHits)}</span></div>`).join('')}
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;" onclick="event.stopPropagation()">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -3784,13 +3776,6 @@ async function loadBonusPhase2() {
 
     container.style.display = 'block';
     
-    const renderStars = (bonusDetails) => {
-      if (!bonusDetails) return '';
-      return bonusDetails.map(b => 
-        `<i class="fa-solid fa-star" style="color: var(--gold); cursor: pointer; font-size: 1rem; margin-left: 2px;" onclick="event.stopPropagation(); window.showBonusMatchPhase2(${b.matchId}, ${b.prediction.team1Score}, ${b.prediction.team2Score})"></i>`
-      ).join('');
-    };
-
     let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.25rem;">';
     
     html += data.map((u, i) => `
@@ -3800,7 +3785,7 @@ async function loadBonusPhase2() {
           <span class="top3-username" title="${u.username}" style="font-weight: 600;">${u.username}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 2px;">
-          ${renderStars(u.bonusDetails)}
+          ${window.renderBonusStars(u.bonusDetails)}
         </div>
       </div>
     `).join('');
