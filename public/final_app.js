@@ -823,16 +823,22 @@ window.renderStreakStars = function(hits, recentHits) {
   const blueStar = '<i class="fa-solid fa-star" style="color: #4da3ff; font-size: 0.8rem; margin: 0 1px;"></i>';
   const normalCheck = '<i class="fa-solid fa-check"></i>';
   
-  if (hits > 0 && hits < 5) {
-    for (let i = 0; i < hits; i++) {
+  if (hits > 0) {
+    const goldCount = Math.floor(hits / 5);
+    const blueCount = hits % 5;
+    
+    // Render gold stars first
+    if (goldCount > 0) {
+      const hitsJson = encodeURIComponent(JSON.stringify(recentHits || []));
+      for (let i = 0; i < goldCount; i++) {
+        html += `<i class="fa-solid fa-star gold-super-star" onclick="event.stopPropagation(); window.showStreakDetails('${hitsJson}')" title="Ver detalle de racha"></i>`;
+      }
+    }
+    
+    // Render remaining blue stars
+    for (let i = 0; i < blueCount; i++) {
       html += blueStar;
     }
-  } else if (hits >= 5) {
-    for (let i = 0; i < hits; i++) {
-      html += blueStar;
-    }
-    const hitsJson = encodeURIComponent(JSON.stringify(recentHits || []));
-    html += `<i class="fa-solid fa-star gold-super-star" onclick="event.stopPropagation(); window.showStreakDetails('${hitsJson}')" title="Ver detalle de racha"></i>`;
   } else {
     html = `${hits} <span class="seguidos-text">${normalCheck}</span>`;
   }
