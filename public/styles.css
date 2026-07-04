@@ -1,4 +1,4 @@
-﻿/* CSS DESIGN SYSTEM - QUINIELA MUNDIAL 2026 */
+/* CSS DESIGN SYSTEM - QUINIELA MUNDIAL 2026 */
 
 :root {
   /* DEFAULT THEME - TIKTOK INSPIRED */
@@ -2105,6 +2105,22 @@ body {
   letter-spacing: 0.5px;
   color: var(--color-text-muted);
   font-weight: 600;
+}
+
+.gold-super-star {
+  color: var(--gold);
+  font-size: 1.4rem;
+  margin-left: 5px;
+  cursor: pointer;
+  animation: pulse-gold 1.5s infinite;
+  filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.6));
+  vertical-align: middle;
+}
+
+@keyframes pulse-gold {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 .racha-user {

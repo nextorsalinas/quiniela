@@ -1440,15 +1440,25 @@ async function getStreaks() {
   const userStreaks = nonAdminUsers.map(user => {
     let currentHits = 0;
     let currentMisses = 0;
+    let recentHits = [];
 
     finishedMatches.forEach(match => {
       const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
       if (!pred || pred.prediction !== match.result) {
         currentHits = 0;
         currentMisses++;
+        recentHits = [];
       } else {
         currentHits++;
         currentMisses = 0;
+        recentHits.push({
+          matchId: match.id,
+          team1: match.team1,
+          team2: match.team2,
+          prediction: pred.prediction,
+          result: match.result,
+          points: 3 // In Phase 1, an exact match is 3 points
+        });
       }
     });
 
@@ -1457,7 +1467,8 @@ async function getStreaks() {
       username: user.username,
       points: user.points || 0,
       activeHits: currentHits,
-      activeMisses: currentMisses
+      activeMisses: currentMisses,
+      recentHits: recentHits
     };
   });
 

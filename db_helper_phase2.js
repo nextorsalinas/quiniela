@@ -1688,15 +1688,25 @@ async function getStreaks() {
     let currentHits = 0;
     let currentMisses = 0;
     let bonusCount = 0;
+    let recentHits = [];
 
     finishedMatches.forEach(match => {
       const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
       if (!pred || calculatePointsHelper(match.result, pred.prediction) === 0) {
         currentHits = 0;
         currentMisses++;
+        recentHits = [];
       } else {
         currentHits++;
         currentMisses = 0;
+        recentHits.push({
+          matchId: match.id,
+          team1: match.team1,
+          team2: match.team2,
+          prediction: pred.prediction,
+          result: match.result,
+          points: calculatePointsHelper(match.result, pred.prediction)
+        });
         if (pred && pred.prediction) {
           const pts = calculatePointsHelper(match.result, pred.prediction);
           if (pts === 4) {
@@ -1713,7 +1723,8 @@ async function getStreaks() {
       activeHits: currentHits,
       activeMisses: currentMisses,
       profilePic: user.profilePic || '',
-      bonusCount: bonusCount
+      bonusCount: bonusCount,
+      recentHits: recentHits
     };
   });
 
