@@ -1135,7 +1135,7 @@ app.get('*', (req, res) => {
 });
 
 // HYBRID RUNTIME: Firebase Functions or Local Server
-if (process.env.FIREBASE_CONFIG) {
+if (process.env.FIREBASE_CONFIG || process.env.FUNCTIONS_EMULATOR || process.env.K_SERVICE || process.env.FUNCTION_TARGET) {
   // Running in Firebase Cloud Functions v2
   const { onRequest } = require("firebase-functions/v2/https");
   const { onSchedule } = require("firebase-functions/v2/scheduler");
