@@ -647,6 +647,7 @@ async function getLeaderboard() {
         points: u.points,
         isAdmin: u.isAdmin,
         createdAt: u.createdAt,
+        profilePic: u.profilePic || '',
         predictionCount: countSnap.data().count
       });
     }
@@ -665,6 +666,7 @@ async function getLeaderboard() {
       points: u.points,
       isAdmin: u.isAdmin,
       createdAt: u.createdAt,
+      profilePic: u.profilePic || '',
       predictionCount: db.predictions.filter(p => p.userId === u.id).length
     }));
 
@@ -792,11 +794,17 @@ function normalizeTeam(name) {
 }
 
 async function syncFifaResults() {
+  console.log("Sincronización de marcadores con la API externa deshabilitada.");
+  return { checked: 0, updated: 0, message: "Sincronización deshabilitada por configuración." };
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches from openfootball GitHub repository...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch World Cup matches: ${response.statusText}`);
   }
+  */
   
   const data = await response.json();
   const apiMatches = data.matches || [];
@@ -1175,11 +1183,17 @@ function translateTeamToSpanish(engName) {
 }
 
 async function getTopScorers() {
+  console.log("Obtención de goleadores desde la API externa deshabilitada.");
+  return [];
+  
+  // Código inactivo:
+  /*
   console.log("Fetching live matches for top scorers from openfootball...");
   const response = await fetch("https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json");
   if (!response.ok) {
     throw new Error(`Failed to fetch scorers: ${response.statusText}`);
   }
+  */
   const data = await response.json();
   const matches = data.matches || [];
   
@@ -1314,6 +1328,71 @@ async function getMatchTrends() {
     cache.trends.data = trends;
     cache.trends.timestamp = Date.now();
   }
+  
+  return trends;
+}
+
+async function getMatchTrendsAll() {
+  const matches = await getMatches();
+  const sortedMatches = matches.sort((a, b) => a.id - b.id);
+  if (sortedMatches.length === 0) {
+    return [];
+  }
+  
+  const matchIds = sortedMatches.map(m => m.id);
+  let predictions = [];
+  let usersMap = {};
+  
+  if (dbType === 'firestore') {
+    const usersSnap = await firestoreDb.collection('users').get();
+    usersSnap.docs.forEach(doc => {
+      const u = doc.data();
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    
+    const predsSnap = await firestoreDb.collection('predictions').get();
+    predsSnap.docs.forEach(doc => {
+      predictions.push(doc.data());
+    });
+  } else {
+    const db = readDb();
+    (db.users || []).forEach(u => {
+      if (!u.isAdmin) {
+        usersMap[u.id] = u.username;
+      }
+    });
+    predictions = (db.predictions || []);
+  }
+  
+  const trends = sortedMatches.map(match => {
+    const matchPreds = predictions.filter(p => p.matchId === match.id);
+    
+    const stats = {
+      L: { count: 0, users: [] },
+      E: { count: 0, users: [] },
+      V: { count: 0, users: [] }
+    };
+    
+    matchPreds.forEach(p => {
+      const username = usersMap[p.userId];
+      if (username && stats[p.prediction]) {
+        stats[p.prediction].count++;
+        stats[p.prediction].users.push(username);
+      }
+    });
+    
+    return {
+      matchId: match.id,
+      team1: match.team1,
+      team2: match.team2,
+      group: match.group,
+      date: match.date,
+      result: match.result,
+      stats
+    };
+  });
   
   return trends;
 }
@@ -1576,6 +1655,23 @@ async function resetUserPassword(userId, newPassword) {
   }
 }
 
+async function updateProfilePic(userId, profilePic) {
+  if (dbType === 'firestore') {
+    const userRef = firestoreDb.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) throw new Error("Usuario no encontrado.");
+    
+    await userRef.update({ profilePic });
+  } else {
+    const db = readDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) throw new Error("Usuario no encontrado.");
+    
+    db.users[userIndex].profilePic = profilePic;
+    writeDb(db);
+  }
+}
+
 module.exports = {
   initDb,
   getUsers: async () => {
@@ -1604,8 +1700,10 @@ module.exports = {
   getTopScorers,
   deleteNotification,
   getMatchTrends,
+  getMatchTrendsAll,
   getStreaks,
   calculateWinningProbabilities,
   resetUserPassword,
+  updateProfilePic,
   getDbType: () => dbType
 };

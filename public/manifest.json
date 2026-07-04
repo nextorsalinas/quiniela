@@ -9,13 +9,13 @@
   "theme_color": "#006341",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/miquiniela.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/miquiniela.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

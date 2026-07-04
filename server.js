@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Parse request bodies
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,13 +27,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize DB and load Excel matches on startup
-console.log("Initializing database...");
-Promise.all([
-  dbHelper.initDb().then(() => console.log("Phase 1 database initialized successfully.")),
-  dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully."))
-]).catch(err => {
-  console.error("Error during database initialization:", err);
+// Initialize DB lazily. Firebase CLI loads this file during deploy analysis without
+// production credentials, so Firestore reads must not run at module load time.
+let dbInitPromise = null;
+function ensureDbInitialized() {
+  if (!dbInitPromise) {
+    console.log("Initializing database...");
+    dbInitPromise = Promise.all([
+      dbHelper.initDb().then(() => console.log("Phase 1 database initialized successfully.")),
+      dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully."))
+    ]).catch(err => {
+      dbInitPromise = null;
+      console.error("Error during database initialization:", err);
+      throw err;
+    });
+  }
+  return dbInitPromise;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbInitialized();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Error al inicializar la base de datos." });
+  }
 });
 
 // Simple authentication middleware
@@ -100,6 +118,55 @@ async function requireAdminPhase2(req, res, next) {
     }
     next();
   });
+}
+
+async function checkPhase2PredictionsComplete(userId) {
+  try {
+    const matches = await dbHelperPhase2.getMatches();
+    const predictions = await dbHelperPhase2.getPredictionsByUser(userId);
+
+    // Find matches that require prediction (only octavos)
+    const requiredMatches = matches.filter(match => {
+      const g = match.group ? match.group.toLowerCase().trim() : '';
+      return g === 'octavos';
+    });
+
+    const predMatchIds = new Set(predictions.map(p => parseInt(p.matchId)));
+
+    for (const match of requiredMatches) {
+      if (!predMatchIds.has(parseInt(match.id))) {
+        return false;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in checkPhase2PredictionsComplete:", err);
+    return false;
+  }
+}
+
+async function requireCompletePredictions(req, res, next) {
+  // Admin is exempt
+  if (req.user && req.user.isAdmin) {
+    return next();
+  }
+
+  // If requesting own predictions, exempt
+  const targetUserId = req.params.userId;
+  if (targetUserId && req.user && req.user.id === targetUserId) {
+    return next();
+  }
+
+  try {
+    const isComplete = await checkPhase2PredictionsComplete(req.user.id || req.headers['x-user-id']);
+    if (!isComplete) {
+      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de la fase de octavos." });
+    }
+    next();
+  } catch (error) {
+    console.error("Error in requireCompletePredictions middleware:", error);
+    res.status(500).json({ error: "Error al validar el estado de tus pronósticos." });
+  }
 }
 
 // --- API ROUTES ---
@@ -365,13 +432,24 @@ app.get('/api/predictions/probability', authenticate, async (req, res) => {
 });
 
 // Get matches voting trends (next 2 unplayed matches)
-app.get('/api/matches/trends', authenticate, async (req, res) => {
+app.get('/api/matches/trends', authenticate, requireCompletePredictions, async (req, res) => {
   try {
     const trends = await dbHelper.getMatchTrends();
     res.json(trends);
   } catch (error) {
     console.error("Error getting match trends:", error);
     res.status(500).json({ error: "Error al obtener las tendencias de votación." });
+  }
+});
+
+// Get ALL matches voting trends (Phase 1 from beginning)
+app.get('/api/matches/trends/all', authenticate, requireCompletePredictions, async (req, res) => {
+  try {
+    const trends = await dbHelper.getMatchTrendsAll();
+    res.json(trends);
+  } catch (error) {
+    console.error("Error getting all match trends:", error);
+    res.status(500).json({ error: "Error al obtener todas las tendencias de votación." });
   }
 });
 
@@ -396,7 +474,7 @@ app.get('/api/top-scorers', authenticate, async (req, res) => {
 });
 
 // Get another user's predictions details
-app.get('/api/predictions/user/:userId', authenticate, async (req, res) => {
+app.get('/api/predictions/user/:userId', authenticate, requireCompletePredictions, async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -456,6 +534,29 @@ app.delete('/api/notifications/:notificationId', authenticate, async (req, res) 
     res.json({ message: "Notificación eliminada con éxito." });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Update profile pic
+app.post('/api/user/profile-pic', authenticate, async (req, res) => {
+  const { profilePic } = req.body;
+  if (!profilePic) {
+    return res.status(400).json({ error: "Foto de perfil es requerida." });
+  }
+
+  try {
+    await dbHelper.updateProfilePic(req.user.id, profilePic);
+    
+    try {
+      await dbHelperPhase2.updateProfilePic(req.user.id, profilePic);
+    } catch (e2) {
+      console.log("Error actualizando foto de perfil en Fase 2:", e2.message);
+    }
+
+    res.json({ message: "Foto de perfil actualizada con éxito.", profilePic });
+  } catch (error) {
+    console.error("Error al actualizar la foto de perfil:", error);
+    res.status(500).json({ error: "Error al guardar la foto de perfil en el servidor: " + error.message });
   }
 });
 
@@ -647,11 +748,11 @@ app.post('/api/phase2/admin/matches', requireAdminPhase2, async (req, res) => {
 // Admin update teams
 app.post('/api/phase2/admin/matches/teams', requireAdminPhase2, async (req, res) => {
   const { matchId, team1, team2, date } = req.body;
-  if (matchId === undefined || !team1 || !team2 || !date) {
-    return res.status(400).json({ error: "Faltan datos (matchId, team1, team2, date)." });
+  if (matchId === undefined || !team1 || !team2) {
+    return res.status(400).json({ error: "Faltan datos (matchId, team1, team2)." });
   }
   try {
-    await dbHelperPhase2.updateMatchTeams(matchId, team1, team2, date);
+    await dbHelperPhase2.updateMatchTeams(matchId, String(team1).trim(), String(team2).trim(), String(date || 'TBD').trim() || 'TBD');
     res.json({ message: "Datos del partido actualizados correctamente." });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -753,12 +854,33 @@ app.get('/api/phase2/leaderboard', authenticatePhase2, async (req, res) => {
 app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
   try {
     const trends = await dbHelperPhase2.getMatchTrends();
-    res.json(trends);
+    const filteredTrends = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
+    res.json(filteredTrends);
   } catch (error) {
     console.error("Error getting match trends:", error);
     res.status(500).json({ error: "Error al obtener las tendencias de votación." });
   }
 });
+
+app.get('/api/phase2/matches/trends/all', authenticatePhase2, async (req, res) => {
+  try {
+    const trends = await dbHelperPhase2.getMatchTrendsAll();
+    const filteredTrends = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
+    res.json(filteredTrends);
+  } catch (error) {
+    console.error("Error getting all match trends for Phase 2:", error);
+    res.status(500).json({ error: "Error al obtener todas las tendencias de votación de Fase 2." });
+  }
+});
+
 
 app.get('/api/phase2/bonus', authenticatePhase2, async (req, res) => {
   try {
@@ -789,7 +911,7 @@ app.get('/api/phase2/top-scorers', authenticatePhase2, async (req, res) => {
   }
 });
 
-app.get('/api/phase2/predictions/user/:userId', authenticatePhase2, async (req, res) => {
+app.get('/api/phase2/predictions/user/:userId', authenticatePhase2, requireCompletePredictions, async (req, res) => {
   const { userId } = req.params;
   try {
     const details = await dbHelperPhase2.getUserPredictionsDetail(userId);
@@ -1020,13 +1142,15 @@ if (process.env.FIREBASE_CONFIG) {
 
   exports.api = onRequest(app);
   
-  // Scheduled Cloud Function running at 5 and 55 minutes past the hour (PM 13-23) to automatically pull FIFA results
+  // Sincronización automática de marcadores deshabilitada (Cloud Function programada inactiva)
+  /*
   exports.scheduledFifaSync = onSchedule({
     schedule: "5 12-23/2 * * *",
     timeZone: "America/Mexico_City"
   }, async (event) => {
     console.log("Starting scheduled FIFA match results synchronization...");
     try {
+      await ensureDbInitialized();
       const stats = await dbHelper.syncFifaResults();
       console.log(`FIFA Sincronización automática terminada con éxito: ${JSON.stringify(stats)}`);
       return null;
@@ -1035,6 +1159,7 @@ if (process.env.FIREBASE_CONFIG) {
       throw err;
     }
   });
+  */
 } else {
   // Running locally
   app.listen(PORT, () => {

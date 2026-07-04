@@ -1,26 +1,26 @@
-/* CSS DESIGN SYSTEM - QUINIELA MUNDIAL 2026 */
+﻿/* CSS DESIGN SYSTEM - QUINIELA MUNDIAL 2026 */
 
 :root {
-  /* DEFAULT LIGHT MODE THEME */
-  --bg-main: #f0f4f8;
-  --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-card-hover: rgba(255, 255, 255, 1);
-  --border-glass: rgba(0, 0, 0, 0.08);
-  --border-focus: rgba(16, 185, 129, 0.4);
+  /* DEFAULT THEME - TIKTOK INSPIRED */
+  --bg-main: #010101;
+  --bg-card: rgba(18, 18, 22, 0.88);
+  --bg-card-hover: rgba(26, 26, 32, 0.96);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(37, 244, 238, 0.45);
 
-  --color-text-main: #1e293b;
-  --color-text-muted: #64748b;
+  --color-text-main: #ffffff;
+  --color-text-muted: #a8b0bd;
 
-  /* Brand Colors - GREEN ACCENT */
-  --gold: #10b981; /* Emerald Green */
-  --gold-glow: rgba(16, 185, 129, 0.3);
-  --emerald: #059669;
-  --emerald-glow: rgba(5, 150, 105, 0.3);
-  --red: #ef4444;
+  /* Brand Colors - TIKTOK INSPIRED */
+  --gold: #25f4ee; /* Cyan Accent */
+  --gold-glow: rgba(37, 244, 238, 0.34);
+  --emerald: #fe2c55;
+  --emerald-glow: rgba(254, 44, 85, 0.32);
+  --red: #ff4d67;
 
-  --grad-local: linear-gradient(135deg, #3b82f6, #0ea5e9);
-  --grad-draw: linear-gradient(135deg, #64748b, #94a3b8);
-  --grad-visitor: linear-gradient(135deg, #8b5cf6, #ec4899);
+  --grad-local: linear-gradient(135deg, #25f4ee, #1586ff);
+  --grad-draw: linear-gradient(135deg, #2c3038, #717887);
+  --grad-visitor: linear-gradient(135deg, #fe2c55, #ff7a90);
 
   --font-title: 'Outfit', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
@@ -34,31 +34,31 @@
 
 /* DARK THEME OVERRIDES */
 body.dark-theme {
-  --bg-main: #0A001F;
-  --bg-card: rgba(27, 0, 75, 0.55);
-  --bg-card-hover: rgba(76, 0, 125, 0.65);
-  --border-glass: rgba(188, 78, 216, 0.15);
-  --border-focus: rgba(249, 136, 255, 0.45);
+  --bg-main: #010101;
+  --bg-card: rgba(15, 15, 20, 0.78);
+  --bg-card-hover: rgba(26, 26, 34, 0.92);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(37, 244, 238, 0.45);
 
-  --color-text-main: #f8fafc;
-  --color-text-muted: #94a3b8;
+  --color-text-main: #f8f6f1;
+  --color-text-muted: #b8b1ac;
 
-  --gold: #F988FF; /* Bright Neon Accent */
-  --gold-glow: rgba(249, 136, 255, 0.3);
-  --emerald: #BC4ED8; /* Secondary Orchid Accent */
-  --emerald-glow: rgba(188, 78, 216, 0.3);
+  --gold: #25f4ee; /* Cyan Accent */
+  --gold-glow: rgba(37, 244, 238, 0.34);
+  --emerald: #fe2c55;
+  --emerald-glow: rgba(254, 44, 85, 0.32);
 
-  --grad-local: linear-gradient(135deg, #7F00B2, #BC4ED8);
-  --grad-draw: linear-gradient(135deg, #4C007D, #7F00B2);
-  --grad-visitor: linear-gradient(135deg, #BC4ED8, #F988FF);
+  --grad-local: linear-gradient(135deg, #25f4ee, #1586ff);
+  --grad-draw: linear-gradient(135deg, #2c3038, #717887);
+  --grad-visitor: linear-gradient(135deg, #fe2c55, #ff7a90);
 
   --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 20px rgba(249, 136, 255, 0.25);
+  --shadow-gold: 0 0 20px rgba(37, 244, 238, 0.28);
 
   background-image: 
-    radial-gradient(at 0% 0%, rgba(27, 0, 75, 0.8) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(76, 0, 125, 0.6) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(127, 0, 178, 0.7) 0px, transparent 60%);
+    radial-gradient(at 0% 0%, rgba(37, 244, 238, 0.14) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(37, 244, 238, 0.45) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(255, 255, 255, 0.05) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
@@ -115,27 +115,27 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold), #7F00B2);
-  color: #070913;
+  background: linear-gradient(135deg, var(--gold), #fe2c55);
+  color: #111111;
   box-shadow: 0 4px 15px var(--gold-glow);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(249, 136, 255, 0.5);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(37, 244, 238, 0.42);
+  filter: brightness(1.05);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--emerald), #4C007D);
+  background: linear-gradient(135deg, var(--emerald), #fe2c55);
   color: #ffffff;
   box-shadow: 0 4px 15px var(--emerald-glow);
 }
 
 .btn-success:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(188, 78, 216, 0.5);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(254, 44, 85, 0.32);
+  filter: brightness(1.05);
 }
 
 .btn-outline {
@@ -628,6 +628,7 @@ body {
 /* APP VIEW STRUCTURE */
 .app-main {
   flex-grow: 1;
+  padding-bottom: 82px;
 }
 
 .tab-view {
@@ -824,21 +825,18 @@ body {
   gap: 0.75rem;
 }
 
-.team-flag-mock {
+..team-flag-mock {
   width: 28px;
   height: 20px;
   border-radius: 3px;
-  background: linear-gradient(135deg, #1e293b, #334155);
+  background: var(--grad-visitor);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
   font-weight: 800;
-  color: #94a3b8;
-  border: 1px solid rgba(255,255,255,0.1);
-  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
-
 .team-name {
   font-family: var(--font-title);
   font-weight: 600;
@@ -1057,7 +1055,7 @@ body {
 }
 
 .rank-1 {
-  background: linear-gradient(135deg, #fcd34d, #f59e0b);
+  background: linear-gradient(135deg, #fcd34d, #25f4ee);
   color: #070913;
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
@@ -1893,8 +1891,8 @@ body {
 }
 
 .notification-prompt-banner {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(16, 185, 129, 0.05));
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: linear-gradient(135deg, rgba(37, 244, 238, 0.12), rgba(254, 44, 85, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -1918,20 +1916,20 @@ body {
   left: 0;
   right: 0;
   height: 65px;
-  background: linear-gradient(135deg, #1B004B 0%, #4C007D 100%); /* Contraste morado */
-  border-top: 1px solid rgba(188, 78, 216, 0.3);
+  background: linear-gradient(135deg, #fe2c55 0%, #fe2c55 100%);
+  border-top: 1px solid rgba(254, 44, 85, 0.32);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1500;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(76, 0, 125, 0.3);
+  box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.45), 0 0 15px rgba(254, 44, 85, 0.18);
   padding: 0 0.5rem;
 }
 
 /* Scroll Hide/Show Animation Class */
 .bottom-nav.nav-hidden {
-  transform: translateY(100%);
+  transform: translateY(0);
 }
 
 /* Navigation button styles */
@@ -1977,8 +1975,8 @@ body {
 }
 
 .bottom-nav .tab-btn.active i {
-  color: #F988FF;
-  filter: drop-shadow(0 0 5px rgba(249, 136, 255, 0.6));
+  color: var(--gold);
+  filter: drop-shadow(0 0 5px rgba(37, 244, 238, 0.6));
 }
 
 /* Premium active top-indicator line */
@@ -1989,9 +1987,9 @@ body {
   left: 20%;
   right: 20%;
   height: 3px;
-  background: #F988FF;
+  background: var(--gold);
   border-radius: 0 0 4px 4px;
-  box-shadow: 0 0 10px rgba(249, 136, 255, 0.8);
+  box-shadow: 0 0 10px rgba(37, 244, 238, 0.8);
 }
 
 /* Responsive adjustments for bottom navigation */
@@ -2259,37 +2257,37 @@ body {
 
 /* Register Mode Visual Distinction */
 .auth-card.register-mode {
-  background: rgba(17, 24, 39, 0.85);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.25);
+  background: rgba(31, 17, 35, 0.88);
+  border-color: rgba(37, 244, 238, 0.45);
+  box-shadow: 0 10px 30px rgba(254, 44, 85, 0.2);
 }
 
 .auth-card.register-mode .logo i {
-  color: #818cf8;
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+  color: #25f4ee;
+  filter: drop-shadow(0 0 8px rgba(37, 244, 238, 0.5));
 }
 
 .auth-card.register-mode .logo h1 span {
-  color: #818cf8;
+  color: #25f4ee;
 }
 
 .auth-card.register-mode .subtitle {
-  color: #a5b4fc;
+  color: #25f4ee;
 }
 
 .auth-card.register-mode .form-group input:focus {
-  border-color: #818cf8;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+  border-color: #25f4ee;
+  box-shadow: 0 0 8px rgba(37, 244, 238, 0.24);
 }
 
 .auth-card.register-mode .btn-primary {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, #25f4ee, #0b0b10);
   color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px rgba(37, 244, 238, 0.45);
 }
 
 .auth-card.register-mode .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 20px rgba(37, 244, 238, 0.45);
 }
 
 /* Remove spin arrows from score and number inputs globally */
@@ -2303,62 +2301,102 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
-/* Cosmic purple theme for Nuevo panel (Fase Final positions & trends) */
+/* Nuevo panel theme for Fase Final positions & trends */
 #view-new-panel {
-  --gold: #c084fc; /* Purple/violet */
-  --emerald: #a78bfa; /* Light purple */
+  --gold: #25f4ee;
+  --emerald: #fe2c55;
 }
 
 #view-new-panel .rank-1 {
-  background: linear-gradient(135deg, #d8b4fe, #a855f7);
+  background: linear-gradient(135deg, #2c3038, #717887);
   color: #070913;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 10px rgba(37, 244, 238, 0.45);
 }
 
 #view-new-panel .rank-2 {
-  background: linear-gradient(135deg, #e9d5ff, #c084fc);
+  background: linear-gradient(135deg, #25f4ee, #25f4ee);
   color: #070913;
 }
 
 #view-new-panel .rank-3 {
-  background: linear-gradient(135deg, #c084fc, #8b5cf6);
+  background: linear-gradient(135deg, #fe2c55, #ff7a90);
   color: #fff;
 }
 
 #view-new-panel .table-card {
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(254, 44, 85, 0.2);
   background: rgba(15, 10, 25, 0.6);
 }
 
 #view-new-panel .glass-panel {
-  border: 1px solid rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(254, 44, 85, 0.2);
   background: rgba(15, 10, 25, 0.6);
 }
 
 #view-new-panel .trend-vote-box {
-  background: rgba(168, 85, 247, 0.05);
-  border: 1px solid rgba(168, 85, 247, 0.15);
+  background: rgba(254, 44, 85, 0.06);
+  border: 1px solid rgba(254, 44, 85, 0.18);
 }
 
 #view-new-panel .trend-vote-box:hover {
-  background: rgba(168, 85, 247, 0.15);
-  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(254, 44, 85, 0.14);
+  border-color: rgba(254, 44, 85, 0.28);
 }
 
 #view-new-panel .trend-vote-count {
-  color: #c084fc;
+  color: #25f4ee;
 }
 
 #view-new-panel .racha-badge.racha-buena {
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  color: #c084fc;
+  background: rgba(254, 44, 85, 0.15);
+  border: 1px solid rgba(254, 44, 85, 0.28);
+  color: #25f4ee;
 }
 
 #view-new-panel .top3-val {
-  color: #c084fc;
+  color: #25f4ee;
 }
 
 #view-new-panel .clickable:hover {
-  background: rgba(168, 85, 247, 0.05) !important;
+  background: rgba(254, 44, 85, 0.05) !important;
+}
+
+/* FLOATING TRENDS BUTTON (Leaderboard view only) */
+.floating-trends-btn {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1400;
+  background: linear-gradient(135deg, var(--gold), #fe2c55);
+  color: #070913;
+  border: 1px solid rgba(37, 244, 238, 0.45);
+  border-right: none;
+  border-radius: 20px 0 0 20px;
+  padding: 0.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: -4px 0 20px rgba(254, 44, 85, 0.3);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.floating-trends-btn:hover {
+  transform: translateY(-50%) scale(1.05);
+  padding-left: 1.5rem;
+  box-shadow: -6px 0 25px rgba(37, 244, 238, 0.45);
+}
+.floating-trends-btn i {
+  font-size: 1.1rem;
+}
+
+.floating-trends-btn .btn-label {
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }

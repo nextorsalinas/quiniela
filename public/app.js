@@ -1,7 +1,17 @@
+window.onerror = function(message, source, lineno, colno, error) {
+  const errText = "Error: " + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno;
+  alert(errText);
+  console.error(errText);
+};
+
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
   document.body.classList.add('dark-theme');
-  localStorage.setItem('theme', 'dark');
+  try {
+    localStorage.setItem('theme', 'dark');
+  } catch (e) {
+    console.warn("Storage access denied:", e);
+  }
 }
 
 function toggleTheme() {
@@ -25,6 +35,42 @@ function truncateName(name, maxLength = 10) {
   return name.length > maxLength ? name.substring(0, maxLength) + '...' : name;
 }
 
+function checkPredictionsComplete() {
+  if (state.currentUser && state.currentUser.isAdmin) {
+    return true;
+  }
+  if (!statePhase2.matches || statePhase2.matches.length === 0) {
+    return true;
+  }
+  const requiredMatches = statePhase2.matches.filter(match => {
+    const g = match.group ? match.group.toLowerCase().trim() : '';
+    return g === 'octavos';
+  });
+
+  if (requiredMatches.length === 0) return true;
+
+  for (const match of requiredMatches) {
+    if (!statePhase2.predictions[match.id]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function showIncompletePredictionsModal() {
+  const modal = document.getElementById('incomplete-predictions-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeIncompletePredictionsModal() {
+  const modal = document.getElementById('incomplete-predictions-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 // Initialize theme immediately
 initTheme();
 
@@ -34,7 +80,7 @@ let state = {
   matches: [],
   predictions: {}, // Key: matchId, Value: prediction string ('L', 'E', 'V')
   leaderboard: [],
-  activeTab: 'leaderboard',
+  activeTab: 'profile',
   authTab: 'login'
 };
 
@@ -248,6 +294,12 @@ function showAppDashboard() {
   document.getElementById('welcome-username').textContent = displayUsername;
   document.getElementById('user-display-points').textContent = `${state.currentUser.points} pts`;
   
+  // Set header avatar
+  const headerAvatar = document.getElementById('user-header-avatar');
+  if (headerAvatar) {
+    headerAvatar.src = state.currentUser.profilePic || 'avatar.png';
+  }
+  
   // Show admin tab/badge if admin
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
@@ -266,7 +318,7 @@ function showAppDashboard() {
 
 
   // Initial data fetch
-  switchTab('leaderboard');
+  switchTab('profile');
   checkAnnouncementModal();
 
   // Notifications init
@@ -411,6 +463,9 @@ function handleLogout() {
 // --- DASHBOARD ROUTING & TABS ---
 
 function switchTab(tabId) {
+  if (tabId === 'leaderboard') {
+    tabId = 'profile';
+  }
   state.activeTab = tabId;
   
   // Update Tab buttons styling
@@ -432,6 +487,12 @@ function switchTab(tabId) {
     targetView.classList.add('active');
   }
 
+  // Toggle tab trends button visibility.
+  const trendsBtn = document.getElementById('tab-trends');
+  if (trendsBtn) {
+    trendsBtn.style.display = (tabId === 'new-panel' || tabId === 'profile') ? 'flex' : 'none';
+  }
+
   // Fetch data depending on tab
   if (tabId === 'leaderboard') {
     loadLeaderboard();
@@ -445,6 +506,8 @@ function switchTab(tabId) {
     loadFinalPredictionsDashboard();
   } else if (tabId === 'admin-2') {
     loadAdmin2Dashboard();
+  } else if (tabId === 'profile') {
+    loadProfileDashboard();
   }
 }
 
@@ -926,8 +989,8 @@ function renderLeaderboardTables() {
             <div class="rank-badge ${rankBadgeClass}">${position}</div>
           </td>
           <td>
-            <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
-              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
+            <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}" style="display: flex; align-items: center; gap: 0.5rem;">
+              <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
                 <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
                 ${adminBadge}
@@ -963,7 +1026,8 @@ function renderLeaderboardTables() {
             <div class="rank-badge ${rankBadgeClass}">${position}</div>
           </td>
           <td>
-            <div class="player-info-cell" style="gap: 0.4rem;">
+            <div class="player-info-cell" style="display: flex; align-items: center; gap: 0.5rem;">
+              <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <span class="player-name" style="font-weight: ${isMe ? '700' : '600'}; color: ${isMe ? 'var(--gold)' : 'inherit'};">
                 ${player.username} ${isMe ? '(Tú)' : ''}
               </span>
@@ -1030,6 +1094,11 @@ async function loadGoleadores() {
 
 // Open comparison details of user
 async function viewPlayerPredictions(targetUserId) {
+  if (targetUserId !== state.currentUser.id && !checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   // If target matches are empty, load matches first
   if (state.matches.length === 0) {
     const matchesRes = await fetch(`${API_URL}/matches`, {
@@ -1131,6 +1200,9 @@ window.onclick = function(event) {
   const pwaModal = document.getElementById('pwa-install-modal');
   const trendsModal = document.getElementById('trends-voters-modal');
   const announcementModal = document.getElementById('info-announcement-modal');
+  const completeTrendsModal = document.getElementById('complete-trends-modal');
+  const cropperModal = document.getElementById('cropper-modal');
+  const incompleteModal = document.getElementById('incomplete-predictions-modal');
   if (event.target === modal) {
     closeComparisonModal();
   } else if (event.target === editModal) {
@@ -1141,6 +1213,12 @@ window.onclick = function(event) {
     closeTrendsVotersModal();
   } else if (event.target === announcementModal) {
     closeAnnouncementModal();
+  } else if (event.target === completeTrendsModal) {
+    closeCompleteTrendsModal();
+  } else if (event.target === cropperModal) {
+    closeCropperModal();
+  } else if (event.target === incompleteModal) {
+    closeIncompletePredictionsModal();
   }
 };
 
@@ -1152,6 +1230,12 @@ async function loadVotingTrends() {
   
   const tabTrendsContainer = document.getElementById('tab-trends-container');
   const tabTrendsGrid = document.getElementById('tab-trends-grid');
+
+  if (!checkPredictionsComplete()) {
+    if (container) container.style.display = 'none';
+    if (tabTrendsContainer) tabTrendsContainer.style.display = 'none';
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/matches/trends`, {
@@ -1253,6 +1337,11 @@ async function loadVotingTrends() {
 }
 
 function toggleTrendsGrid() {
+  if (!checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   const grid = document.getElementById('trends-grid');
   const icon = document.getElementById('trends-toggle-icon');
   const title = document.querySelector('.trends-section h3');
@@ -1293,11 +1382,13 @@ function showTrendsVoters(matchIndex, predictionType) {
   if (predictionStats.users.length === 0) {
     votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); padding: 1rem 0; font-size: 0.85rem;">Nadie pronosticó esta opción.</li>`;
   } else {
-    votersList.innerHTML = predictionStats.users.map(username => {
+    votersList.innerHTML = predictionStats.users.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
       return `
         <li style="padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-user-check" style="color: var(--gold); font-size: 0.75rem;"></i>
-          ${username}
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          ${name}
         </li>
       `;
     }).join('');
@@ -1311,11 +1402,137 @@ function closeTrendsVotersModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function checkAnnouncementModal() {
-  if (state.currentUser) {
-    const modal = document.getElementById('info-announcement-modal');
-    if (modal) modal.style.display = 'flex';
+window.openCompleteTrendsModal = async function() {
+  const modal = document.getElementById('complete-trends-modal');
+  const grid = document.getElementById('complete-trends-grid');
+  const title = modal ? modal.querySelector('h3') : null;
+  const desc = modal ? modal.querySelector('p') : null;
+  if (!modal || !grid) return;
+
+  modal.style.display = 'flex';
+  grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--color-text-muted);">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--gold); margin-bottom: 0.5rem;"></i>
+    <p>Cargando tendencias...</p>
+  </div>`;
+
+  const isPhase2 = true; // Always Phase 2 for trends as we ignore Phase 1 (72 matches)
+  const url = isPhase2 ? '/api/phase2/matches/trends/all' : `${API_URL}/matches/trends/all`;
+
+  if (title) {
+    title.innerHTML = isPhase2 
+      ? `<i class="fa-solid fa-chart-line"></i> Tendencias Completas (Fase Final)` 
+      : `<i class="fa-solid fa-chart-line"></i> Tendencias Completas (Fase 1)`;
   }
+  if (desc) {
+    desc.textContent = isPhase2 
+      ? "Porcentaje y cantidad de votos por cada encuentro de la Fase Final" 
+      : "Porcentaje y cantidad de votos por cada encuentro";
+  }
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!res.ok) throw new Error("Error loading complete trends");
+    const data = await res.json();
+    
+    // Filter to only show dieciseisavos trends if Phase 2
+    const filteredData = isPhase2 
+      ? data.filter(match => {
+          if (!match.group) return false;
+          const g = match.group.toLowerCase().trim();
+          return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+        })
+      : data;
+
+    window.completeTrendsData = filteredData;
+
+    grid.innerHTML = filteredData.map((match, idx) => {
+      const isPlayed = match.result !== null;
+      const resultBadge = isPlayed ? `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); margin-left: 0.5rem;">Jugado</span>` : '';
+      const groupLabel = match.group || 'Fase Final';
+
+      return `
+        <div class="trend-card" style="${isPlayed ? 'opacity: 0.8;' : ''}">
+          <div class="trend-teams-row" style="justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.35rem; margin-bottom: 0.35rem;">
+            <span style="font-weight: 700; font-size: 0.75rem; color: var(--gold);">${groupLabel} - Partido ${match.matchId} ${resultBadge}</span>
+          </div>
+          <div class="trend-teams-row" style="font-size: 0.8rem; font-weight: 600;">
+            <span>${match.team1 || 'Por definir'}</span>
+            <span style="color: var(--color-text-muted); font-size: 0.7rem; font-style: italic; margin: 0 0.4rem;">vs</span>
+            <span>${match.team2 || 'Por definir'}</span>
+          </div>
+          <div class="trend-votes-row" style="margin-top: 0.4rem;">
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'L')">
+              <span class="trend-vote-label">Local</span>
+              <span class="trend-vote-count">${match.stats.L.count}</span>
+            </div>
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'E')">
+              <span class="trend-vote-label">Empate</span>
+              <span class="trend-vote-count">${match.stats.E.count}</span>
+            </div>
+            <div class="trend-vote-box" onclick="showCompleteTrendsVoters(${idx}, 'V')">
+              <span class="trend-vote-label">Visitante</span>
+              <span class="trend-vote-count">${match.stats.V.count}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error("Error fetching all trends:", error);
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--red);">Error al cargar tendencias.</div>`;
+  }
+};
+
+window.closeCompleteTrendsModal = function() {
+  const modal = document.getElementById('complete-trends-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.showCompleteTrendsVoters = function(matchIndex, predictionType) {
+  const match = window.completeTrendsData[matchIndex];
+  if (!match) return;
+
+  const optionName = predictionType === 'L' ? 'Local' : (predictionType === 'E' ? 'Empate' : 'Visitante');
+  const predictionStats = match.stats[predictionType];
+  if (!predictionStats) return;
+
+  const modal = document.getElementById('trends-voters-modal');
+  const modalTitle = document.getElementById('trends-modal-title');
+  const modalSubtitle = document.getElementById('trends-modal-subtitle');
+  const votersList = document.getElementById('trends-voters-list');
+
+  if (!modal || !modalTitle || !modalSubtitle || !votersList) return;
+
+  modalTitle.textContent = `${match.team1} vs ${match.team2}`;
+  modalSubtitle.textContent = `Votaron por ${optionName} (${predictionStats.count} personas)`;
+
+  const voters = predictionStats.users || [];
+  if (voters.length === 0) {
+    votersList.innerHTML = '<li style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">Nadie votó por esta opción</li>';
+  } else {
+    votersList.innerHTML = voters.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
+      const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      const winnerTeamText = (typeof u === 'object' && u.winnerTeam) ? ` - Avanza: ${u.winnerTeam}` : '';
+      return `
+        <li class="voter-item" style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 0.5rem;">
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          <span>${name}${scoreSuffix}${winnerTeamText}</span>
+        </li>
+      `;
+    }).join('');
+  }
+
+  modal.style.zIndex = '1800';
+  modal.style.display = 'flex';
+};
+
+function checkAnnouncementModal() {
+  // Modal desactivado
+  return;
 }
 
 function closeAnnouncementModal() {
@@ -1379,8 +1596,8 @@ async function loadAdminUsers() {
       return `
         <tr>
           <td>
-            <div class="player-info-cell" style="justify-content: flex-start; gap: 0.75rem;">
-              <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}" style="font-size: 1.25rem;"></i>
+            <div class="player-info-cell" style="justify-content: flex-start; gap: 0.75rem; display: flex; align-items: center;">
+              <img src="${user.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
               <div style="text-align: left;">
                 <span class="player-name" style="display: block; font-weight: 600;">${user.username} ${isMe ? '(Tú)' : ''}</span>
                 <span class="player-email" style="display: block; font-size: 0.75rem; color: var(--color-text-muted);">${user.email || 'Sin correo'}</span>
@@ -1394,7 +1611,7 @@ async function loadAdminUsers() {
             <button class="btn btn-primary" onclick="openEditPredictionsModal('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
               <i class="fa-solid fa-pen-to-square"></i> Editar Pronósticos
             </button>
-            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: #3b82f6; border-color: #3b82f6;">
+            <button class="btn btn-primary" onclick="adminResetUserPassword('${user.id}', '${user.username}')" style="padding: 0.4rem 0.6rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px; background-color: var(--gold); border-color: var(--gold);">
               <i class="fa-solid fa-key"></i> Nueva Contraseña
             </button>
             <button class="btn btn-outline" onclick="deleteUser('${user.id}', '${user.username}')" ${deleteBtnDisabled} title="${deleteBtnTitle}" style="padding: 0.4rem 0.6rem; border-color: var(--red); color: var(--red); display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.8rem; border-radius: 6px;">
@@ -1454,22 +1671,28 @@ async function deleteUser(userId, username) {
 function renderAdminMatchesList() {
   const list = document.getElementById('admin-matches-list');
 
-  // Ocultar los resultados registrados (matches that already have a result)
-  let filtered = state.matches.filter(m => !m.result);
-
-  list.innerHTML = filtered.map(match => {
+  // Mostrar todos los partidos, pero deshabilitar la edición para los que ya tienen resultado
+  list.innerHTML = state.matches.map(match => {
+    const isCaptured = match.result !== null && match.result !== undefined;
     const actL = match.result === 'L' ? 'active-L' : '';
     const actE = match.result === 'E' ? 'active-E' : '';
     const actV = match.result === 'V' ? 'active-V' : '';
 
+    const disabledAttr = isCaptured ? 'disabled' : '';
+    const disabledStyle = isCaptured ? 'opacity: 0.5; cursor: not-allowed;' : '';
+    const clickL = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'L')"`;
+    const clickE = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'E')"`;
+    const clickV = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'V')"`;
+
     return `
-      <div class="admin-match-row">
+      <div class="admin-match-row" style="${isCaptured ? 'background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.03);' : ''}">
         <div class="admin-match-info">
           <span class="admin-match-id">${match.id}</span>
           <div class="admin-match-teams">
             <span class="admin-team-l">${match.team1}</span>
             <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">vs</span>
             <span class="admin-team-v">${match.team2}</span>
+            ${isCaptured ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; margin-left: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Capturado</span>' : ''}
           </div>
         </div>
 
@@ -1480,12 +1703,12 @@ function renderAdminMatchesList() {
 
         <div class="admin-controls">
           <div class="admin-result-buttons">
-            <button class="admin-opt-btn ${actL}" onclick="saveAdminResult(${match.id}, 'L')">L</button>
-            <button class="admin-opt-btn ${actE}" onclick="saveAdminResult(${match.id}, 'E')">E</button>
-            <button class="admin-opt-btn ${actV}" onclick="saveAdminResult(${match.id}, 'V')">V</button>
+            <button class="admin-opt-btn ${actL}" ${clickL} style="${disabledStyle}" ${disabledAttr}>L</button>
+            <button class="admin-opt-btn ${actE}" ${clickE} style="${disabledStyle}" ${disabledAttr}>E</button>
+            <button class="admin-opt-btn ${actV}" ${clickV} style="${disabledStyle}" ${disabledAttr}>V</button>
           </div>
           ${match.result !== null ? `
-            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado">
+            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado" style="${disabledStyle}" ${disabledAttr}>
               <i class="fa-solid fa-trash-can"></i>
             </button>
           ` : ''}
@@ -2276,6 +2499,322 @@ async function loadProbabilityDashboard() {
   }
 }
 
+async function loadProfileDashboard() {
+  const predictionsEl = document.getElementById('profile-stat-predictions');
+  const pointsEl = document.getElementById('profile-stat-points');
+  const hitsEl = document.getElementById('profile-stat-hits');
+  const missesEl = document.getElementById('profile-stat-misses');
+  const remainingEl = document.getElementById('profile-stat-remaining');
+  const effectivenessEl = document.getElementById('profile-stat-effectiveness');
+  const goodStreakEl = document.getElementById('profile-stat-good-streak');
+  const badStreakEl = document.getElementById('profile-stat-bad-streak');
+  const bonusEl = document.getElementById('profile-stat-bonus');
+  const usernameEl = document.getElementById('profile-username');
+  const picDisplay = document.getElementById('profile-pic-display');
+
+  if (usernameEl) usernameEl.textContent = state.currentUser.username;
+  if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+
+  // Mostrar spinners de carga temporalmente en la tabla
+  const loader = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+  if (predictionsEl) predictionsEl.innerHTML = loader;
+  if (pointsEl) pointsEl.innerHTML = loader;
+  if (hitsEl) hitsEl.innerHTML = loader;
+  if (missesEl) missesEl.innerHTML = loader;
+  if (remainingEl) remainingEl.innerHTML = loader;
+  if (effectivenessEl) effectivenessEl.innerHTML = loader;
+  if (goodStreakEl) goodStreakEl.innerHTML = loader;
+  if (badStreakEl) badStreakEl.innerHTML = loader;
+  if (bonusEl) bonusEl.innerHTML = loader;
+
+  try {
+    // Fetches paralelos para tener todos los datos consistentes
+    const [matchesRes, predictionsRes, p2MatchesRes, p2PredictionsRes, probRes] = await Promise.all([
+      // Fase 1 partidos y predicciones
+      state.matches.length === 0 
+        ? fetch(`${API_URL}/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+        : Promise.resolve(state.matches),
+      fetch(`${API_URL}/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+      
+      // Fase 2 partidos y predicciones
+      statePhase2.matches.length === 0 
+        ? fetch(`/api/phase2/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+        : Promise.resolve(statePhase2.matches),
+      fetch(`/api/phase2/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+
+      // Probabilidades de ganar
+      fetch(`${API_URL}/predictions/probability`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+    ]);
+
+    // Actualizar estados locales si es necesario
+    if (state.matches.length === 0) state.matches = matchesRes;
+    state.predictions = {};
+    predictionsRes.forEach(p => {
+      state.predictions[p.matchId] = p.prediction;
+    });
+
+    if (statePhase2.matches.length === 0) statePhase2.matches = p2MatchesRes;
+    statePhase2.predictions = {};
+    p2PredictionsRes.forEach(p => {
+      statePhase2.predictions[p.matchId] = p.prediction;
+    });
+
+    // --- CÁLCULOS (Solo Fase Final - 32 partidos, sin contemplar la primera fase de 72 partidos) ---
+    
+    // 1. Pronósticos realizados (Solo Fase Final)
+    const totalPredictions = Object.keys(statePhase2.predictions).length;
+    const totalPossibleMatches = 32; // 32 de Fase Final
+
+    // 2. Aciertos y fallas de Fase 2, y conteo de Bonus
+    let hitsP2 = 0;
+    let missesP2 = 0;
+    let bonusCount = 0;
+    statePhase2.matches.forEach(match => {
+      if (match.result !== null) {
+        const pred = statePhase2.predictions[match.id];
+        if (pred) {
+          const r1 = parseInt(match.result.team1Score);
+          const r2 = parseInt(match.result.team2Score);
+          const p1 = parseInt(pred.team1Score);
+          const p2 = parseInt(pred.team2Score);
+          const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+          const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+
+          if (realWinner === predWinner) {
+            hitsP2++;
+            if (r1 === p1 && r2 === p2) {
+              bonusCount++; // Marcador exacto en Fase 2 equivale a Bonus (4 pts)
+            }
+          } else {
+            missesP2++;
+          }
+        }
+      }
+    });
+
+    // 3. Totales (Solo Fase Final)
+    const totalHits = hitsP2;
+    const totalMisses = missesP2;
+
+    // 4. Restantes por jugar (Solo Fase Final)
+    const totalRemaining = statePhase2.matches.filter(m => m.result === null).length;
+
+    // Calculate active streaks for the current user in Phase 2
+    // 1. Filter and sort finished matches
+    const finishedP2Matches = statePhase2.matches
+      .filter(m => m.result !== null && m.result !== undefined)
+      .sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) {
+          return new Date(a.updatedAt) - new Date(b.updatedAt);
+        } else if (a.updatedAt) return 1;
+        else if (b.updatedAt) return -1;
+        return a.id - b.id;
+      });
+
+    let currentHits = 0;
+    let currentMisses = 0;
+
+    finishedP2Matches.forEach(match => {
+      const pred = statePhase2.predictions[match.id];
+      let isHit = false;
+      if (pred) {
+        const r1 = parseInt(match.result.team1Score);
+        const r2 = parseInt(match.result.team2Score);
+        const p1 = parseInt(pred.team1Score);
+        const p2 = parseInt(pred.team2Score);
+        const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+        const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        isHit = (realWinner === predWinner);
+      }
+
+      if (isHit) {
+        currentHits++;
+        currentMisses = 0;
+      } else {
+        currentHits = 0;
+        currentMisses++;
+      }
+    });
+
+    const effectiveness = totalPredictions > 0 ? (totalHits / totalPredictions * 100) : 0;
+
+    // Render en la interfaz
+    const totalPoints = (totalHits - bonusCount) * 3 + bonusCount * 4;
+    if (pointsEl) pointsEl.textContent = `${totalPoints} pts`;
+    if (predictionsEl) predictionsEl.textContent = `${totalPredictions} / ${totalPossibleMatches}`;
+    if (hitsEl) hitsEl.textContent = totalHits;
+    if (missesEl) missesEl.textContent = totalMisses;
+    if (remainingEl) remainingEl.textContent = totalRemaining;
+    if (effectivenessEl) effectivenessEl.textContent = `${effectiveness.toFixed(1)}%`;
+    if (goodStreakEl) goodStreakEl.textContent = currentHits;
+    if (badStreakEl) badStreakEl.textContent = currentMisses;
+    if (bonusEl) bonusEl.textContent = bonusCount;
+
+    // Actualizar puntos en el header
+    const headerPoints = document.getElementById('user-display-points');
+    if (headerPoints) headerPoints.textContent = `${totalPoints} pts`;
+
+  } catch (err) {
+    console.error("Error al cargar el dashboard del perfil:", err);
+    showToast("Error de conexión al cargar estadísticas del perfil.", "error");
+  }
+}
+
+window.selectPresetProfilePic = async function(path) {
+  const picDisplay = document.getElementById('profile-pic-display');
+  if (picDisplay) picDisplay.src = path;
+
+  showToast("Actualizando foto de perfil...", "info");
+  try {
+    const response = await fetch('/api/user/profile-pic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ profilePic: path })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al actualizar la foto de perfil", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+      return;
+    }
+
+    // Actualizar estado local
+    state.currentUser.profilePic = path;
+    localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+
+    // Actualizar en el header
+    const headerAvatar = document.getElementById('user-header-avatar');
+    if (headerAvatar) headerAvatar.src = path;
+
+    showToast("¡Foto de perfil actualizada con éxito!", "success");
+  } catch (err) {
+    console.error("Error updating preset avatar:", err);
+    showToast("Error de conexión al actualizar la foto de perfil", "error");
+    if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+  }
+};
+
+let cropperInstance = null;
+
+function closeCropperModal() {
+  const modal = document.getElementById('cropper-modal');
+  if (modal) modal.style.display = 'none';
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+  const fileInput = document.getElementById('profile-pic-input');
+  if (fileInput) fileInput.value = '';
+}
+
+async function applyImageCrop() {
+  if (!cropperInstance) return;
+  
+  const saveBtn = document.getElementById('cropper-save-btn');
+  const originalHtml = saveBtn.innerHTML;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...`;
+
+  try {
+    // Generar canvas con tamaño de 200x200 (para optimizar espacio en base de datos)
+    const canvas = cropperInstance.getCroppedCanvas({
+      width: 200,
+      height: 200,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high'
+    });
+
+    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+    // Mostrar preview local inmediato
+    const picDisplay = document.getElementById('profile-pic-display');
+    if (picDisplay) picDisplay.src = croppedBase64;
+
+    showToast("Subiendo foto de perfil recortada...", "info");
+    const response = await fetch('/api/user/profile-pic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ profilePic: croppedBase64 })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al subir la imagen", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+      return;
+    }
+
+    // Actualizar estado local
+    state.currentUser.profilePic = croppedBase64;
+    localStorage.setItem('quiniela_user', JSON.stringify(state.currentUser));
+
+    // Actualizar en el header
+    const headerAvatar = document.getElementById('user-header-avatar');
+    if (headerAvatar) headerAvatar.src = croppedBase64;
+
+    showToast("¡Foto de perfil recortada y guardada con éxito!", "success");
+    closeCropperModal();
+  } catch (err) {
+    console.error("Error al recortar/subir imagen:", err);
+    showToast("Error al procesar la imagen recortada.", "error");
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalHtml;
+  }
+}
+
+async function handleProfilePicUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validar tipo de archivo
+  if (!file.type.startsWith('image/')) {
+    showToast("Por favor selecciona un archivo de imagen válido.", "error");
+    return;
+  }
+
+  // Validar tamaño de archivo (limitar a 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showToast("La imagen es muy pesada. Selecciona una de menos de 5MB.", "error");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const modal = document.getElementById('cropper-modal');
+    const image = document.getElementById('cropper-image');
+    if (!modal || !image) return;
+
+    image.src = e.target.result;
+    modal.style.display = 'flex';
+
+    // Destruir instancia anterior si existiera
+    if (cropperInstance) {
+      cropperInstance.destroy();
+    }
+
+    // Inicializar Cropper.js
+    cropperInstance = new Cropper(image, {
+      aspectRatio: 1, // Relación de aspecto cuadrada (1:1)
+      viewMode: 1, // Mantener el recuadro dentro de la imagen
+      autoCropArea: 0.8,
+      responsive: true,
+      background: false,
+      ready() {
+        console.log("Cropper.js listo para usar.");
+      }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
 // ====================================================
 // --- PHASE 2 (Fase Final) CLIENT LOGIC ---
 // ====================================================
@@ -2314,8 +2853,38 @@ function renderFinalMatchesGrid() {
   const grid = document.getElementById('matches-grid-final');
   if (!grid) return;
 
-  const matchesHtml = statePhase2.matches.map(match => {
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+
+  const sortedMatches = [...statePhase2.matches].sort((a, b) => {
+    const aCompleted = a.result !== null && a.result !== undefined;
+    const bCompleted = b.result !== null && b.result !== undefined;
+    
+    // 1. Uncompleted matches go first
+    if (aCompleted && !bCompleted) return 1;
+    if (!aCompleted && bCompleted) return -1;
+    
+    // 2. Octavos matches go first within their group
+    const aIsOctavos = a.group && a.group.toLowerCase().trim() === 'octavos';
+    const bIsOctavos = b.group && b.group.toLowerCase().trim() === 'octavos';
+    if (aIsOctavos && !bIsOctavos) return -1;
+    if (!aIsOctavos && bIsOctavos) return 1;
+    
+    // 3. Retain original ID ordering
+    return a.id - b.id;
+  });
+
+  const matchesHtml = sortedMatches.map(match => {
     const userPrediction = statePhase2.predictions[match.id] || null;
+    const isSaved = !!userPrediction;
+    
+    if (!isSaved && !statePhase2.tempPredictions[match.id]) {
+      statePhase2.tempPredictions[match.id] = { team1Score: '', team2Score: '', winner: null };
+    }
+    const temp = statePhase2.tempPredictions[match.id] || {};
+    const activePrediction = isSaved ? userPrediction : temp;
+
     const isCompleted = match.result !== null;
     const flag1 = match.team1.substring(0, 3);
     const flag2 = match.team2.substring(0, 3);
@@ -2348,33 +2917,54 @@ function renderFinalMatchesGrid() {
 
     const hasTBD = match.team1 === 'A definir' || match.team2 === 'A definir';
     const isPaused = statePhase2.config && statePhase2.config.predictionsPaused;
-    const disabled = isCompleted || isPaused || hasTBD ? 'disabled' : '';
-    const val1 = userPrediction ? userPrediction.team1Score : '';
-    const val2 = userPrediction ? userPrediction.team2Score : '';
-    const selL = (userPrediction && userPrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
-    const selV = (userPrediction && userPrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    const disabled = isSaved || isCompleted || isPaused || hasTBD ? 'disabled' : '';
+    const val1 = activePrediction.team1Score !== undefined ? activePrediction.team1Score : '';
+    const val2 = activePrediction.team2Score !== undefined ? activePrediction.team2Score : '';
+    const selL = (activePrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
+    const selV = (activePrediction.winner === 'V') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
     if (!isCompleted && hasTBD) {
       resultBannerHtml = `<div class="real-result-banner pending" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #f87171;"><span><i class="fa-solid fa-lock"></i> Bloqueado (Equipos por definir)</span></div>`;
     }
 
+    const clickL = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'L')"` : '';
+    const clickV = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'V')"` : '';
+
+    let confirmBtnHtml = '';
+    if (!isSaved && !isCompleted && !isPaused && !hasTBD) {
+      confirmBtnHtml = `
+        <div style="margin-top: 1rem; text-align: center;">
+          <button class="btn btn-primary" onclick="confirmFinalPrediction(${match.id})" style="width: 100%; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #d97706;">
+            <i class="fa-solid fa-circle-check"></i> Confirmar Pronóstico
+          </button>
+        </div>
+      `;
+    } else if (isSaved && !isCompleted) {
+      confirmBtnHtml = `
+        <div style="margin-top: 0.75rem; text-align: center; color: var(--gold); font-size: 0.8rem; font-weight: 600; background: rgba(245, 158, 11, 0.08); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+          <i class="fa-solid fa-lock"></i> Pronóstico Confirmado (Bloqueado)
+        </div>
+      `;
+    }
+
     return `
-      <div class="match-card ${userPrediction ? 'completed' : ''}" id="match-card-final-${match.id}">
+      <div class="match-card ${isSaved ? 'completed' : ''}" id="match-card-final-${match.id}">
         <div class="match-meta"><span class="match-group">${match.group}</span><span class="match-date">${match.date}</span></div>
         <div class="match-teams-layout" style="margin-bottom: 1rem;">
           <div class="team-row" style="justify-content: space-between;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'L')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selL}">
+            <div class="team-info" ${clickL} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selL}">
               <div class="team-flag-mock">${flag1}</div><span class="team-name">${match.team1}</span>
             </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" oninput="updateTempScore(${match.id}, 1, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
           <div class="team-row" style="justify-content: space-between; margin-top: 0.5rem;">
-            <div class="team-info" onclick="!${isCompleted} && !${isPaused} && !${hasTBD} && selectFinalWinner(${match.id}, 'V')" style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selV}">
+            <div class="team-info" ${clickV} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selV}">
               <div class="team-flag-mock">${flag2}</div><span class="team-name">${match.team2}</span>
             </div>
-            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" onchange="saveFinalPrediction(${match.id})" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" oninput="updateTempScore(${match.id}, 2, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
         </div>
+        ${confirmBtnHtml}
         ${resultBannerHtml}
       </div>
     `;
@@ -2391,36 +2981,77 @@ function renderFinalMatchesGrid() {
 }
 
 window.selectFinalWinner = function(matchId, winner) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
-  if (!statePhase2.predictions[matchId]) statePhase2.predictions[matchId] = {};
-  statePhase2.predictions[matchId].winner = winner;
-  if (v1 !== '' && v2 !== '') {
-      saveFinalPrediction(matchId);
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+  if (!statePhase2.tempPredictions[matchId]) {
+    statePhase2.tempPredictions[matchId] = { team1Score: '', team2Score: '', winner: null };
+  }
+  statePhase2.tempPredictions[matchId].winner = winner;
+  renderFinalMatchesGrid();
+};
+
+window.updateTempScore = function(matchId, teamIndex, value) {
+  if (!statePhase2.tempPredictions) {
+    statePhase2.tempPredictions = {};
+  }
+  if (!statePhase2.tempPredictions[matchId]) {
+    statePhase2.tempPredictions[matchId] = { team1Score: '', team2Score: '', winner: null };
+  }
+  if (teamIndex === 1) {
+    statePhase2.tempPredictions[matchId].team1Score = value;
   } else {
-      renderFinalMatchesGrid();
+    statePhase2.tempPredictions[matchId].team2Score = value;
+  }
+  
+  // Auto-select winner if clear (not a draw)
+  const t1 = statePhase2.tempPredictions[matchId].team1Score;
+  const t2 = statePhase2.tempPredictions[matchId].team2Score;
+  if (t1 !== '' && t2 !== '') {
+    const s1 = parseInt(t1);
+    const s2 = parseInt(t2);
+    if (!isNaN(s1) && !isNaN(s2)) {
+      if (s1 > s2) {
+        statePhase2.tempPredictions[matchId].winner = 'L';
+      } else if (s1 < s2) {
+        statePhase2.tempPredictions[matchId].winner = 'V';
+      }
+    }
   }
 };
 
-async function saveFinalPrediction(matchId) {
-  const v1 = document.getElementById(`pred1-final-${matchId}`).value;
-  const v2 = document.getElementById(`pred2-final-${matchId}`).value;
+window.confirmFinalPrediction = async function(matchId) {
+  const v1 = document.getElementById(`pred1-final-${matchId}`).value.trim();
+  const v2 = document.getElementById(`pred2-final-${matchId}`).value.trim();
   
-  if (v1 === '' || v2 === '') return;
+  if (v1 === '' || v2 === '') {
+    showToast("Debes ingresar el marcador de ambos equipos.", "warning");
+    return;
+  }
   
   const score1 = parseInt(v1);
   const score2 = parseInt(v2);
-  if (isNaN(score1) || isNaN(score2)) return;
+  if (isNaN(score1) || isNaN(score2)) {
+    showToast("Los marcadores deben ser números válidos.", "warning");
+    return;
+  }
 
-  const pred = statePhase2.predictions[matchId] || {};
-  const winner = pred.winner || (score1 > score2 ? 'L' : (score1 < score2 ? 'V' : null));
+  const temp = (statePhase2.tempPredictions && statePhase2.tempPredictions[matchId]) || {};
+  let winner = temp.winner;
+  
+  if (score1 > score2) {
+    winner = 'L';
+  } else if (score1 < score2) {
+    winner = 'V';
+  }
   
   if (score1 === score2 && !winner) {
     showToast("Para empates, debes tocar el nombre del equipo que avanza.", "warning");
     return;
   }
 
-  const finalWinner = score1 > score2 ? 'L' : (score1 < score2 ? 'V' : winner);
+  const confirmSave = confirm("¿Estás seguro de confirmar este pronóstico? Una vez confirmado, no se podrá modificar.");
+  if (!confirmSave) return;
 
   try {
     const res = await fetch('/api/phase2/predictions', {
@@ -2436,7 +3067,7 @@ async function saveFinalPrediction(matchId) {
             prediction: {
               team1Score: score1,
               team2Score: score2,
-              winner: finalWinner
+              winner: winner
             }
           }
         ]
@@ -2449,15 +3080,19 @@ async function saveFinalPrediction(matchId) {
     statePhase2.predictions[matchId] = {
       team1Score: score1,
       team2Score: score2,
-      winner: finalWinner
+      winner: winner
     };
     
-    showToast("Pronóstico guardado", "success");
+    if (statePhase2.tempPredictions) {
+      delete statePhase2.tempPredictions[matchId];
+    }
+    
+    showToast("¡Pronóstico confirmado y guardado!", "success");
     renderFinalMatchesGrid();
   } catch (err) {
-    showToast(err.message || "Error al guardar el pronóstico", "error");
+    showToast(err.message || "Error al confirmar el pronóstico", "error");
   }
-}
+};
 
 async function loadAdmin2Dashboard() {
   const list = document.getElementById('admin-2-matches-list');
@@ -2494,6 +3129,7 @@ function renderAdmin2MatchesList() {
   if (!window.admin2Winners) window.admin2Winners = {};
   
   const html = statePhase2.matches.map(match => {
+    const isCaptured = match.result !== null && match.result !== undefined;
     let r1 = match.result ? match.result.team1Score : '';
     let r2 = match.result ? match.result.team2Score : '';
     let win = window.admin2Winners[match.id] || (match.result ? match.result.winner : null);
@@ -2501,32 +3137,38 @@ function renderAdmin2MatchesList() {
     let selL = win === 'L' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
     let selV = win === 'V' ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
 
+    const disabledAttr = isCaptured ? 'disabled' : '';
+    const disabledStyle = isCaptured ? 'opacity: 0.5; cursor: not-allowed;' : '';
+    const clickL = isCaptured ? '' : `onclick="selectAdmin2Winner(${match.id}, 'L')"`;
+    const clickV = isCaptured ? '' : `onclick="selectAdmin2Winner(${match.id}, 'V')"`;
+    const pointerStyle = isCaptured ? 'cursor: default;' : 'cursor: pointer;';
+
     return `
-      <div class="admin-user-card" style="margin-bottom: 1rem;">
+      <div class="admin-user-card" style="margin-bottom: 1rem; ${isCaptured ? 'border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.01);' : ''}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <strong>#${match.id} - ${match.group || 'Partido'}</strong>
-          <input type="text" id="admin-2-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;" placeholder="Fecha/Sede">
+          <strong>#${match.id} - ${match.group || 'Partido'} ${isCaptured ? '<span class="badge badge-success" style="margin-left: 0.5rem; font-size: 0.7rem; padding: 0.15rem 0.35rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Capturado</span>' : ''}</strong>
+          <input type="text" id="admin-2-date-${match.id}" value="${match.date}" class="input-field" style="width: 130px; font-size: 0.8rem; padding: 0.25rem;" placeholder="Fecha/Sede" ${disabledAttr}>
         </div>
         
         <!-- Team Editing -->
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
-          <input type="text" id="admin-2-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1">
+          <input type="text" id="admin-2-t1-${match.id}" value="${match.team1}" class="input-field" style="flex:1;" placeholder="Equipo 1" ${disabledAttr}>
           <span>vs</span>
-          <input type="text" id="admin-2-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2">
-          <button class="btn btn-secondary" onclick="saveAdmin2Teams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem;">Guardar Datos</button>
+          <input type="text" id="admin-2-t2-${match.id}" value="${match.team2}" class="input-field" style="flex:1;" placeholder="Equipo 2" ${disabledAttr}>
+          <button class="btn btn-secondary" onclick="saveAdmin2Teams(${match.id})" style="padding: 0.5rem; font-size: 0.8rem; ${disabledStyle}" ${disabledAttr}>Guardar Datos</button>
         </div>
 
         <!-- Result Editing -->
         <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-          <div onclick="selectAdmin2Winner(${match.id}, 'L')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
+          <div ${clickL} style="${pointerStyle} padding: 0.5rem; flex: 1; text-align: center; ${selL}">${match.team1}</div>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res1-${match.id}" value="${r1}" class="input-field" style="width: 60px; text-align: center;" placeholder="G" ${disabledAttr}>
           <span>-</span>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G">
-          <div onclick="selectAdmin2Winner(${match.id}, 'V')" style="cursor: pointer; padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="admin-2-res2-${match.id}" value="${r2}" class="input-field" style="width: 60px; text-align: center;" placeholder="G" ${disabledAttr}>
+          <div ${clickV} style="${pointerStyle} padding: 0.5rem; flex: 1; text-align: center; ${selV}">${match.team2}</div>
         </div>
         <div style="display: flex; gap: 1rem;">
-          <button class="btn btn-primary" style="flex:1;" onclick="saveAdmin2Result(${match.id})">Guardar Marcador</button>
-          <button class="btn btn-danger" onclick="saveAdmin2Result(${match.id}, true)">Borrar Marcador</button>
+          <button class="btn btn-primary" style="flex:1; ${disabledStyle}" onclick="saveAdmin2Result(${match.id})" ${disabledAttr}>Guardar Marcador</button>
+          <button class="btn btn-danger" style="${disabledStyle}" onclick="saveAdmin2Result(${match.id}, true)" ${disabledAttr}>Borrar Marcador</button>
         </div>
       </div>
     `;
@@ -2663,7 +3305,7 @@ function renderPhase2Leaderboard() {
   const tbody = document.getElementById('new-panel-leaderboard-body');
   if (!tbody) return;
 
-  tbody.innerHTML = statePhase2.leaderboard.filter(player => player.username !== 'invitado').map((player, index) => {
+  tbody.innerHTML = statePhase2.leaderboard.filter(player => player.username !== 'invitado' && player.predictionCount > 0).map((player, index) => {
     const position = index + 1;
     let rankBadgeClass = 'rank-other';
     if (position === 1) rankBadgeClass = 'rank-1';
@@ -2681,8 +3323,8 @@ function renderPhase2Leaderboard() {
           <div class="rank-badge ${rankBadgeClass}">${position}</div>
         </td>
         <td>
-          <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}">
-            <i class="fa-solid ${isMe ? 'fa-user-astronaut' : 'fa-circle-user'}"></i>
+          <div class="player-info-cell ${player.isAdmin ? 'is-admin' : ''}" style="display: flex; align-items: center; gap: 0.5rem;">
+            <img src="${player.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);">
             <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap;">
               <span class="player-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${player.username} ${isMe ? '(Tú)' : ''}">${player.username} ${isMe ? '(Tú)' : ''}</span>
               ${adminBadge}
@@ -2698,6 +3340,11 @@ function renderPhase2Leaderboard() {
 }
 
 async function viewPlayerPredictionsPhase2(targetUserId) {
+  if (targetUserId !== state.currentUser.id && !checkPredictionsComplete()) {
+    showIncompletePredictionsModal();
+    return;
+  }
+
   if (statePhase2.matches.length === 0) {
     try {
       const matchesRes = await fetch('/api/phase2/matches', {
@@ -2826,7 +3473,12 @@ async function loadVotingTrendsPhase2() {
     });
     if (!res.ok) throw new Error("Error fetching trends");
     
-    currentTrendsDataPhase2 = await res.json();
+    const trends = await res.json();
+    currentTrendsDataPhase2 = trends.filter(t => {
+      if (!t.group) return false;
+      const g = t.group.toLowerCase().trim();
+      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+    });
     
     if (currentTrendsDataPhase2.length === 0) {
       container.style.display = 'none';
@@ -2909,7 +3561,7 @@ window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
   const match = currentTrendsDataPhase2[matchIndex];
   if (!match) return;
 
-  const voters = match.stats[predictionType].voters || [];
+  const voters = match.stats[predictionType].users || [];
   
   const modal = document.getElementById('trends-voters-modal');
   const modalTitle = document.getElementById('trends-modal-title');
@@ -2925,11 +3577,18 @@ window.showTrendsVotersPhase2 = function(matchIndex, predictionType) {
   if (voters.length === 0) {
     votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.9rem; padding: 1rem 0;">Ningún jugador pronosticó esta opción.</li>`;
   } else {
-    votersList.innerHTML = voters.map(name => `
-      <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
-        <i class="fa-solid fa-user-circle" style="color: var(--gold); opacity: 0.8;"></i> ${name}
-      </li>
-    `).join('');
+    votersList.innerHTML = voters.map(u => {
+      const name = typeof u === 'object' ? u.username : u;
+      const pic = (typeof u === 'object' && u.profilePic) ? u.profilePic : 'avatar.png';
+      const scoreSuffix = (typeof u === 'object' && u.score) ? ` (${u.score})` : '';
+      const winnerTeamText = (typeof u === 'object' && u.winnerTeam) ? ` - Avanza: ${u.winnerTeam}` : '';
+      return `
+        <li style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; font-weight: 500;">
+          <img src="${pic}" alt="Avatar" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--gold);">
+          <span>${name}${scoreSuffix}${winnerTeamText}</span>
+        </li>
+      `;
+    }).join('');
   }
   
   modal.style.display = 'flex';
@@ -2960,11 +3619,11 @@ async function loadStreaksPhase2() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😎</span><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-label-group"><img src="${top.profilePic || 'avatar.png'}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);"><div class="racha-info"><span class="racha-title">Buena</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
             <div class="racha-badge racha-buena" onclick="toggleStreaksTop3Phase2('buena')">${top.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></div>
           </div>
           <div id="top3-buena-final" class="top3-list">
-            ${data.buenaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
+            ${data.buenaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;">${u.activeHits} <span class="seguidos-text"><i class="fa-solid fa-check"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
@@ -2975,11 +3634,11 @@ async function loadStreaksPhase2() {
       html += `
         <div class="racha-row-container">
           <div class="racha-row">
-            <div class="racha-label-group"><span class="racha-emoji">😢</span><div class="racha-info"><span class="racha-title">Mala</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
+            <div class="racha-label-group"><img src="${top.profilePic || 'avatar.png'}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold);"><div class="racha-info"><span class="racha-title">El Mala Racha</span><span class="racha-user" title="${top.username}">${top.username}</span></div></div>
             <div class="racha-badge racha-mala" onclick="toggleStreaksTop3Phase2('mala')">${top.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></div>
           </div>
           <div id="top3-mala-final" class="top3-list">
-            ${data.malaRacha.map((u, i) => `<div class="top3-item"><span class="top3-rank">${i+1}°</span><span class="top3-username" title="${u.username}">${u.username}</span><span class="top3-val">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
+            ${data.malaRacha.map((u, i) => `<div class="top3-item" style="display: flex; align-items: center; gap: 0.4rem;"><span class="top3-rank">${i+1}°</span><img src="${u.profilePic || 'avatar.png'}" alt="Avatar" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25);"><span class="top3-username" title="${u.username}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${u.username}</span><span class="top3-val" style="margin-left: auto;">${u.activeMisses} <span class="seguidos-text"><i class="fa-solid fa-xmark"></i></span></span></div>`).join('')}
           </div>
         </div>`;
     }
