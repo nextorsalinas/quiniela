@@ -1436,12 +1436,12 @@ window.openCompleteTrendsModal = async function() {
     if (!res.ok) throw new Error("Error loading complete trends");
     const data = await res.json();
     
-    // Filter to only show dieciseisavos trends if Phase 2
+    // Filter to only show octavos trends if Phase 2
     const filteredData = isPhase2 
       ? data.filter(match => {
           if (!match.group) return false;
           const g = match.group.toLowerCase().trim();
-          return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+          return g.includes('octavos');
         })
       : data;
 
