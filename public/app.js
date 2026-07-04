@@ -3477,7 +3477,7 @@ async function loadVotingTrendsPhase2() {
     currentTrendsDataPhase2 = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('dieciseis') || g.includes('deciseis') || g.includes('desiseis') || g.includes('dieciséis') || g.includes('desiseisabos') || g.includes('dieciseisavos');
+      return g.includes('octavos');
     });
     
     if (currentTrendsDataPhase2.length === 0) {
