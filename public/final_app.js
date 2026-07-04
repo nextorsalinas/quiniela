@@ -845,7 +845,16 @@ window.showBonusDetails = function(bonusJson) {
     } else {
       bonuses.forEach((b, index) => {
         // Find match in state
-        const match = state.matches.find(m => m.id == b.matchId) || { team1: 'Local', team2: 'Visitante', resultTeam1: '?', resultTeam2: '?' };
+        const match = state.matches.find(m => m.id == b.matchId) || { team1: 'Local', team2: 'Visitante' };
+        
+        let res1 = '?';
+        let res2 = '?';
+        if (match.resultTeam1 !== undefined && match.resultTeam1 !== null) res1 = match.resultTeam1;
+        else if (match.result && match.result.team1Score !== undefined) res1 = match.result.team1Score;
+        
+        if (match.resultTeam2 !== undefined && match.resultTeam2 !== null) res2 = match.resultTeam2;
+        else if (match.result && match.result.team2Score !== undefined) res2 = match.result.team2Score;
+        
         html += `
           <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
             <div style="font-size: 0.75rem; color: var(--gold); font-weight: bold; margin-bottom: 0.4rem;">Súper Bonus #${index + 1}</div>
@@ -854,7 +863,7 @@ window.showBonusDetails = function(bonusJson) {
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.2rem;">
               <div><span style="color: var(--color-text-muted);">Pronóstico:</span> <strong style="color: #4da3ff;">${b.prediction.team1Score} - ${b.prediction.team2Score}</strong></div>
-              <div><span style="color: var(--color-text-muted);">Resultado Real:</span> <strong>${match.resultTeam1 !== null ? match.resultTeam1 : '?'} - ${match.resultTeam2 !== null ? match.resultTeam2 : '?'}</strong></div>
+              <div><span style="color: var(--color-text-muted);">Resultado Real:</span> <strong>${res1} - ${res2}</strong></div>
             </div>
           </div>
         `;
