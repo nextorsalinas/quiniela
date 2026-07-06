@@ -708,8 +708,8 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
       const predRef = firestoreDb.collection('phase2_predictions').doc(docId);
       const existingPredDoc = await predRef.get();
 
-      if (existingPredDoc.exists && !isAdmin) {
-        throw new Error(`El partido #${matchId} ya tiene un pronóstico guardado y no se puede modificar.`);
+      if (match.result !== null && !isAdmin) {
+        throw new Error(`El partido #${matchId} ya finalizó y no se puede modificar.`);
       }
 
       let prevPoints = 0;
@@ -783,8 +783,8 @@ async function savePredictions(userId, matchPredictions, isAdmin = false) {
       }
 
       const existingIndex = db.predictions.findIndex(p => p.userId === userId && p.matchId === matchId);
-      if (existingIndex > -1 && !isAdmin) {
-        throw new Error(`El partido #${matchId} ya tiene un pronóstico guardado y no se puede modificar.`);
+      if (match.result !== null && !isAdmin) {
+        throw new Error(`El partido #${matchId} ya finalizó y no se puede modificar.`);
       }
 
       if (predictionVal === null) {
@@ -894,6 +894,7 @@ async function getUserPredictionsDetail(userId) {
     return {
       username: user.username,
       points: user.points,
+      profilePic: user.profilePic || '',
       predictions: predictionsMap
     };
   }
@@ -911,6 +912,7 @@ async function getUserPredictionsDetail(userId) {
   return {
     username: user.username,
     points: user.points,
+    profilePic: user.profilePic || '',
     predictions: predictionsMap
   };
 }
