@@ -3022,7 +3022,7 @@ function renderFinalMatchesGrid() {
 
     const hasTBD = match.team1 === 'A definir' || match.team2 === 'A definir';
     const isPaused = statePhase2.config && statePhase2.config.predictionsPaused;
-    const disabled = isCompleted || isPaused || hasTBD ? 'disabled' : '';
+    const disabled = isSaved || isCompleted || isPaused || hasTBD ? 'disabled' : '';
     const val1 = activePrediction.team1Score !== undefined ? activePrediction.team1Score : '';
     const val2 = activePrediction.team2Score !== undefined ? activePrediction.team2Score : '';
     const selL = (activePrediction.winner === 'L') ? 'border: 2px solid var(--gold); border-radius: 8px;' : '';
@@ -3032,16 +3032,22 @@ function renderFinalMatchesGrid() {
       resultBannerHtml = `<div class="real-result-banner pending" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #f87171;"><span><i class="fa-solid fa-lock"></i> Bloqueado (Equipos por definir)</span></div>`;
     }
 
-    const clickL = (!isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'L')"` : '';
-    const clickV = (!isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'V')"` : '';
+    const clickL = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'L')"` : '';
+    const clickV = (!isSaved && !isCompleted && !isPaused && !hasTBD) ? `onclick="selectFinalWinner(${match.id}, 'V')"` : '';
 
     let confirmBtnHtml = '';
-    if (!isCompleted && !isPaused && !hasTBD) {
+    if (!isSaved && !isCompleted && !isPaused && !hasTBD) {
       confirmBtnHtml = `
         <div style="margin-top: 1rem; text-align: center;">
           <button class="btn btn-primary" onclick="confirmFinalPrediction(${match.id})" style="width: 100%; padding: 0.5rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #d97706;">
-            <i class="fa-solid fa-circle-check"></i> ${isSaved ? 'Modificar Pronóstico' : 'Confirmar Pronóstico'}
+            <i class="fa-solid fa-circle-check"></i> Confirmar Pronóstico
           </button>
+        </div>
+      `;
+    } else if (isSaved && !isCompleted) {
+      confirmBtnHtml = `
+        <div style="margin-top: 0.75rem; text-align: center; color: var(--gold); font-size: 0.8rem; font-weight: 600; background: rgba(245, 158, 11, 0.08); padding: 0.4rem; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; gap: 0.3rem;">
+          <i class="fa-solid fa-lock"></i> Pronóstico Confirmado (Bloqueado)
         </div>
       `;
     }
@@ -3051,13 +3057,13 @@ function renderFinalMatchesGrid() {
         <div class="match-meta"><span class="match-group">${match.group}</span><span class="match-date">${match.date}</span></div>
         <div class="match-teams-layout" style="margin-bottom: 1rem;">
           <div class="team-row" style="justify-content: space-between;">
-            <div class="team-info" ${clickL} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selL}">
+            <div class="team-info" ${clickL} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selL}">
               <div class="team-flag-mock">${flag1}</div><span class="team-name">${match.team1}</span>
             </div>
             <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred1-final-${match.id}" class="score-input" value="${val1}" oninput="updateTempScore(${match.id}, 1, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
           </div>
           <div class="team-row" style="justify-content: space-between; margin-top: 0.5rem;">
-            <div class="team-info" ${clickV} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'} padding: 0.5rem; ${selV}">
+            <div class="team-info" ${clickV} style="${hasTBD ? 'cursor: not-allowed; opacity: 0.6;' : (isSaved ? 'cursor: default;' : 'cursor: pointer;')} padding: 0.5rem; ${selV}">
               <div class="team-flag-mock">${flag2}</div><span class="team-name">${match.team2}</span>
             </div>
             <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" id="pred2-final-${match.id}" class="score-input" value="${val2}" oninput="updateTempScore(${match.id}, 2, this.value)" ${disabled} style="width: 50px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.5rem; font-size: 1.1rem; font-weight: bold;">
@@ -3149,7 +3155,7 @@ window.confirmFinalPrediction = async function(matchId) {
     return;
   }
 
-  const confirmSave = confirm("¿Estás seguro de guardar este pronóstico?");
+  const confirmSave = confirm("¿Estás seguro de confirmar este pronóstico? Una vez confirmado, no se podrá modificar.");
   if (!confirmSave) return;
 
   try {
