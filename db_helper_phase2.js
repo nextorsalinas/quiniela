@@ -1497,7 +1497,7 @@ async function getMatchTrends() {
   
   // 2. Filter matches that don't have a result (result === null) and are from Octavos
   const unplayedMatches = matches
-    .filter(m => m.result === null && m.group === 'Octavos')
+    .filter(m => m.result === null && m.group === 'Cuartos')
     .sort((a, b) => a.id - b.id);
     
   if (unplayedMatches.length === 0) {
