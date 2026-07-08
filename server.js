@@ -128,7 +128,7 @@ async function checkPhase2PredictionsComplete(userId) {
     // Find matches that require prediction (only octavos)
     const requiredMatches = matches.filter(match => {
       const g = match.group ? match.group.toLowerCase().trim() : '';
-      return g === 'octavos';
+      return g === 'cuartos';
     });
 
     const predMatchIds = new Set(predictions.map(p => parseInt(p.matchId)));
@@ -160,7 +160,7 @@ async function requireCompletePredictions(req, res, next) {
   try {
     const isComplete = await checkPhase2PredictionsComplete(req.user.id || req.headers['x-user-id']);
     if (!isComplete) {
-      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de la fase de octavos." });
+      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de la fase de cuartos." });
     }
     next();
   } catch (error) {
@@ -851,13 +851,13 @@ app.get('/api/phase2/leaderboard', authenticatePhase2, async (req, res) => {
   }
 });
 
-app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
+app.get('/api/phase2/matches/trends', authenticatePhase2, requireCompletePredictions, async (req, res) => {
   try {
     const trends = await dbHelperPhase2.getMatchTrends();
     const filteredTrends = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('octavos');
+      return g.includes('cuartos');
     });
     res.json(filteredTrends);
   } catch (error) {
@@ -866,13 +866,13 @@ app.get('/api/phase2/matches/trends', authenticatePhase2, async (req, res) => {
   }
 });
 
-app.get('/api/phase2/matches/trends/all', authenticatePhase2, async (req, res) => {
+app.get('/api/phase2/matches/trends/all', authenticatePhase2, requireCompletePredictions, async (req, res) => {
   try {
     const trends = await dbHelperPhase2.getMatchTrendsAll();
     const filteredTrends = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('octavos');
+      return g.includes('cuartos');
     });
     res.json(filteredTrends);
   } catch (error) {

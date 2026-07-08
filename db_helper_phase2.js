@@ -39,6 +39,9 @@ function calculatePointsHelper(matchResult, predValue) {
     if (r1 === p1 && r2 === p2) return 4;
     return 3;
   }
+  if (r1 === p1 && r2 === p2) {
+    return 1;
+  }
   return 0;
 }
  // 5 minutes
@@ -1711,7 +1714,7 @@ async function getStreaks() {
         });
         if (pred && pred.prediction) {
           const pts = calculatePointsHelper(match.result, pred.prediction);
-          if (pts === 4) {
+          if (pts === 4 || pts === 1) {
             bonusCount++;
           }
         }

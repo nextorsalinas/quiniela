@@ -1094,6 +1094,9 @@ async function viewPlayerPredictions(targetUserId) {
             if (r1 === p1 && r2 === p2) {
               bonusCount++;
             }
+          } else if (r1 === p1 && r2 === p2) {
+            hits++;
+            bonusCount++;
           } else {
             misses++;
           }
@@ -1223,10 +1226,12 @@ async function viewPlayerPredictions(targetUserId) {
         if (match.result && typeof match.result === 'object') {
           const exactScore = (targetPred.team1Score === match.result.team1Score && targetPred.team2Score === match.result.team2Score);
           const winnerCorrect = (targetPred.winner === match.result.winner);
-          if (exactScore) {
+          if (exactScore && winnerCorrect) {
             highlightClass = 'background: rgba(16, 185, 129, 0.15); border: 1px solid var(--gold);'; // 4 points
           } else if (winnerCorrect) {
             highlightClass = 'background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success);'; // 3 points
+          } else if (exactScore) {
+            highlightClass = 'background: rgba(245, 158, 11, 0.15); border: 1px solid var(--gold);'; // 1 point (draw matched but wrong winner)
           } else {
             highlightClass = 'background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger);'; // 0 points
           }

@@ -44,7 +44,7 @@ function checkPredictionsComplete() {
   }
   const requiredMatches = statePhase2.matches.filter(match => {
     const g = match.group ? match.group.toLowerCase().trim() : '';
-    return g === 'octavos';
+    return g === 'cuartos';
   });
 
   if (requiredMatches.length === 0) return true;
@@ -1518,7 +1518,7 @@ window.openCompleteTrendsModal = async function() {
       ? data.filter(match => {
           if (!match.group) return false;
           const g = match.group.toLowerCase().trim();
-          return g.includes('octavos');
+          return g.includes('cuartos');
         })
       : data;
 
@@ -2662,6 +2662,9 @@ async function loadProfileDashboard() {
             if (r1 === p1 && r2 === p2) {
               bonusCount++; // Marcador exacto en Fase 2 equivale a Bonus (4 pts)
             }
+          } else if (r1 === p1 && r2 === p2) {
+            hitsP2++;
+            bonusCount++; // Marcador exacto de empate sin acertar ganador (+1 pt)
           } else {
             missesP2++;
           }
@@ -2716,7 +2719,30 @@ async function loadProfileDashboard() {
     const effectiveness = totalPredictions > 0 ? (totalHits / totalPredictions * 100) : 0;
 
     // Render en la interfaz
-    const totalPoints = (totalHits - bonusCount) * 3 + bonusCount * 4;
+    let totalPoints = 0;
+    statePhase2.matches.forEach(match => {
+      if (match.result !== null) {
+        const pred = statePhase2.predictions[match.id];
+        if (pred) {
+          const r1 = parseInt(match.result.team1Score);
+          const r2 = parseInt(match.result.team2Score);
+          const p1 = parseInt(pred.team1Score);
+          const p2 = parseInt(pred.team2Score);
+          const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+          const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+          if (realWinner === predWinner) {
+            if (r1 === p1 && r2 === p2) {
+              totalPoints += 4;
+            } else {
+              totalPoints += 3;
+            }
+          } else if (r1 === p1 && r2 === p2) {
+            totalPoints += 1;
+          }
+        }
+      }
+    });
+
     if (pointsEl) pointsEl.textContent = `${totalPoints} pts`;
     if (predictionsEl) predictionsEl.textContent = `${totalPredictions} / ${totalPossibleMatches}`;
     if (hitsEl) hitsEl.textContent = totalHits;
@@ -2982,6 +3008,8 @@ function renderFinalMatchesGrid() {
           } else {
             resultBannerHtml = `<div class="real-result-banner correct"><span><i class="fa-solid fa-circle-check"></i> Acertaste al que avanza</span><span>+3 pts</span></div>`;
           }
+        } else if (r1 === p1 && r2 === p2) {
+          resultBannerHtml = `<div class="real-result-banner correct" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); color: var(--gold);"><span><i class="fa-solid fa-star-half-stroke"></i> Acertaste el marcador de empate</span><span>+1 pt</span></div>`;
         } else {
           resultBannerHtml = `<div class="real-result-banner incorrect"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste. Avanzó ${realW==='L'?match.team1:match.team2}</span><span>0 pts</span></div>`;
         }
@@ -3481,7 +3509,7 @@ async function viewPlayerPredictionsPhase2(targetUserId) {
         const exactScore = (bet && bet.team1Score === real.team1Score && bet.team2Score === real.team2Score);
         const winnerCorrect = (bet && bet.winner === real.winner);
         
-        if (exactScore) {
+        if (exactScore && winnerCorrect) {
           scoreClass = 'pts-3';
           rowStatusClass = 'correct';
           pointsText = '+4 pts';
@@ -3489,6 +3517,10 @@ async function viewPlayerPredictionsPhase2(targetUserId) {
           scoreClass = 'pts-3';
           rowStatusClass = 'correct';
           pointsText = '+3 pts';
+        } else if (exactScore) {
+          scoreClass = 'pts-1';
+          rowStatusClass = 'correct';
+          pointsText = '+1 pt';
         } else {
           scoreClass = 'pts-0';
           rowStatusClass = 'incorrect';
@@ -3548,7 +3580,7 @@ async function loadVotingTrendsPhase2() {
     currentTrendsDataPhase2 = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('octavos');
+      return g.includes('cuartos');
     });
     
     if (currentTrendsDataPhase2.length === 0) {
