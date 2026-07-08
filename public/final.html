@@ -389,23 +389,34 @@
 
   <!-- COMPARISON MODAL -->
   <div id="comparison-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content glass-panel">
-      <div class="modal-header">
+    <div class="modal-content glass-panel" style="max-height: 90vh;">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem;">
         <div>
-          <h3 id="modal-user-title">Pronósticos de Jugador</h3>
-          <p id="modal-user-subtitle">Comparación de predicciones y resultados reales</p>
+          <h3 id="modal-user-title">Perfil de Jugador</h3>
+          <p id="modal-user-subtitle">Estadísticas y pronósticos detallados</p>
         </div>
         <button class="modal-close-btn" onclick="closeComparisonModal()">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="modal-legend">
-          <span class="legend-item"><span class="indicator ind-correct"></span> Acierto (+3 pts)</span>
-          <span class="legend-item"><span class="indicator ind-incorrect"></span> Error (0 pts)</span>
-          <span class="legend-item"><span class="indicator ind-pending"></span> Pendiente / Sin Resultado</span>
-        </div>
+      <div class="modal-body" style="padding-top: 1rem;">
+        <!-- Profile & stats section -->
+        <div id="modal-profile-stats-container"></div>
         
-        <div id="modal-comparison-grid" class="modal-comparison-grid">
-          <!-- Match comparisons injected via JS -->
+        <!-- Header for predictions -->
+        <div id="modal-preds-header" style="margin: 1.5rem 0 1rem 0; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+          <h4 style="margin: 0; font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: white;">Pronósticos Realizados</h4>
+          <button class="btn btn-outline" id="toggle-modal-preds" onclick="toggleModalPredictionsList()" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; margin: 0; line-height: 1;">Ocultar</button>
+        </div>
+
+        <div id="modal-preds-wrapper">
+          <div class="modal-legend" style="margin-bottom: 1rem;">
+            <span class="legend-item"><span class="indicator ind-correct"></span> Acierto (+3 pts)</span>
+            <span class="legend-item"><span class="indicator ind-incorrect"></span> Error (0 pts)</span>
+            <span class="legend-item"><span class="indicator ind-pending"></span> Pendiente / Sin Resultado</span>
+          </div>
+          
+          <div id="modal-comparison-grid" class="modal-comparison-grid">
+            <!-- Match comparisons injected via JS -->
+          </div>
         </div>
       </div>
     </div>

@@ -1065,8 +1065,140 @@ async function viewPlayerPredictions(targetUserId) {
 
     const modal = document.getElementById('comparison-modal');
     const grid = document.getElementById('modal-comparison-grid');
-    document.getElementById('modal-user-title').textContent = 'Pronósticos de ' + truncateName(data.username, 20);
     
+    document.getElementById('modal-user-title').textContent = 'Perfil de ' + truncateName(data.username, 20);
+    document.getElementById('modal-user-subtitle').textContent = 'Estadísticas y pronósticos detallados';
+
+    // --- STATS CALCULATION ---
+    const totalPredictions = Object.keys(data.predictions).length;
+    const totalPossibleMatches = state.matches ? state.matches.length : 32;
+
+    let hits = 0;
+    let misses = 0;
+    let bonusCount = 0;
+    let remaining = 0;
+
+    state.matches.forEach(match => {
+      if (match.result !== null && match.result !== undefined) {
+        const pred = data.predictions[match.id];
+        if (pred) {
+          const r1 = parseInt(match.result.team1Score);
+          const r2 = parseInt(match.result.team2Score);
+          const p1 = parseInt(pred.team1Score);
+          const p2 = parseInt(pred.team2Score);
+          const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+          const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+
+          if (realWinner === predWinner) {
+            hits++;
+            if (r1 === p1 && r2 === p2) {
+              bonusCount++;
+            }
+          } else {
+            misses++;
+          }
+        }
+      } else {
+        remaining++;
+      }
+    });
+
+    const effectiveness = totalPredictions > 0 ? (hits / totalPredictions * 100) : 0;
+
+    // Streaks
+    const finishedMatches = [...state.matches]
+      .filter(m => m.result !== null && m.result !== undefined)
+      .sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) {
+          return new Date(a.updatedAt) - new Date(b.updatedAt);
+        } else if (a.updatedAt) return 1;
+        else if (b.updatedAt) return -1;
+        return a.id - b.id;
+      });
+
+    let currentHits = 0;
+    let currentMisses = 0;
+
+    finishedMatches.forEach(match => {
+      const pred = data.predictions[match.id];
+      let isHit = false;
+      if (pred) {
+        const r1 = parseInt(match.result.team1Score);
+        const r2 = parseInt(match.result.team2Score);
+        const p1 = parseInt(pred.team1Score);
+        const p2 = parseInt(pred.team2Score);
+        const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+        const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        isHit = (realWinner === predWinner);
+      }
+
+      if (isHit) {
+        currentHits++;
+        currentMisses = 0;
+      } else {
+        currentHits = 0;
+        currentMisses++;
+      }
+    });
+
+    // Locate rank / position in leaderboard
+    const leaderboardIndex = state.leaderboard.findIndex(p => p.id === targetUserId);
+    const position = leaderboardIndex !== -1 ? leaderboardIndex + 1 : '-';
+
+    // Inject profile and stats HTML
+    const profileStatsContainer = document.getElementById('modal-profile-stats-container');
+    if (profileStatsContainer) {
+      profileStatsContainer.innerHTML = `
+        <div class="user-profile-header" style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <img src="${data.profilePic || 'avatar.png'}" alt="Avatar" style="width: 65px; height: 65px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--gold); background: rgba(0,0,0,0.3);">
+          <div style="flex-grow: 1;">
+            <h4 style="margin: 0; font-size: 1.25rem; font-family: var(--font-title); font-weight: 700; color: white;">
+              ${data.username}
+            </h4>
+            <div style="display: flex; gap: 0.6rem; align-items: center; margin-top: 0.35rem; font-size: 0.8rem; color: var(--color-text-muted);">
+              <span style="background: rgba(245, 158, 11, 0.12); color: var(--gold); padding: 0.15rem 0.5rem; border-radius: 6px; font-weight: 700; font-family: var(--font-title);">Posición #${position}</span>
+              <span style="background: rgba(255, 255, 255, 0.06); padding: 0.15rem 0.5rem; border-radius: 6px; font-weight: 600; color: white;">${data.points || 0} pts</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-square-poll-vertical" style="color: var(--gold); margin-right: 0.25rem;"></i> Pronósticos</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: white;">${totalPredictions} / ${totalPossibleMatches}</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 0.25rem;"></i> Aciertos</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--success);">${hits}</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-circle-xmark" style="color: var(--red); margin-right: 0.25rem;"></i> Errores</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--red);">${misses}</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-star" style="color: var(--gold); margin-right: 0.25rem;"></i> Bonus</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--gold);">${bonusCount}</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-percent" style="color: var(--gold); margin-right: 0.25rem;"></i> Efectividad</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: white;">${effectiveness.toFixed(1)}%</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255, 255, 255, 0.02); padding: 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-bottom: 0.2rem;"><i class="fa-solid fa-fire" style="color: var(--success); margin-right: 0.25rem;"></i> Racha Activa</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: ${currentHits > 0 ? 'var(--success)' : (currentMisses > 0 ? 'var(--red)' : 'white')};">
+              ${currentHits > 0 ? `+${currentHits} Aciertos` : (currentMisses > 0 ? `-${currentMisses} Errores` : '0')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Reset predictions list wrapper to visible by default
+    const wrapper = document.getElementById('modal-preds-wrapper');
+    const toggleBtn = document.getElementById('toggle-modal-preds');
+    if (wrapper) wrapper.style.display = 'block';
+    if (toggleBtn) toggleBtn.textContent = 'Ocultar';
+
     let html = '';
     
     // Sort matches
@@ -1126,6 +1258,20 @@ async function viewPlayerPredictions(targetUserId) {
   } catch (error) {
     console.error("Error loading player predictions:", error);
     showToast("Error de conexión", "error");
+  }
+}
+
+window.toggleModalPredictionsList = function() {
+  const wrapper = document.getElementById('modal-preds-wrapper');
+  const btn = document.getElementById('toggle-modal-preds');
+  if (wrapper && btn) {
+    if (wrapper.style.display === 'none') {
+      wrapper.style.display = 'block';
+      btn.textContent = 'Ocultar';
+    } else {
+      wrapper.style.display = 'none';
+      btn.textContent = 'Mostrar';
+    }
   }
 }
 

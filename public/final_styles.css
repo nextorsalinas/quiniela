@@ -17,6 +17,8 @@
   --emerald: #0F4C5C;
   --emerald-glow: rgba(15, 76, 92, 0.25);
   --red: #9A031E;
+  --success: #10b981;
+  --danger: #ef4444;
 
   --grad-local: linear-gradient(135deg, #5F0F40, #9A031E);
   --grad-draw: linear-gradient(135deg, #E36414, #FB8B24);
@@ -47,6 +49,8 @@ body.dark-theme {
   --gold-glow: rgba(227, 100, 20, 0.23);
   --emerald: #0F4C5C;
   --emerald-glow: rgba(15, 76, 92, 0.23);
+  --success: #10b981;
+  --danger: #ef4444;
 
   --grad-local: linear-gradient(135deg, #5F0F40, #9A031E);
   --grad-draw: linear-gradient(135deg, #E36414, #FB8B24);

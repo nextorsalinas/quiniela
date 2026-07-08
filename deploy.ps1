@@ -1,16 +1,16 @@
 # Script de despliegue para la Quiniela 2026
 # Ejecuta este script en una terminal de PowerShell dentro de la carpeta del proyecto.
 
-Write-Host "=========================================" -ForegroundColor Gold
-Write-Host "  INICIANDO DESPLIEGUE EN FIREBASE...  " -ForegroundColor Gold
-Write-Host "=========================================" -ForegroundColor Gold
+Write-Host "=========================================" -ForegroundColor Yellow
+Write-Host "  INICIANDO DESPLIEGUE EN FIREBASE...  " -ForegroundColor Yellow
+Write-Host "=========================================" -ForegroundColor Yellow
 
 # 1. Configurar bypass para certificados SSL en red corporativa
 $env:NODE_TLS_REJECT_UNAUTHORIZED="0"
 
-# 2. Iniciar sesión en Firebase (abrirá tu navegador)
-Write-Host "`n1. Iniciando sesión en Firebase. Por favor, autoriza el acceso en el navegador..." -ForegroundColor Cyan
-npx firebase-tools login
+# 2. Iniciar sesión en Firebase (descomentar si expira la sesión)
+# Write-Host "`n1. Iniciando sesión en Firebase. Por favor, autoriza el acceso en el navegador..." -ForegroundColor Cyan
+# npx firebase-tools login
 
 # 3. Desplegar hosting y funciones en tu proyecto
 Write-Host "`n2. Desplegando en el proyecto quiniela----mundial-2026..." -ForegroundColor Cyan
