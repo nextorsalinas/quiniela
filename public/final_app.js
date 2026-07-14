@@ -7,6 +7,10 @@ window.onerror = function(message, source, lineno, colno, error) {
 // --- THEME TOGGLE LOGIC ---
 function initTheme() {
   try {
+    if (!localStorage.getItem('theme_migrated_v2')) {
+      localStorage.setItem('theme', 'light');
+      localStorage.setItem('theme_migrated_v2', 'true');
+    }
     const saved = localStorage.getItem('theme');
     if (saved === 'dark') {
       document.body.classList.add('dark-theme');
