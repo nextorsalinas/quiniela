@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const dbHelper = require('./db_helper');
 const dbHelperPhase2 = require('./db_helper_phase2');
+const dbHelperLigaMX = require('./db_helper_ligamx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,7 +36,8 @@ function ensureDbInitialized() {
     console.log("Initializing database...");
     dbInitPromise = Promise.all([
       dbHelper.initDb().then(() => console.log("Phase 1 database initialized successfully.")),
-      dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully."))
+      dbHelperPhase2.initDb().then(() => console.log("Phase 2 database initialized successfully.")),
+      dbHelperLigaMX.initDb().then(() => console.log("Liga MX database initialized successfully."))
     ]).catch(err => {
       dbInitPromise = null;
       console.error("Error during database initialization:", err);
@@ -1130,6 +1132,63 @@ app.post('/api/phase2/admin/notifications/broadcast', requireAdminPhase2, async 
   }
 });
 
+
+// ==========================================
+// LIGA MX (PRONOSTICOS MX) API ENDPOINTS
+// ==========================================
+
+app.get('/api/ligamx/matches', authenticate, async (req, res) => {
+  try {
+    const matches = await dbHelperLigaMX.getMatches();
+    res.json(matches);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/ligamx/predictions', authenticate, async (req, res) => {
+  try {
+    const preds = await dbHelperLigaMX.getPredictionsByUser(req.user.id);
+    res.json(preds);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/ligamx/predictions', authenticate, async (req, res) => {
+  const { predictions } = req.body;
+  if (!predictions || !Array.isArray(predictions)) {
+    return res.status(400).json({ error: "Predicciones inválidas." });
+  }
+  try {
+    await dbHelperLigaMX.savePredictions(req.user.id, predictions);
+    res.json({ message: "Pronósticos de Liga MX guardados con éxito." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/ligamx/leaderboard', authenticate, async (req, res) => {
+  try {
+    const lb = await dbHelperLigaMX.getLeaderboard();
+    res.json(lb);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/ligamx/admin/matches/result', requireAdmin, async (req, res) => {
+  const { matchId, result } = req.body;
+  if (!matchId || !result || result.team1Score === undefined || result.team2Score === undefined) {
+    return res.status(400).json({ error: "Datos de resultado inválidos." });
+  }
+  try {
+    await dbHelperLigaMX.updateMatchResult(matchId, result);
+    res.json({ message: "Resultado de Liga MX actualizado con éxito." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Info helper
 app.get('/api/info', (req, res) => {

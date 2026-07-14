@@ -116,6 +116,14 @@ let statePhase2 = {
   leaderboard: []
 };
 
+// STATE FOR LIGA MX (PronosticosMx)
+let stateLigaMX = {
+  matches: [],
+  predictions: {}, // Key: matchId, Value: prediction object { team1Score, team2Score, winner }
+  leaderboard: [],
+  activeSubTab: 'play'
+};
+
 // API BASE PATH
 const API_URL = '/api';
 
@@ -532,6 +540,8 @@ function switchTab(tabId) {
     loadAdmin2Dashboard();
   } else if (tabId === 'profile') {
     loadProfileDashboard();
+  } else if (tabId === 'ligamx') {
+    loadLigaMXDashboard();
   }
 }
 
@@ -3911,4 +3921,319 @@ window.showBonusMatchPhase2 = function(matchId, s1, s2) {
   const match = statePhase2.matches.find(m => m.id === parseInt(matchId));
   if (!match) return;
   showToast(`Marcador exacto: ${match.team1} ${s1} - ${s2} ${match.team2}`, 'info');
+};
+
+// ============================================================================
+// LIGA MX (PRONOSTICOS MX) SYSTEM
+// ============================================================================
+
+window.switchLigaMXSubTab = function(subTabId) {
+  stateLigaMX.activeSubTab = subTabId;
+  const playBtn = document.getElementById('btn-ligamx-play');
+  const lbBtn = document.getElementById('btn-ligamx-leaderboard');
+  const playView = document.getElementById('ligamx-subview-play');
+  const lbView = document.getElementById('ligamx-subview-leaderboard');
+  
+  if (subTabId === 'play') {
+    if (playBtn) {
+      playBtn.classList.remove('btn-outline');
+      playBtn.classList.add('btn-primary');
+      playBtn.style.color = '#000';
+      playBtn.style.borderColor = 'transparent';
+    }
+    if (lbBtn) {
+      lbBtn.classList.remove('btn-primary');
+      lbBtn.classList.add('btn-outline');
+      lbBtn.style.color = 'var(--gold)';
+      lbBtn.style.borderColor = 'transparent';
+    }
+    if (playView) playView.style.display = 'block';
+    if (lbView) lbView.style.display = 'none';
+    renderLigaMXMatchesGrid();
+  } else {
+    if (playBtn) {
+      playBtn.classList.remove('btn-primary');
+      playBtn.classList.add('btn-outline');
+      playBtn.style.color = 'var(--gold)';
+      playBtn.style.borderColor = 'transparent';
+    }
+    if (lbBtn) {
+      lbBtn.classList.remove('btn-outline');
+      lbBtn.classList.add('btn-primary');
+      lbBtn.style.color = '#000';
+      lbBtn.style.borderColor = 'transparent';
+    }
+    if (playView) playView.style.display = 'none';
+    if (lbView) lbView.style.display = 'block';
+    loadLigaMXLeaderboard();
+  }
+};
+
+window.loadLigaMXDashboard = async function() {
+  const container = document.getElementById('ligamx-matches-container');
+  if (!container) return;
+  container.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Liga MX...</div>`;
+  
+  try {
+    // 1. Fetch matches
+    const matchesRes = await fetch(`${API_URL}/ligamx/matches`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const matches = await matchesRes.json();
+    stateLigaMX.matches = matches.sort((a, b) => a.jornada - b.jornada || a.id.localeCompare(b.id));
+    
+    // 2. Fetch predictions
+    const predsRes = await fetch(`${API_URL}/ligamx/predictions`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const preds = await predsRes.json();
+    stateLigaMX.predictions = {};
+    preds.forEach(p => {
+      stateLigaMX.predictions[p.matchId] = p.prediction;
+    });
+    
+    switchLigaMXSubTab(stateLigaMX.activeSubTab);
+  } catch (err) {
+    console.error("Error loading Liga MX dashboard:", err);
+    container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--danger);"><p>Error al cargar partidos de Liga MX.</p></div>`;
+  }
+};
+
+window.renderLigaMXMatchesGrid = function() {
+  const container = document.getElementById('ligamx-matches-container');
+  if (!container) return;
+  
+  if (stateLigaMX.matches.length === 0) {
+    container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--color-text-muted);"><p>No hay partidos registrados de Liga MX.</p></div>`;
+    return;
+  }
+  
+  const html = stateLigaMX.matches.map(match => {
+    const pred = stateLigaMX.predictions[match.id] || null;
+    const val1 = pred ? pred.team1Score : '';
+    const val2 = pred ? pred.team2Score : '';
+    const selL = pred && pred.winner === 'L';
+    const selE = pred && pred.winner === 'E';
+    const selV = pred && pred.winner === 'V';
+    
+    const isCompleted = match.result !== null;
+    const disabled = isCompleted ? 'disabled' : '';
+    
+    let resultBannerHtml = '';
+    if (isCompleted) {
+      const r1 = parseInt(match.result.team1Score);
+      const r2 = parseInt(match.result.team2Score);
+      const realW = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+      
+      if (pred) {
+        const p1 = parseInt(pred.team1Score);
+        const p2 = parseInt(pred.team2Score);
+        const predW = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+        
+        if (realW === predW) {
+          const isExact = (r1 === p1 && r2 === p2);
+          if (isExact) {
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto! (Final: ${r1}-${r2})</span><strong>+4 pts</strong></div>`;
+          } else {
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); color: var(--success); border: 1px dashed var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-check"></i> Acertaste ganador (Final: ${r1}-${r2})</span><strong>+3 pts</strong></div>`;
+          }
+        } else {
+          resultBannerHtml = `<div class="real-result-banner incorrect" style="margin-top: 0.75rem; background: rgba(239, 68, 68, 0.08); color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste (Final: ${r1}-${r2}, Ganador: ${realW})</span><strong>0 pts</strong></div>`;
+        }
+      } else {
+        resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); border: 1px solid var(--border-glass); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico (Final: ${r1}-${r2})</span><strong>0 pts</strong></div>`;
+      }
+    } else {
+      resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(229, 168, 35, 0.08); color: var(--gold); border: 1px solid var(--border-glass); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-clock"></i> Pendiente</span><span>-</span></div>`;
+    }
+    
+    // Style outcome buttons
+    const styleL = selL ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    const styleE = selE ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    const styleV = selV ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    
+    return `
+      <div class="match-card" id="mx-match-${match.id}" style="padding: 1.25rem; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-glass); margin-bottom: 0.85rem; transition: var(--transition-smooth); display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.4rem;">
+          <span style="font-weight: 700; color: var(--gold);">Liga MX - Jornada ${match.jornada}</span>
+          <span>${match.date}</span>
+        </div>
+        
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
+          <!-- Local -->
+          <div style="flex: 1; min-width: 120px; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">${match.team1}</span>
+          </div>
+          
+          <!-- Outcome & Score Input -->
+          <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: center; flex-wrap: nowrap;">
+            <input type="number" min="0" max="99" id="mx-score1-${match.id}" class="score-input" value="${val1}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
+            
+            <div style="display: flex; border-radius: 6px; background: rgba(0,0,0,0.25); padding: 0.15rem; border: 1px solid var(--border-glass);">
+              <button id="mx-btn-l-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'L')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleL}">L</button>
+              <button id="mx-btn-e-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'E')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleE}">E</button>
+              <button id="mx-btn-v-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'V')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleV}">V</button>
+            </div>
+            
+            <input type="number" min="0" max="99" id="mx-score2-${match.id}" class="score-input" value="${val2}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
+          </div>
+          
+          <!-- Visitor -->
+          <div style="flex: 1; min-width: 120px; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; text-align: right;">
+            <span style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">${match.team2}</span>
+          </div>
+        </div>
+        ${resultBannerHtml}
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = html;
+};
+
+window.selectLigaMXOutcome = function(matchId, outcome) {
+  // Update state
+  if (!stateLigaMX.predictions[matchId]) {
+    stateLigaMX.predictions[matchId] = { team1Score: '', team2Score: '', winner: '' };
+  }
+  stateLigaMX.predictions[matchId].winner = outcome;
+  
+  // Update UI buttons styles
+  const btnL = document.getElementById(`mx-btn-l-${matchId}`);
+  const btnE = document.getElementById(`mx-btn-e-${matchId}`);
+  const btnV = document.getElementById(`mx-btn-v-${matchId}`);
+  
+  if (btnL && btnE && btnV) {
+    btnL.style.background = outcome === 'L' ? 'var(--gold)' : 'transparent';
+    btnL.style.color = outcome === 'L' ? '#000' : 'var(--color-text-main)';
+    
+    btnE.style.background = outcome === 'E' ? 'var(--gold)' : 'transparent';
+    btnE.style.color = outcome === 'E' ? '#000' : 'var(--color-text-main)';
+    
+    btnV.style.background = outcome === 'V' ? 'var(--gold)' : 'transparent';
+    btnV.style.color = outcome === 'V' ? '#000' : 'var(--color-text-main)';
+  }
+};
+
+window.autoSelectLigaMXOutcome = function(matchId) {
+  const s1Input = document.getElementById(`mx-score1-${matchId}`);
+  const s2Input = document.getElementById(`mx-score2-${matchId}`);
+  if (!s1Input || !s2Input) return;
+  
+  const s1 = parseInt(s1Input.value);
+  const s2 = parseInt(s2Input.value);
+  
+  if (isNaN(s1) || isNaN(s2)) return;
+  
+  let outcome = 'E';
+  if (s1 > s2) outcome = 'L';
+  else if (s1 < s2) outcome = 'V';
+  
+  selectLigaMXOutcome(matchId, outcome);
+  
+  // Save input scores to state
+  if (!stateLigaMX.predictions[matchId]) {
+    stateLigaMX.predictions[matchId] = { team1Score: '', team2Score: '', winner: '' };
+  }
+  stateLigaMX.predictions[matchId].team1Score = s1;
+  stateLigaMX.predictions[matchId].team2Score = s2;
+};
+
+window.submitLigaMXPredictions = async function() {
+  const matchPredictions = [];
+  
+  for (const match of stateLigaMX.matches) {
+    const s1Input = document.getElementById(`mx-score1-${match.id}`);
+    const s2Input = document.getElementById(`mx-score2-${match.id}`);
+    const pred = stateLigaMX.predictions[match.id] || null;
+    
+    if (s1Input && s2Input) {
+      const s1 = s1Input.value.trim();
+      const s2 = s2Input.value.trim();
+      const winner = pred ? pred.winner : '';
+      
+      if (s1 !== '' && s2 !== '') {
+        if (!winner) {
+          showToast(`Elige el ganador (L, E, V) para el partido de ${match.team1}`, 'warning');
+          return;
+        }
+        matchPredictions.push({
+          matchId: match.id,
+          prediction: {
+            team1Score: parseInt(s1),
+            team2Score: parseInt(s2),
+            winner
+          }
+        });
+      }
+    }
+  }
+  
+  if (matchPredictions.length === 0) {
+    showToast("Por favor captura al menos un marcador exacto.", "warning");
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/ligamx/predictions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ predictions: matchPredictions })
+    });
+    
+    const result = await response.json();
+    if (response.ok) {
+      showToast("¡Pronósticos de Liga MX guardados!", "success");
+      // Update local predictions state
+      matchPredictions.forEach(p => {
+        stateLigaMX.predictions[p.matchId] = p.prediction;
+      });
+      renderLigaMXMatchesGrid();
+    } else {
+      showToast(result.error || "Error al guardar pronósticos.", "danger");
+    }
+  } catch (err) {
+    console.error("Error saving Liga MX predictions:", err);
+    showToast("Error de conexión al servidor.", "danger");
+  }
+};
+
+window.loadLigaMXLeaderboard = async function() {
+  const body = document.getElementById('ligamx-leaderboard-body');
+  if (!body) return;
+  body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
+  
+  try {
+    const response = await fetch(`${API_URL}/ligamx/leaderboard`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    const leaderboard = await response.json();
+    stateLigaMX.leaderboard = leaderboard;
+    
+    if (leaderboard.length === 0) {
+      body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay posiciones registradas.</td></tr>`;
+      return;
+    }
+    
+    const html = leaderboard.map((row, index) => {
+      const isSelf = row.userId === state.currentUser.id ? 'background: rgba(229,168,35,0.08); font-weight: bold; border-left: 3px solid var(--gold);' : '';
+      return `
+        <tr style="${isSelf}">
+          <td style="text-align: center;">${index + 1}</td>
+          <td style="text-transform: capitalize;">${row.username}</td>
+          <td style="text-align: center; color: var(--color-text-muted);">${row.exacts}</td>
+          <td style="text-align: center; color: var(--color-text-muted);">${row.hits}</td>
+          <td style="text-align: center; font-weight: 700; color: var(--gold);">${row.points} pts</td>
+        </tr>
+      `;
+    }).join('');
+    
+    body.innerHTML = html;
+  } catch (err) {
+    console.error("Error loading Liga MX leaderboard:", err);
+    body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">Error al cargar posiciones.</td></tr>`;
+  }
 };
