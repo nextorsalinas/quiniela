@@ -1495,9 +1495,9 @@ async function getMatchTrends() {
   // 1. Get all matches
   const matches = await getMatches();
   
-  // 2. Filter matches that don't have a result (result === null) and are from Octavos
+  // 2. Filter matches that don't have a result (result === null) and are from Semifinales / Finales
   const unplayedMatches = matches
-    .filter(m => m.result === null && m.group === 'Cuartos')
+    .filter(m => m.result === null && (m.group === 'Semifinal' || m.group === 'Tercer Lugar' || m.group === 'Final'))
     .sort((a, b) => a.id - b.id);
     
   if (unplayedMatches.length === 0) {

@@ -42,10 +42,23 @@ function checkPredictionsComplete() {
   if (!statePhase2.matches || statePhase2.matches.length === 0) {
     return true;
   }
-  const requiredMatches = statePhase2.matches.filter(match => {
+  let requiredMatches = statePhase2.matches.filter(match => {
     const g = match.group ? match.group.toLowerCase().trim() : '';
-    return g === 'cuartos';
+    const hasTeams = match.team1 && match.team2 && 
+                     match.team1 !== 'A definir' && match.team2 !== 'A definir' && 
+                     match.team1 !== 'TBD' && match.team2 !== 'TBD';
+    return g === 'semifinal' && match.result === null && hasTeams;
   });
+
+  if (requiredMatches.length === 0) {
+    requiredMatches = statePhase2.matches.filter(match => {
+      const g = match.group ? match.group.toLowerCase().trim() : '';
+      const hasTeams = match.team1 && match.team2 && 
+                       match.team1 !== 'A definir' && match.team2 !== 'A definir' && 
+                       match.team1 !== 'TBD' && match.team2 !== 'TBD';
+      return (g === 'tercer lugar' || g === 'final') && match.result === null && hasTeams;
+    });
+  }
 
   if (requiredMatches.length === 0) return true;
 
@@ -1510,15 +1523,22 @@ window.openCompleteTrendsModal = async function() {
     const res = await fetch(url, {
       headers: { 'x-user-id': state.currentUser.id }
     });
-    if (!res.ok) throw new Error("Error loading complete trends");
+    if (!res.ok) {
+      let errMsg = "Error al cargar tendencias.";
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error) errMsg = errJson.error;
+      } catch(e) {}
+      throw new Error(errMsg);
+    }
     const data = await res.json();
     
-    // Filter to only show octavos trends if Phase 2
+    // Filter to only show final trends if Phase 2
     const filteredData = isPhase2 
       ? data.filter(match => {
           if (!match.group) return false;
           const g = match.group.toLowerCase().trim();
-          return g.includes('cuartos');
+          return g === 'semifinal' || g === 'tercer lugar' || g === 'final';
         })
       : data;
 
@@ -1558,7 +1578,7 @@ window.openCompleteTrendsModal = async function() {
     }).join('');
   } catch (error) {
     console.error("Error fetching all trends:", error);
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--red);">Error al cargar tendencias.</div>`;
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2.5rem 1rem; color: #f87171; font-weight: 600; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem;"></i><span>${error.message}</span></div>`;
   }
 };
 
@@ -3586,7 +3606,7 @@ async function loadVotingTrendsPhase2() {
     currentTrendsDataPhase2 = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('cuartos');
+      return g === 'semifinal' || g === 'tercer lugar' || g === 'final';
     });
     
     if (currentTrendsDataPhase2.length === 0) {

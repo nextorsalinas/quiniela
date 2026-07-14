@@ -2477,7 +2477,14 @@ window.openCompleteTrendsModal = async function() {
     const res = await fetch(`${API_URL}/matches/trends/all`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
-    if (!res.ok) throw new Error("Error loading complete trends");
+    if (!res.ok) {
+      let errMsg = "Error al cargar tendencias.";
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error) errMsg = errJson.error;
+      } catch(e) {}
+      throw new Error(errMsg);
+    }
     const data = await res.json();
     
     window.completeTrendsData = data;
@@ -2515,7 +2522,7 @@ window.openCompleteTrendsModal = async function() {
     }).join('');
   } catch (error) {
     console.error("Error fetching all trends:", error);
-    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--red);">Error al cargar tendencias.</div>`;
+    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2.5rem 1rem; color: #f87171; font-weight: 600; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem;"></i><span>${error.message}</span></div>`;
   }
 };
 

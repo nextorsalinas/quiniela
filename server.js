@@ -125,11 +125,26 @@ async function checkPhase2PredictionsComplete(userId) {
     const matches = await dbHelperPhase2.getMatches();
     const predictions = await dbHelperPhase2.getPredictionsByUser(userId);
 
-    // Find matches that require prediction (only octavos)
-    const requiredMatches = matches.filter(match => {
+    // Determine required matches:
+    // 1. First, require unplayed Semifinals (if teams are defined)
+    let requiredMatches = matches.filter(match => {
       const g = match.group ? match.group.toLowerCase().trim() : '';
-      return g === 'cuartos';
+      const hasTeams = match.team1 && match.team2 && 
+                       match.team1 !== 'A definir' && match.team2 !== 'A definir' && 
+                       match.team1 !== 'TBD' && match.team2 !== 'TBD';
+      return g === 'semifinal' && match.result === null && hasTeams;
     });
+
+    // 2. If no unplayed Semifinals remain, require unplayed Tercer Lugar and Final (if teams are defined)
+    if (requiredMatches.length === 0) {
+      requiredMatches = matches.filter(match => {
+        const g = match.group ? match.group.toLowerCase().trim() : '';
+        const hasTeams = match.team1 && match.team2 && 
+                         match.team1 !== 'A definir' && match.team2 !== 'A definir' && 
+                         match.team1 !== 'TBD' && match.team2 !== 'TBD';
+        return (g === 'tercer lugar' || g === 'final') && match.result === null && hasTeams;
+      });
+    }
 
     const predMatchIds = new Set(predictions.map(p => parseInt(p.matchId)));
 
@@ -160,7 +175,7 @@ async function requireCompletePredictions(req, res, next) {
   try {
     const isComplete = await checkPhase2PredictionsComplete(req.user.id || req.headers['x-user-id']);
     if (!isComplete) {
-      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de la fase de cuartos." });
+      return res.status(403).json({ error: "Solo lo podrás consultar al completar los pronósticos de las rondas finales (Semifinales y Final)." });
     }
     next();
   } catch (error) {
@@ -857,7 +872,7 @@ app.get('/api/phase2/matches/trends', authenticatePhase2, requireCompletePredict
     const filteredTrends = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('cuartos');
+      return g === 'semifinal' || g === 'tercer lugar' || g === 'final';
     });
     res.json(filteredTrends);
   } catch (error) {
@@ -872,7 +887,7 @@ app.get('/api/phase2/matches/trends/all', authenticatePhase2, requireCompletePre
     const filteredTrends = trends.filter(t => {
       if (!t.group) return false;
       const g = t.group.toLowerCase().trim();
-      return g.includes('cuartos');
+      return g === 'semifinal' || g === 'tercer lugar' || g === 'final';
     });
     res.json(filteredTrends);
   } catch (error) {

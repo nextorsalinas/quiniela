@@ -20,3 +20,17 @@ proxy_cert.pem
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Large zip files and archives
+*.zip
+
+# Backup directories
+backup_before_zip_*/
+public_backup_*/
+_github_public_before_prod_overlay/
+
+# Agent and temporary files
+.agents/
+scratch/
+pglite-debug.log
+
