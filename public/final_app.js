@@ -8,17 +8,17 @@ window.onerror = function(message, source, lineno, colno, error) {
 function initTheme() {
   try {
     const saved = localStorage.getItem('theme');
-    if (saved === 'light') {
-      document.body.classList.remove('dark-theme');
-      updateThemeButtonUI('light');
-    } else {
+    if (saved === 'dark') {
       document.body.classList.add('dark-theme');
-      localStorage.setItem('theme', 'dark');
       updateThemeButtonUI('dark');
+    } else {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+      updateThemeButtonUI('light');
     }
   } catch (e) {
     console.warn("Storage access denied:", e);
-    document.body.classList.add('dark-theme');
+    document.body.classList.remove('dark-theme');
   }
 }
 

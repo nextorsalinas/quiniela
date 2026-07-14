@@ -4,13 +4,20 @@ window.onerror = function(message, source, lineno, colno, error) {
   console.error(errText);
 };
 
-// --- THEME TOGGLE LOGIC ---
 function initTheme() {
-  document.body.classList.add('dark-theme');
   try {
-    localStorage.setItem('theme', 'dark');
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.body.classList.add('dark-theme');
+      updateThemeButtonUI('dark');
+    } else {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+      updateThemeButtonUI('light');
+    }
   } catch (e) {
     console.warn("Storage access denied:", e);
+    document.body.classList.remove('dark-theme');
   }
 }
 
