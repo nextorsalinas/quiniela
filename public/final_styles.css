@@ -1,68 +1,66 @@
 /* CSS DESIGN SYSTEM - QUINIELA MUNDIAL 2026 */
 
 :root {
-  /* DEFAULT LIGHT MODE THEME */
-  --bg-main: #fff5ee;
-  --bg-card: rgba(255, 255, 255, 0.92);
+  /* DEFAULT LIGHT MODE THEME - PROGOL/LOTERIA NACIONAL INSPIRED */
+  --bg-main: #FAF6F7; /* Warm off-white from Capture */
+  --bg-card: rgba(255, 255, 255, 0.94);
   --bg-card-hover: rgba(255, 255, 255, 0.98);
-  --border-glass: rgba(95, 15, 64, 0.1);
-  --border-focus: rgba(251, 139, 36, 0.35);
+  --border-glass: rgba(138, 0, 46, 0.15); /* Burgundy border */
+  --border-focus: rgba(229, 168, 35, 0.45); /* Gold focus */
 
-  --color-text-main: #272126;
-  --color-text-muted: #6f6a73;
+  --color-text-main: #1A0D10; /* Dark brown-black */
+  --color-text-muted: #705B60; /* Muted warm gray */
 
-  /* Brand Colors - SUNSET ACCENT */
-  --gold: #FB8B24; /* Sunset Orange */
-  --gold-glow: rgba(251, 139, 36, 0.25);
-  --emerald: #0F4C5C;
-  --emerald-glow: rgba(15, 76, 92, 0.25);
-  --red: #9A031E;
-  --success: #10b981;
-  --danger: #ef4444;
+  /* Brand Colors */
+  --gold: #E5A823; /* Gold accent */
+  --gold-glow: rgba(229, 168, 35, 0.25);
+  --emerald: #8A002E; /* Burgundy Primary */
+  --emerald-glow: rgba(138, 0, 46, 0.25);
+  --red: #D81B60; /* Brighter rose red */
+  --success: #10B981;
+  --danger: #EF4444;
 
-  --grad-local: linear-gradient(135deg, #5F0F40, #9A031E);
-  --grad-draw: linear-gradient(135deg, #E36414, #FB8B24);
-  --grad-visitor: linear-gradient(135deg, #0F4C5C, #5F0F40);
+  --grad-local: linear-gradient(135deg, #8A002E, #C2185B); /* Burgundy local */
+  --grad-draw: linear-gradient(135deg, #2D1E20, #4E3B3D); /* Charcoal */
+  --grad-visitor: linear-gradient(135deg, #E5A823, #FFD700); /* Gold visitor */
 
   --font-title: 'Outfit', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
 
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
-  --shadow-gold: 0 0 20px rgba(16, 185, 129, 0.25);
+  --shadow-premium: 0 10px 30px -10px rgba(138, 0, 46, 0.1);
+  --shadow-gold: 0 0 20px rgba(229, 168, 35, 0.25);
   --radius-lg: 16px;
   --radius-md: 10px;
 }
 
 /* DARK THEME OVERRIDES */
 body.dark-theme {
-  --bg-main: #100f18;
-  --bg-card: rgba(15, 16, 29, 0.75);
-  --bg-card-hover: rgba(31, 17, 35, 0.75);
-  --border-glass: rgba(251, 139, 36, 0.2);
-  --border-focus: rgba(236, 100, 20, 0.35);
+  --bg-main: #0C0103; /* Very dark burgundy black */
+  --bg-card: rgba(25, 4, 10, 0.85); /* Dark burgundy glass card */
+  --bg-card-hover: rgba(38, 8, 16, 0.95);
+  --border-glass: rgba(138, 0, 46, 0.3);
+  --border-focus: rgba(229, 168, 35, 0.55);
 
-  --color-text-main: #f8f6f1;
-  --color-text-muted: #b8b1ac;
+  --color-text-main: #FBF8F9;
+  --color-text-muted: #C7B5B9;
 
-  --gold: #E36414; /* Warm Accent */
-  --gold-glow: rgba(227, 100, 20, 0.23);
-  --emerald: #0F4C5C;
-  --emerald-glow: rgba(15, 76, 92, 0.23);
-  --success: #10b981;
-  --danger: #ef4444;
+  --gold: #E5A823; /* Gold accent */
+  --gold-glow: rgba(229, 168, 35, 0.35);
+  --emerald: #8A002E; /* Burgundy Primary */
+  --emerald-glow: rgba(138, 0, 46, 0.35);
 
-  --grad-local: linear-gradient(135deg, #5F0F40, #9A031E);
-  --grad-draw: linear-gradient(135deg, #E36414, #FB8B24);
-  --grad-visitor: linear-gradient(135deg, #0F4C5C, #5F0F40);
+  --grad-local: linear-gradient(135deg, #8A002E, #B3003B);
+  --grad-draw: linear-gradient(135deg, #2D1A1F, #4A3338);
+  --grad-visitor: linear-gradient(135deg, #E5A823, #FFC107);
 
   --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 20px rgba(236, 100, 20, 0.22);
+  --shadow-gold: 0 0 20px rgba(229, 168, 35, 0.3);
 
   background-image: 
-    radial-gradient(at 0% 0%, rgba(95, 15, 64, 0.75) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(236, 100, 20, 0.35) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(15, 76, 92, 0.5) 0px, transparent 60%);
+    radial-gradient(at 0% 0%, rgba(138, 0, 46, 0.25) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(229, 168, 35, 0.18) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(138, 0, 46, 0.15) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
