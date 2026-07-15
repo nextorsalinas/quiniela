@@ -4089,6 +4089,15 @@ window.renderLigaMXMatchesGrid = function() {
           </div>
         </div>
         ${resultBannerHtml}
+        
+        <!-- Individual Save Button -->
+        ${!isCompleted ? `
+        <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+          <button id="btn-save-mx-${match.id}" class="btn btn-primary" onclick="submitSingleLigaMXPrediction('${match.id}')" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700;">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar
+          </button>
+        </div>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -4144,40 +4153,44 @@ window.autoSelectLigaMXOutcome = function(matchId) {
   stateLigaMX.predictions[matchId].team2Score = s2;
 };
 
-window.submitLigaMXPredictions = async function() {
-  const matchPredictions = [];
+window.submitSingleLigaMXPrediction = async function(matchId) {
+  const match = stateLigaMX.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  const s1Input = document.getElementById(`mx-score1-${match.id}`);
+  const s2Input = document.getElementById(`mx-score2-${match.id}`);
+  const pred = stateLigaMX.predictions[match.id] || null;
   
-  for (const match of stateLigaMX.matches) {
-    const s1Input = document.getElementById(`mx-score1-${match.id}`);
-    const s2Input = document.getElementById(`mx-score2-${match.id}`);
-    const pred = stateLigaMX.predictions[match.id] || null;
-    
-    if (s1Input && s2Input) {
-      const s1 = s1Input.value.trim();
-      const s2 = s2Input.value.trim();
-      const winner = pred ? pred.winner : '';
-      
-      if (s1 !== '' && s2 !== '') {
-        if (!winner) {
-          showToast(`Elige el ganador (L, E, V) para el partido de ${match.team1}`, 'warning');
-          return;
-        }
-        matchPredictions.push({
-          matchId: match.id,
-          prediction: {
-            team1Score: parseInt(s1),
-            team2Score: parseInt(s2),
-            winner
-          }
-        });
-      }
-    }
-  }
+  if (!s1Input || !s2Input) return;
   
-  if (matchPredictions.length === 0) {
-    showToast("Por favor captura al menos un marcador exacto.", "warning");
+  const s1 = s1Input.value.trim();
+  const s2 = s2Input.value.trim();
+  const winner = pred ? pred.winner : '';
+  
+  if (s1 === '' || s2 === '') {
+    showToast(`Por favor ingresa un marcador exacto para el partido de ${match.team1}`, 'warning');
     return;
   }
+  
+  if (!winner) {
+    showToast(`Elige el ganador (L, E, V) para el partido de ${match.team1}`, 'warning');
+    return;
+  }
+  
+  const matchPrediction = {
+    matchId: match.id,
+    prediction: {
+      team1Score: parseInt(s1),
+      team2Score: parseInt(s2),
+      winner
+    }
+  };
+  
+  // Show loading on button
+  const saveBtn = document.getElementById(`btn-save-mx-${match.id}`);
+  const originalBtnHtml = saveBtn.innerHTML;
+  saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  saveBtn.disabled = true;
   
   try {
     const response = await fetch(`${API_URL}/ligamx/predictions`, {
@@ -4186,23 +4199,23 @@ window.submitLigaMXPredictions = async function() {
         'Content-Type': 'application/json',
         'x-user-id': state.currentUser.id
       },
-      body: JSON.stringify({ predictions: matchPredictions })
+      // Backend expects an array of predictions even for a single one
+      body: JSON.stringify({ predictions: [matchPrediction] })
     });
     
     const result = await response.json();
     if (response.ok) {
-      showToast("¡Pronósticos de Liga MX guardados!", "success");
-      // Update local predictions state
-      matchPredictions.forEach(p => {
-        stateLigaMX.predictions[p.matchId] = p.prediction;
-      });
-      renderLigaMXMatchesGrid();
+      showToast("¡Pronóstico guardado exitosamente!", "success");
+      // Re-fetch or update UI could be done here, but since state is bound it's ok
     } else {
-      showToast(result.error || "Error al guardar pronósticos.", "danger");
+      showToast(result.error || "Error al guardar el pronóstico", "error");
     }
-  } catch (err) {
-    console.error("Error saving Liga MX predictions:", err);
-    showToast("Error de conexión al servidor.", "danger");
+  } catch (error) {
+    console.error("Error saving Liga MX prediction:", error);
+    showToast("Error de conexión", "error");
+  } finally {
+    saveBtn.innerHTML = originalBtnHtml;
+    saveBtn.disabled = false;
   }
 };
 
