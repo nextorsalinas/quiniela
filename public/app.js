@@ -4299,61 +4299,45 @@ window.loadLigaMXVotingTrends = async function() {
     
     // Render in Progol ticket format!
     let html = `
-      <div style="display: grid; grid-template-columns: 30px 1fr 60px 1fr 30px; gap: 0.5rem; font-weight: 800; font-family: var(--font-title); font-size: 0.8rem; color: var(--gold); border-bottom: 2px solid rgba(229, 168, 35, 0.3); padding-bottom: 0.5rem; margin-bottom: 0.5rem; text-align: center; text-transform: uppercase;">
+      <div style="display: grid; grid-template-columns: 24px 1fr 50px 1fr; gap: 0.4rem; font-weight: 800; font-family: var(--font-title); font-size: 0.75rem; color: var(--gold); border-bottom: 2px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.4rem; margin-bottom: 0.4rem; text-align: center; text-transform: uppercase;">
         <span></span>
         <span>Local</span>
         <span>Empate</span>
         <span>Visita</span>
-        <span></span>
       </div>
     `;
     
     html += trends.map((match, index) => {
       const stats = match.stats;
-      const fav = (stats.L.count > stats.E.count && stats.L.count > stats.V.count) ? 'L' :
-                  (stats.V.count > stats.L.count && stats.V.count > stats.E.count) ? 'V' :
-                  (stats.E.count > stats.L.count && stats.E.count > stats.V.count) ? 'E' : '';
-      
-      const styleL = fav === 'L' 
-        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
-        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
-      const styleE = fav === 'E' 
-        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
-        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
-      const styleV = fav === 'V' 
-        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
-        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
+      const boxStyle = 'background: rgba(0,0,0,0.18); color: var(--color-text-main); border: 1px solid var(--border-glass);';
       
       return `
-        <div class="mx-trend-row" style="display: grid; grid-template-columns: 30px 1fr 60px 1fr 30px; align-items: center; gap: 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+        <div class="mx-trend-row" style="display: grid; grid-template-columns: 24px 1fr 50px 1fr; align-items: center; gap: 0.4rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
           <!-- Left number -->
-          <span style="font-weight: bold; color: var(--color-text-muted); text-align: center; font-size: 0.8rem;">${index + 1}</span>
+          <span style="font-weight: bold; color: var(--color-text-muted); text-align: center; font-size: 0.75rem;">${index + 1}</span>
           
           <!-- Local Side -->
-          <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: flex-start; min-width: 0;">
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 48px; flex-shrink: 0; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleL}">
+          <div style="display: flex; align-items: center; gap: 0.45rem; justify-content: flex-start; min-width: 0;">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 42px; flex-shrink: 0; border-radius: 4px; padding: 0.25rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.78rem; ${boxStyle}">
               ${stats.L.count}
             </div>
-            <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team1}">${match.team1}</span>
+            <span style="font-weight: 600; font-size: 0.78rem; text-transform: uppercase; color: var(--color-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team1}">${match.team1}</span>
           </div>
           
           <!-- Draw Side -->
           <div style="display: flex; justify-content: center; flex-shrink: 0;">
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'E')" style="width: 48px; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleE}">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'E')" style="width: 42px; border-radius: 4px; padding: 0.25rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.78rem; ${boxStyle}">
               ${stats.E.count}
             </div>
           </div>
           
           <!-- Visitor Side -->
-          <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: flex-end; min-width: 0;">
-            <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team2}">${match.team2}</span>
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 48px; flex-shrink: 0; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleV}">
+          <div style="display: flex; align-items: center; gap: 0.45rem; justify-content: flex-end; min-width: 0;">
+            <span style="font-weight: 600; font-size: 0.78rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team2}">${match.team2}</span>
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 42px; flex-shrink: 0; border-radius: 4px; padding: 0.25rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.78rem; ${boxStyle}">
               ${stats.V.count}
             </div>
           </div>
-          
-          <!-- Right number -->
-          <span style="font-weight: bold; color: var(--color-text-muted); text-align: center; font-size: 0.8rem;">${index + 1}</span>
         </div>
       `;
     }).join('');
