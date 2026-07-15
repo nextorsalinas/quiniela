@@ -4299,7 +4299,7 @@ window.loadLigaMXVotingTrends = async function() {
     
     // Render in Progol ticket format!
     let html = `
-      <div style="display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0.25rem; font-weight: 800; font-family: var(--font-title); font-size: 0.72rem; color: var(--gold); border-bottom: 2px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.3rem; margin-bottom: 0.3rem; text-align: center; text-transform: uppercase;">
+      <div style="display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0.25rem; font-weight: 800; font-family: var(--font-title); font-size: 0.66rem; color: var(--gold); border-bottom: 2px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.3rem; margin-bottom: 0.3rem; text-align: center; text-transform: uppercase;">
         <span>Local</span>
         <span>Empate</span>
         <span>Visita</span>
@@ -4318,7 +4318,7 @@ window.loadLigaMXVotingTrends = async function() {
             <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 30px; flex-shrink: 0; border-radius: 4px; padding: 0.15rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.72rem; ${boxStyle}">
               ${stats.L.count}
             </div>
-            <span style="font-weight: 600; font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-main); word-break: break-word; line-height: 1.15;">${match.team1}</span>
+            <span style="font-weight: 600; font-size: 0.64rem; text-transform: uppercase; color: var(--color-text-main); word-break: break-word; line-height: 1.15;">${match.team1}</span>
           </div>
           
           <!-- Draw Side -->
@@ -4330,7 +4330,7 @@ window.loadLigaMXVotingTrends = async function() {
           
           <!-- Visitor Side -->
           <div style="display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; min-width: 0;">
-            <span style="font-weight: 600; font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; word-break: break-word; line-height: 1.15;">${match.team2}</span>
+            <span style="font-weight: 600; font-size: 0.64rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; word-break: break-word; line-height: 1.15;">${match.team2}</span>
             <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 30px; flex-shrink: 0; border-radius: 4px; padding: 0.15rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.72rem; ${boxStyle}">
               ${stats.V.count}
             </div>
