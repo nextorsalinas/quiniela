@@ -36,31 +36,31 @@
 
 /* DARK THEME OVERRIDES */
 body.dark-theme {
-  --bg-main: #0C0103; /* Very dark burgundy black */
-  --bg-card: rgba(25, 4, 10, 0.85); /* Dark burgundy glass card */
-  --bg-card-hover: rgba(38, 8, 16, 0.95);
-  --border-glass: rgba(138, 0, 46, 0.3);
-  --border-focus: rgba(229, 168, 35, 0.55);
+  --bg-main: #010101;
+  --bg-card: rgba(15, 15, 20, 0.78);
+  --bg-card-hover: rgba(26, 26, 34, 0.92);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(37, 244, 238, 0.45);
 
-  --color-text-main: #FBF8F9;
-  --color-text-muted: #C7B5B9;
+  --color-text-main: #f8f6f1;
+  --color-text-muted: #b8b1ac;
 
-  --gold: #E5A823; /* Gold accent */
-  --gold-glow: rgba(229, 168, 35, 0.35);
-  --emerald: #8A002E; /* Burgundy Primary */
-  --emerald-glow: rgba(138, 0, 46, 0.35);
+  --gold: #25f4ee; /* Cyan Accent */
+  --gold-glow: rgba(37, 244, 238, 0.34);
+  --emerald: #fe2c55;
+  --emerald-glow: rgba(254, 44, 85, 0.32);
 
-  --grad-local: linear-gradient(135deg, #8A002E, #B3003B);
-  --grad-draw: linear-gradient(135deg, #2D1A1F, #4A3338);
-  --grad-visitor: linear-gradient(135deg, #E5A823, #FFC107);
+  --grad-local: linear-gradient(135deg, #25f4ee, #1586ff);
+  --grad-draw: linear-gradient(135deg, #2c3038, #717887);
+  --grad-visitor: linear-gradient(135deg, #fe2c55, #ff7a90);
 
   --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 20px rgba(229, 168, 35, 0.3);
+  --shadow-gold: 0 0 20px rgba(37, 244, 238, 0.28);
 
   background-image: 
-    radial-gradient(at 0% 0%, rgba(138, 0, 46, 0.25) 0px, transparent 55%),
-    radial-gradient(at 100% 0%, rgba(229, 168, 35, 0.18) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(138, 0, 46, 0.15) 0px, transparent 60%);
+    radial-gradient(at 0% 0%, rgba(37, 244, 238, 0.14) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(37, 244, 238, 0.45) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(255, 255, 255, 0.05) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
