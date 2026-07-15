@@ -324,7 +324,9 @@ async function getLeaderboard() {
     };
   });
 
-  return leaderboard.sort((a, b) => b.points - a.points || b.exacts - a.exacts || b.hits - a.hits || a.username.localeCompare(b.username));
+  return leaderboard
+    .filter(user => user.predictionCount > 0)
+    .sort((a, b) => b.points - a.points || b.exacts - a.exacts || b.hits - a.hits || a.username.localeCompare(b.username));
 }
 
 async function updateMatchResult(matchId, result) {
