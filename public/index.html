@@ -401,14 +401,6 @@
             </h3>
             <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Apertura 2026 - Pronostica los resultados de la Jornada 1</p>
           </div>
-          <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-glass);">
-            <button id="btn-ligamx-play" class="btn btn-primary" onclick="switchLigaMXSubTab('play')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px;">
-              <i class="fa-solid fa-gamepad"></i> Pronosticar
-            </button>
-            <button id="btn-ligamx-leaderboard" class="btn btn-outline" onclick="switchLigaMXSubTab('leaderboard')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px; color: var(--gold); border-color: transparent;">
-              <i class="fa-solid fa-ranking-star"></i> Posiciones
-            </button>
-          </div>
         </div>
 
         <!-- Liga MX Predictions Sub-View -->
@@ -424,29 +416,6 @@
             <button class="btn btn-primary" onclick="submitLigaMXPredictions()" style="font-weight: 700; padding: 0.8rem 2rem; border-radius: 12px; font-size: 1rem; width: 100%; box-shadow: 0 4px 15px var(--gold-glow); transition: var(--transition-smooth);">
               <i class="fa-solid fa-floppy-disk"></i> Guardar Pronósticos Liga MX
             </button>
-          </div>
-        </div>
-
-        <!-- Liga MX Leaderboard Sub-View -->
-        <div id="ligamx-subview-leaderboard" class="ligamx-subview" style="display: none;">
-          <div class="table-card glass-panel" style="padding: 1rem 0 0 0; max-width: 800px; margin: 0 auto 1.5rem auto;">
-            <h3 style="margin: 0 1.5rem 1rem 1.5rem; font-size: 0.95rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
-              <i class="fa-solid fa-trophy"></i> Tabla de Posiciones - Liga MX
-            </h3>
-            <table class="leaderboard-table">
-              <thead>
-                <tr>
-                  <th style="width: 60px; text-align: center;">Pos.</th>
-                  <th>Jugador</th>
-                  <th style="width: 80px; text-align: center;">Marcador</th>
-                  <th style="width: 80px; text-align: center;">Ganador</th>
-                  <th style="width: 90px; text-align: center;">Puntos</th>
-                </tr>
-              </thead>
-              <tbody id="ligamx-leaderboard-body">
-                <!-- Injected dynamically -->
-              </tbody>
-            </table>
           </div>
         </div>
       </section>

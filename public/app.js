@@ -3980,7 +3980,12 @@ window.loadLigaMXDashboard = async function() {
       headers: { 'x-user-id': state.currentUser.id }
     });
     const matches = await matchesRes.json();
-    stateLigaMX.matches = matches.sort((a, b) => a.jornada - b.jornada || a.id.localeCompare(b.id));
+    stateLigaMX.matches = matches.sort((a, b) => {
+      if (a.jornada !== b.jornada) return a.jornada - b.jornada;
+      const dtA = `${a.date || ''} ${a.time || ''}`;
+      const dtB = `${b.date || ''} ${b.time || ''}`;
+      return dtA.localeCompare(dtB);
+    });
     
     // 2. Fetch predictions
     const predsRes = await fetch(`${API_URL}/ligamx/predictions`, {
@@ -4056,7 +4061,7 @@ window.renderLigaMXMatchesGrid = function() {
       <div class="match-card" id="mx-match-${match.id}" style="padding: 1.25rem; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-glass); margin-bottom: 0.85rem; transition: var(--transition-smooth); display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.4rem;">
           <span style="font-weight: 700; color: var(--gold);">Liga MX - Jornada ${match.jornada}</span>
-          <span>${match.date}</span>
+          <span>${match.date} ${match.time && match.time !== 'TBD' ? '| ' + match.time : ''}</span>
         </div>
         
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
