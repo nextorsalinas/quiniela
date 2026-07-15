@@ -4415,3 +4415,13 @@ window.showLigaMXTrendsVoters = function(matchIdx, outcome) {
   
   modal.style.display = 'flex';
 };
+
+window.openAvatarPickerModal = function() {
+  const modal = document.getElementById('avatar-picker-modal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeAvatarPickerModal = function() {
+  const modal = document.getElementById('avatar-picker-modal');
+  if (modal) modal.style.display = 'none';
+};

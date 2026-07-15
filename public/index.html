@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=5.20">
+  <link rel="stylesheet" href="styles.css?v=5.30">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -469,9 +469,12 @@
 
         <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
 
-          <!-- Static Profile Image (Avatar Selection Hidden) -->
-          <div style="position: relative; display: inline-block;">
-            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
+          <!-- Interactive Profile Image Container -->
+          <div style="position: relative; display: inline-block; cursor: pointer;" onclick="openAvatarPickerModal()">
+            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-main); box-shadow: 0 2px 8px rgba(0,0,0,0.3); color: black; font-size: 0.75rem;">
+              <i class="fa-solid fa-pen"></i>
+            </div>
           </div>
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
@@ -797,7 +800,59 @@
     </div>
   </div>
 
+  <!-- AVATAR PICKER MODAL -->
+  <div id="avatar-picker-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 2300;">
+    <div class="modal-content glass-panel" style="max-width: 400px; width: 90%; text-align: center; padding: 1.75rem; border: 1px solid rgba(255, 215, 0, 0.25);">
+      <div class="modal-header" style="justify-content: center; position: relative; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.75rem; display: flex; align-items: center; width: 100%;">
+        <h3 style="color: var(--gold); margin: 0; font-size: 1.2rem; font-family: var(--font-title); font-weight: 700; width: 100%;">
+          <i class="fa-solid fa-user-gear"></i> Seleccionar Avatar
+        </h3>
+        <button class="modal-close-btn" onclick="closeAvatarPickerModal()" style="position: absolute; right: 0; top: 0; background: transparent; border: none; color: var(--color-text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 0 0 0; width: 100%;">
+        <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 1.25rem; margin-top: 0;">
+          Elige uno de los equipos disponibles para tu foto de perfil:
+        </p>
+        
+        <!-- Avatar Grid -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; justify-items: center; align-items: center; width: 100%;">
+          
+          <div onclick="selectPresetProfilePic('perfil/america.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/america.png" alt="América" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">América</span>
+          </div>
+          
+          <div onclick="selectPresetProfilePic('perfil/chivas.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/chivas.png" alt="Chivas" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">Chivas</span>
+          </div>
+          
+          <div onclick="selectPresetProfilePic('perfil/crua azul.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/crua azul.png" alt="Cruz Azul" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">Cruz Azul</span>
+          </div>
+          
+          <div onclick="selectPresetProfilePic('perfil/pumas.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/pumas.png" alt="Pumas" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">Pumas</span>
+          </div>
+          
+          <div onclick="selectPresetProfilePic('perfil/real.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/real.png" alt="Real Madrid" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">Real Madrid</span>
+          </div>
+          
+          <div onclick="selectPresetProfilePic('perfil/mexico.png'); closeAvatarPickerModal();" style="cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="perfil/mexico.png" alt="México" style="width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; background: rgba(0,0,0,0.2);">
+            <span style="font-size: 0.7rem; font-weight: 600; color: var(--color-text-muted);">México</span>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
-  <script src="app.js?v=5.20"></script>
+  <script src="app.js?v=5.30"></script>
 </body>
 </html>
