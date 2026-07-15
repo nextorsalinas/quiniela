@@ -542,6 +542,8 @@ function switchTab(tabId) {
     loadProfileDashboard();
   } else if (tabId === 'ligamx') {
     loadLigaMXDashboard();
+  } else if (tabId === 'panelmx') {
+    loadLigaMXLeaderboard();
   }
 }
 
@@ -3927,48 +3929,6 @@ window.showBonusMatchPhase2 = function(matchId, s1, s2) {
 // LIGA MX (PRONOSTICOS MX) SYSTEM
 // ============================================================================
 
-window.switchLigaMXSubTab = function(subTabId) {
-  stateLigaMX.activeSubTab = subTabId;
-  const playBtn = document.getElementById('btn-ligamx-play');
-  const lbBtn = document.getElementById('btn-ligamx-leaderboard');
-  const playView = document.getElementById('ligamx-subview-play');
-  const lbView = document.getElementById('ligamx-subview-leaderboard');
-  
-  if (subTabId === 'play') {
-    if (playBtn) {
-      playBtn.classList.remove('btn-outline');
-      playBtn.classList.add('btn-primary');
-      playBtn.style.color = '#000';
-      playBtn.style.borderColor = 'transparent';
-    }
-    if (lbBtn) {
-      lbBtn.classList.remove('btn-primary');
-      lbBtn.classList.add('btn-outline');
-      lbBtn.style.color = 'var(--gold)';
-      lbBtn.style.borderColor = 'transparent';
-    }
-    if (playView) playView.style.display = 'block';
-    if (lbView) lbView.style.display = 'none';
-    renderLigaMXMatchesGrid();
-  } else {
-    if (playBtn) {
-      playBtn.classList.remove('btn-primary');
-      playBtn.classList.add('btn-outline');
-      playBtn.style.color = 'var(--gold)';
-      playBtn.style.borderColor = 'transparent';
-    }
-    if (lbBtn) {
-      lbBtn.classList.remove('btn-outline');
-      lbBtn.classList.add('btn-primary');
-      lbBtn.style.color = '#000';
-      lbBtn.style.borderColor = 'transparent';
-    }
-    if (playView) playView.style.display = 'none';
-    if (lbView) lbView.style.display = 'block';
-    loadLigaMXLeaderboard();
-  }
-};
-
 window.loadLigaMXDashboard = async function() {
   const container = document.getElementById('ligamx-matches-container');
   if (!container) return;
@@ -3997,7 +3957,7 @@ window.loadLigaMXDashboard = async function() {
       stateLigaMX.predictions[p.matchId] = p.prediction;
     });
     
-    switchLigaMXSubTab(stateLigaMX.activeSubTab);
+    renderLigaMXMatchesGrid();
   } catch (err) {
     console.error("Error loading Liga MX dashboard:", err);
     container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--danger);"><p>Error al cargar partidos de Liga MX.</p></div>`;
