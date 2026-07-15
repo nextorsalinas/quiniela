@@ -2365,15 +2365,15 @@ async function requestPushPermission() {
 
 async function openEditPredictionsModal(targetUserId, username) {
   // If target matches are empty, load matches first
-  if (state.matches.length === 0) {
+  if (stateLigaMX.matches.length === 0) {
     try {
-      const matchesRes = await fetch(`${API_URL}/matches`, {
+      const matchesRes = await fetch(`${API_URL}/ligamx/matches`, {
         headers: { 'x-user-id': state.currentUser.id }
       });
-      state.matches = await matchesRes.json();
+      stateLigaMX.matches = await matchesRes.json();
     } catch (e) {
       console.error(e);
-      showToast("Error al cargar partidos.", "error");
+      showToast("Error al cargar partidos de Liga MX.", "error");
       return;
     }
   }
@@ -2392,7 +2392,7 @@ async function openEditPredictionsModal(targetUserId, username) {
   modal.style.display = 'flex';
 
   try {
-    const response = await fetch(`${API_URL}/predictions/user/${targetUserId}`, {
+    const response = await fetch(`${API_URL}/admin/ligamx/predictions/user/${targetUserId}`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
 
@@ -2406,41 +2406,22 @@ async function openEditPredictionsModal(targetUserId, username) {
     modalTitle.textContent = `Editar Pronósticos de: ${data.username}`;
     modalSubtitle.textContent = `Modifica las predicciones de los partidos para este usuario.`;
 
-    // Save original predictions and setup state.editingUserPredictions
-    state.originalUserPredictions = { ...data.predictions };
-    state.editingUserPredictions = { ...data.predictions };
+    // Map predictions array to target object format
+    const predsMap = {};
+    if (data.predictions && Array.isArray(data.predictions)) {
+      data.predictions.forEach(p => {
+        predsMap[p.matchId] = {
+          winner: p.prediction.winner || '',
+          team1Score: p.prediction.team1Score !== undefined ? p.prediction.team1Score : '',
+          team2Score: p.prediction.team2Score !== undefined ? p.prediction.team2Score : ''
+        };
+      });
+    }
 
-    matchesGrid.innerHTML = state.matches.map(match => {
-      const currentPred = state.editingUserPredictions[match.id] || null;
-      
-      const actL = currentPred === 'L' ? 'active-L' : '';
-      const actE = currentPred === 'E' ? 'active-E' : '';
-      const actV = currentPred === 'V' ? 'active-V' : '';
-      const actNone = currentPred === null ? 'active-none' : '';
+    state.originalUserPredictions = JSON.parse(JSON.stringify(predsMap));
+    state.editingUserPredictions = JSON.parse(JSON.stringify(predsMap));
 
-      return `
-        <div class="admin-match-row" style="padding: 0.75rem 1rem; gap: 1rem; align-items: center;">
-          <div class="admin-match-info" style="min-width: auto; flex-grow: 1; gap: 1rem; display: flex; align-items: center;">
-            <span class="admin-match-id" style="width: 28px; height: 28px; font-size: 0.85rem; flex-shrink: 0;">#${match.id}</span>
-            <div class="admin-match-teams" style="font-size: 0.9rem; flex-grow: 1;">
-              <span class="admin-team-l" style="min-width: 80px; font-size: 0.85rem;">${match.team1}</span>
-              <span style="color: var(--color-text-muted); font-size: 0.75rem; font-style: italic; font-weight: normal;">vs</span>
-              <span class="admin-team-v" style="min-width: 80px; font-size: 0.85rem;">${match.team2}</span>
-            </div>
-            ${match.result !== null ? `<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;" title="Resultado real">Resultado: ${match.result}</span>` : ''}
-          </div>
-
-          <div class="admin-controls" style="gap: 0.5rem; flex-shrink: 0;">
-            <div class="admin-result-buttons" style="background: rgba(0,0,0,0.4);">
-              <button class="admin-opt-btn ${actL}" onclick="selectEditedPrediction(${match.id}, 'L')" id="edit-opt-L-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">L</button>
-              <button class="admin-opt-btn ${actE}" onclick="selectEditedPrediction(${match.id}, 'E')" id="edit-opt-E-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">E</button>
-              <button class="admin-opt-btn ${actV}" onclick="selectEditedPrediction(${match.id}, 'V')" id="edit-opt-V-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem;">V</button>
-              <button class="admin-opt-btn ${actNone}" onclick="selectEditedPrediction(${match.id}, null)" id="edit-opt-null-${match.id}" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; color: var(--red);" title="Sin Pronóstico">-</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    window.renderAdminEditMatchesList();
 
   } catch (error) {
     console.error("Error loading user predictions for edit:", error);
@@ -2457,24 +2438,86 @@ function closeEditPredictionsModal() {
   state.originalUserPredictions = {};
 }
 
-function selectEditedPrediction(matchId, val) {
-  state.editingUserPredictions[matchId] = val;
+window.renderAdminEditMatchesList = function() {
+  const matchesGrid = document.getElementById('edit-modal-matches-grid');
+  if (!matchesGrid) return;
 
-  const btnL = document.getElementById(`edit-opt-L-${matchId}`);
-  const btnE = document.getElementById(`edit-opt-E-${matchId}`);
-  const btnV = document.getElementById(`edit-opt-V-${matchId}`);
-  const btnNone = document.getElementById(`edit-opt-null-${matchId}`);
+  matchesGrid.innerHTML = stateLigaMX.matches.map(match => {
+    const pred = state.editingUserPredictions[match.id] || { winner: '', team1Score: '', team2Score: '' };
+    const val1 = pred.team1Score !== undefined && pred.team1Score !== null ? pred.team1Score : '';
+    const val2 = pred.team2Score !== undefined && pred.team2Score !== null ? pred.team2Score : '';
+    const selL = pred.winner === 'L';
+    const selE = pred.winner === 'E';
+    const selV = pred.winner === 'V';
 
-  if (btnL) btnL.classList.remove('active-L');
-  if (btnE) btnE.classList.remove('active-E');
-  if (btnV) btnV.classList.remove('active-V');
-  if (btnNone) btnNone.classList.remove('active-none');
+    const styleL = selL ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    const styleE = selE ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    const styleV = selV ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
 
-  if (val === 'L' && btnL) btnL.classList.add('active-L');
-  if (val === 'E' && btnE) btnE.classList.add('active-E');
-  if (val === 'V' && btnV) btnV.classList.add('active-V');
-  if (val === null && btnNone) btnNone.classList.add('active-none');
-}
+    return `
+      <div class="admin-match-row" style="padding: 0.75rem 1rem; gap: 0.5rem; align-items: center; display: flex; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--color-text-muted); width: 100%; margin-bottom: 0.25rem;">
+          <span>Liga MX - Jornada ${match.jornada}</span>
+          <span>${match.date}</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%;">
+          <!-- Local -->
+          <div style="flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-text-main);">${match.team1}</span>
+          </div>
+
+          <!-- Inputs and Buttons -->
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <input type="number" min="0" max="99" id="admin-edit-score1-${match.id}" class="score-input" value="${val1}" placeholder="-" oninput="window.updateAdminEditScores('${match.id}')" style="width: 35px; text-align: center; border-radius: 4px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.25rem; font-size: 0.85rem; font-weight: bold;">
+            
+            <div style="display: flex; border-radius: 4px; background: rgba(0,0,0,0.2); padding: 0.1rem; border: 1px solid var(--border-glass);">
+              <button onclick="window.selectAdminEditOutcome('${match.id}', 'L')" style="padding: 0.25rem 0.4rem; font-size: 0.7rem; font-weight: bold; border-radius: 3px; border: none; min-width: 20px; transition: var(--transition-smooth); ${styleL}">L</button>
+              <button onclick="window.selectAdminEditOutcome('${match.id}', 'E')" style="padding: 0.25rem 0.4rem; font-size: 0.7rem; font-weight: bold; border-radius: 3px; border: none; min-width: 20px; transition: var(--transition-smooth); ${styleE}">E</button>
+              <button onclick="window.selectAdminEditOutcome('${match.id}', 'V')" style="padding: 0.25rem 0.4rem; font-size: 0.7rem; font-weight: bold; border-radius: 3px; border: none; min-width: 20px; transition: var(--transition-smooth); ${styleV}">V</button>
+            </div>
+
+            <input type="number" min="0" max="99" id="admin-edit-score2-${match.id}" class="score-input" value="${val2}" placeholder="-" oninput="window.updateAdminEditScores('${match.id}')" style="width: 35px; text-align: center; border-radius: 4px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.25rem; font-size: 0.85rem; font-weight: bold;">
+          </div>
+
+          <!-- Visitor -->
+          <div style="flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-text-main);">${match.team2}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+window.updateAdminEditScores = function(matchId) {
+  const s1 = document.getElementById(`admin-edit-score1-${matchId}`).value;
+  const s2 = document.getElementById(`admin-edit-score2-${matchId}`).value;
+  
+  if (!state.editingUserPredictions[matchId]) {
+    state.editingUserPredictions[matchId] = { winner: '', team1Score: '', team2Score: '' };
+  }
+  
+  state.editingUserPredictions[matchId].team1Score = s1 !== '' ? parseInt(s1) : '';
+  state.editingUserPredictions[matchId].team2Score = s2 !== '' ? parseInt(s2) : '';
+  
+  // Auto-determine outcome if both scores are filled
+  if (s1 !== '' && s2 !== '') {
+    const val1 = parseInt(s1);
+    const val2 = parseInt(s2);
+    state.editingUserPredictions[matchId].winner = val1 > val2 ? 'L' : (val1 < val2 ? 'V' : 'E');
+  }
+  
+  window.renderAdminEditMatchesList();
+};
+
+window.selectAdminEditOutcome = function(matchId, outcome) {
+  if (!state.editingUserPredictions[matchId]) {
+    state.editingUserPredictions[matchId] = { winner: '', team1Score: '', team2Score: '' };
+  }
+  
+  state.editingUserPredictions[matchId].winner = outcome;
+  window.renderAdminEditMatchesList();
+};
 
 async function submitEditedPredictions() {
   const saveBtn = document.getElementById('save-edit-predictions-btn');
@@ -2483,14 +2526,31 @@ async function submitEditedPredictions() {
 
   // Find predictions that changed
   const changedPredictions = [];
-  for (const match of state.matches) {
+  for (const match of stateLigaMX.matches) {
     const orig = state.originalUserPredictions[match.id] || null;
     const curr = state.editingUserPredictions[match.id] || null;
 
-    if (orig !== curr) {
+    const origWinner = orig ? orig.winner : '';
+    const origS1 = orig ? orig.team1Score : '';
+    const origS2 = orig ? orig.team2Score : '';
+
+    const currWinner = curr ? curr.winner : '';
+    const currS1 = curr ? curr.team1Score : '';
+    const currS2 = curr ? curr.team2Score : '';
+
+    if (origWinner !== currWinner || origS1 !== currS1 || origS2 !== currS2) {
+      // Must be complete if anything is filled
+      if (currWinner === '' || currS1 === '' || currS2 === '') {
+        showToast("Por favor completa marcador y ganador para todos los partidos modificados.", "error");
+        return;
+      }
       changedPredictions.push({
         matchId: match.id,
-        prediction: curr
+        prediction: {
+          winner: currWinner,
+          team1Score: parseInt(currS1),
+          team2Score: parseInt(currS2)
+        }
       });
     }
   }
@@ -2505,7 +2565,7 @@ async function submitEditedPredictions() {
   saveBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...`;
 
   try {
-    const response = await fetch(`${API_URL}/admin/predictions/user/${state.editingUserId}`, {
+    const response = await fetch(`${API_URL}/admin/ligamx/predictions/user/${state.editingUserId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2517,6 +2577,8 @@ async function submitEditedPredictions() {
     const data = await response.json();
     if (!response.ok) {
       showToast(data.error || "Error al guardar los pronósticos", "error");
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalHtml;
       return;
     }
 
@@ -2527,19 +2589,11 @@ async function submitEditedPredictions() {
     loadAdminUsers();
     
     // Refresh leaderboard
-    fetch(`${API_URL}/leaderboard`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    })
-    .then(res => res.json())
-    .then(leaderboard => {
-      state.leaderboard = leaderboard;
-      renderLeaderboardTables();
-    })
-    .catch(err => console.error("Error refreshing leaderboard after edit:", err));
+    loadLigaMXLeaderboard();
 
   } catch (error) {
     console.error("Error submitting edited predictions:", error);
-    showToast("Error de conexión al guardar pronósticos", "error");
+    showToast("Error de conexión al guardar los pronósticos.", "error");
   } finally {
     saveBtn.disabled = false;
     saveBtn.innerHTML = originalHtml;

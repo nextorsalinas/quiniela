@@ -667,6 +667,40 @@ app.post('/api/admin/predictions/user/:userId', requireAdmin, async (req, res) =
   }
 });
 
+// Get user predictions for Liga MX (Admin only)
+app.get('/api/admin/ligamx/predictions/user/:userId', requireAdmin, async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const user = await dbHelper.findUserById(userId);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado." });
+    
+    const predictions = await dbHelperLigaMX.getPredictionsByUser(userId);
+    res.json({
+      username: user.username,
+      predictions
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user predictions for Liga MX (Admin only)
+app.post('/api/admin/ligamx/predictions/user/:userId', requireAdmin, async (req, res) => {
+  const { userId } = req.params;
+  const { predictions } = req.body;
+
+  if (!predictions || !Array.isArray(predictions)) {
+    return res.status(400).json({ error: "Predicciones inválidas o vacías." });
+  }
+
+  try {
+    await dbHelperLigaMX.savePredictions(userId, predictions);
+    res.json({ message: "Pronósticos de Liga MX actualizados con éxito por el administrador." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // ==========================================
 // --- PHASE 2 (Fase Final) API ROUTES ---
