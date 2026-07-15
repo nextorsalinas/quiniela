@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=5.00">
+  <link rel="stylesheet" href="styles.css?v=5.10">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -417,6 +417,19 @@
       <section id="view-panelmx" class="tab-view">
         <div style="margin-top: 1.5rem;"></div>
         
+        <!-- Guaranteed Jackpot Card -->
+        <div id="ligamx-jackpot-container" class="glass-panel" style="margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1rem; border: 1px solid rgba(255, 215, 0, 0.25); text-align: center; border-radius: var(--radius-lg); background: linear-gradient(135deg, rgba(138, 0, 46, 0.2), rgba(0, 0, 0, 0.4));">
+          <span style="font-family: var(--font-title); font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05rem; display: block; margin-bottom: 0.25rem;">
+            Bolsa Garantizada
+          </span>
+          <div id="ligamx-jackpot-amount" style="font-family: var(--font-title); font-size: 2.2rem; font-weight: 800; color: var(--gold); text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); line-height: 1;">
+            $0.00 MXN
+          </div>
+          <span id="ligamx-jackpot-players" style="font-size: 0.72rem; color: var(--color-text-muted); display: block; margin-top: 0.35rem;">
+            Calculado de 0 participantes ($25 c/u)
+          </span>
+        </div>
+
         <!-- Voting Trends Section (Liga MX) -->
         <div id="ligamx-trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none;">
@@ -785,6 +798,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=5.00"></script>
+  <script src="app.js?v=5.10"></script>
 </body>
 </html>

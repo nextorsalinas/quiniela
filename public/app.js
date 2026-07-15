@@ -4219,6 +4219,16 @@ window.loadLigaMXLeaderboard = async function() {
     const leaderboard = await response.json();
     stateLigaMX.leaderboard = leaderboard;
     
+    // Update Guaranteed Jackpot
+    const activeUsersCount = leaderboard.length;
+    const totalJackpot = activeUsersCount * 25;
+    const jackpotAmountEl = document.getElementById('ligamx-jackpot-amount');
+    const jackpotPlayersEl = document.getElementById('ligamx-jackpot-players');
+    if (jackpotAmountEl && jackpotPlayersEl) {
+      jackpotAmountEl.textContent = `$${totalJackpot.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+      jackpotPlayersEl.textContent = `Calculado de ${activeUsersCount} participante${activeUsersCount !== 1 ? 's' : ''} ($25 c/u)`;
+    }
+    
     if (leaderboard.length === 0) {
       body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay posiciones registradas.</td></tr>`;
       return;
