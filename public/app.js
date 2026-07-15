@@ -332,17 +332,21 @@ function showAppDashboard() {
     headerAvatar.src = state.currentUser.profilePic || 'avatar.png';
   }
   
-  // Show admin tab/badge if admin
+  // Show admin tab/badge if admin, and hide profile
   if (state.currentUser.isAdmin) {
     document.getElementById('admin-badge').style.display = 'inline-flex';
     document.getElementById('tab-admin').style.display = 'flex';
     const tabAdmin2 = document.getElementById('tab-admin-2');
     if (tabAdmin2) tabAdmin2.style.display = 'flex';
+    const tabProfile = document.getElementById('tab-profile');
+    if (tabProfile) tabProfile.style.display = 'none';
   } else {
     document.getElementById('admin-badge').style.display = 'none';
     document.getElementById('tab-admin').style.display = 'none';
     const tabAdmin2 = document.getElementById('tab-admin-2');
     if (tabAdmin2) tabAdmin2.style.display = 'none';
+    const tabProfile = document.getElementById('tab-profile');
+    if (tabProfile) tabProfile.style.display = 'flex';
   }
   const tabGroups = document.getElementById('tab-groups');
   if (tabGroups) tabGroups.style.display = 'flex';
@@ -350,7 +354,7 @@ function showAppDashboard() {
 
 
   // Initial data fetch
-  switchTab('profile');
+  switchTab(state.currentUser.isAdmin ? 'admin' : 'profile');
   checkAnnouncementModal();
 
   // Notifications init
@@ -1667,11 +1671,18 @@ async function loadAdminDashboard() {
   list.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos para administración...</div>`;
 
   try {
-    const response = await fetch(`${API_URL}/matches`, {
+    const response = await fetch(`${API_URL}/ligamx/matches`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
     
-    state.matches = await response.json();
+    stateLigaMX.matches = await response.json();
+    stateLigaMX.matches.sort((a, b) => {
+      if (a.jornada !== b.jornada) return a.jornada - b.jornada;
+      const dtA = `${a.date || ''} ${a.time || ''}`;
+      const dtB = `${b.date || ''} ${b.time || ''}`;
+      return dtA.localeCompare(dtB);
+    });
+
     renderAdminMatchesList();
 
     // Also load and render users
@@ -1791,64 +1802,73 @@ async function deleteUser(userId, username) {
 function renderAdminMatchesList() {
   const list = document.getElementById('admin-matches-list');
 
-  // Mostrar todos los partidos, pero deshabilitar la edición para los que ya tienen resultado
-  list.innerHTML = state.matches.map(match => {
-    const isCaptured = match.result !== null && match.result !== undefined;
-    const actL = match.result === 'L' ? 'active-L' : '';
-    const actE = match.result === 'E' ? 'active-E' : '';
-    const actV = match.result === 'V' ? 'active-V' : '';
+  if (stateLigaMX.matches.length === 0) {
+    list.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--color-text-muted);"><p>No hay partidos registrados de Liga MX.</p></div>`;
+    return;
+  }
 
+  list.innerHTML = stateLigaMX.matches.map(match => {
+    const isCaptured = match.result !== null && match.result !== undefined;
+    const r1 = isCaptured ? match.result.team1Score : '';
+    const r2 = isCaptured ? match.result.team2Score : '';
     const disabledAttr = isCaptured ? 'disabled' : '';
     const disabledStyle = isCaptured ? 'opacity: 0.5; cursor: not-allowed;' : '';
-    const clickL = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'L')"`;
-    const clickE = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'E')"`;
-    const clickV = isCaptured ? '' : `onclick="saveAdminResult(${match.id}, 'V')"`;
 
     return `
       <div class="admin-match-row" style="${isCaptured ? 'background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.03);' : ''}">
         <div class="admin-match-info">
-          <span class="admin-match-id">${match.id}</span>
-          <div class="admin-match-teams">
-            <span class="admin-team-l">${match.team1}</span>
-            <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">vs</span>
-            <span class="admin-team-v">${match.team2}</span>
-            ${isCaptured ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; margin-left: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Capturado</span>' : ''}
+          <span class="admin-match-id">#${match.id}</span>
+          <div class="admin-match-teams" style="flex-direction: row; gap: 0.5rem; justify-content: center; align-items: center;">
+            <span class="admin-team-l" style="flex: 1; text-align: right;">${match.team1}</span>
+            <input type="number" id="admin-score1-${match.id}" value="${r1}" min="0" max="20" class="score-input" ${disabledAttr} style="width: 45px; text-align: center; border-radius: 6px; padding: 0.3rem; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-weight: bold;">
+            <span style="color: var(--color-text-muted); font-size: 0.8rem; font-style: italic;">-</span>
+            <input type="number" id="admin-score2-${match.id}" value="${r2}" min="0" max="20" class="score-input" ${disabledAttr} style="width: 45px; text-align: center; border-radius: 6px; padding: 0.3rem; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; font-weight: bold;">
+            <span class="admin-team-v" style="flex: 1; text-align: left;">${match.team2}</span>
           </div>
+          ${isCaptured ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 0.15rem 0.35rem; margin-top: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-lock"></i> Guardado</span>' : ''}
         </div>
 
         <div class="admin-match-meta">
-          <span class="group-label">${match.group}</span>
-          <span>${match.date}</span>
+          <span class="group-label">Jornada ${match.jornada}</span>
+          <span>${match.date} ${match.time || ''}</span>
         </div>
 
         <div class="admin-controls">
-          <div class="admin-result-buttons">
-            <button class="admin-opt-btn ${actL}" ${clickL} style="${disabledStyle}" ${disabledAttr}>L</button>
-            <button class="admin-opt-btn ${actE}" ${clickE} style="${disabledStyle}" ${disabledAttr}>E</button>
-            <button class="admin-opt-btn ${actV}" ${clickV} style="${disabledStyle}" ${disabledAttr}>V</button>
-          </div>
-          ${match.result !== null ? `
-            <button class="admin-clear-btn" onclick="saveAdminResult(${match.id}, null)" title="Borrar resultado" style="${disabledStyle}" ${disabledAttr}>
-              <i class="fa-solid fa-trash-can"></i>
+          ${!isCaptured ? `
+            <button class="btn btn-primary" onclick="saveAdminResult(${match.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar
             </button>
-          ` : ''}
+          ` : `
+            <button class="admin-clear-btn" onclick="clearAdminResult(${match.id})" title="Modificar resultado" style="padding: 0.4rem 0.6rem; color: var(--gold); border: 1px solid var(--gold); background: transparent; border-radius: 6px;">
+              <i class="fa-solid fa-pen-to-square"></i> Modificar
+            </button>
+          `}
         </div>
       </div>
     `;
   }).join('');
 }
 
+async function saveAdminResult(matchId) {
+  const score1Input = document.getElementById(`admin-score1-${matchId}`);
+  const score2Input = document.getElementById(`admin-score2-${matchId}`);
+  
+  if (!score1Input || !score2Input || score1Input.value === '' || score2Input.value === '') {
+    showToast("Ingresa ambos marcadores", "error");
+    return;
+  }
+  
+  const team1Score = parseInt(score1Input.value);
+  const team2Score = parseInt(score2Input.value);
 
-
-async function saveAdminResult(matchId, resultValue) {
   try {
-    const response = await fetch(`${API_URL}/admin/matches/result`, {
+    const response = await fetch(`${API_URL}/ligamx/admin/matches/result`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-user-id': state.currentUser.id
       },
-      body: JSON.stringify({ matchId: matchId, result: resultValue })
+      body: JSON.stringify({ matchId: String(matchId), result: { team1Score, team2Score } })
     });
 
     const data = await response.json();
@@ -1857,13 +1877,21 @@ async function saveAdminResult(matchId, resultValue) {
       return;
     }
 
-    showToast(`Resultado del partido #${matchId} guardado. Puntos recalculados.`, "success");
-    
-    // Refresh admin list and state
+    showToast(`Resultado del partido #${matchId} guardado.`, "success");
+    // Reload matches
     loadAdminDashboard();
   } catch (error) {
-    console.error("Admin save error:", error);
-    showToast("Error de conexión al guardar resultado", "error");
+    console.error("Error saving admin result:", error);
+    showToast("Error de conexión", "error");
+  }
+}
+
+async function clearAdminResult(matchId) {
+  // If we just want to re-open the UI to edit without saving anything yet:
+  const matchIndex = stateLigaMX.matches.findIndex(m => String(m.id) === String(matchId));
+  if (matchIndex > -1) {
+    stateLigaMX.matches[matchIndex].result = null;
+    renderAdminMatchesList();
   }
 }
 
