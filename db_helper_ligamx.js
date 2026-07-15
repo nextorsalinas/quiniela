@@ -349,6 +349,66 @@ async function updateMatchResult(matchId, result) {
   }
 }
 
+async function getMatchTrends(includeVoters) {
+  const matches = await getMatches();
+  const unplayedMatches = matches.filter(m => m.result === null);
+  if (unplayedMatches.length === 0) return [];
+
+  const matchIds = unplayedMatches.map(m => m.id);
+
+  let predictions = [];
+  if (dbType === 'firestore') {
+    const snap = await firestoreDb.collection('ligamx_predictions').get();
+    predictions = snap.docs.map(doc => doc.data());
+  } else {
+    predictions = (readDb().ligamx_predictions || []).filter(p => matchIds.includes(p.matchId));
+  }
+
+  // Get usernames
+  let users = [];
+  if (dbType === 'firestore' && includeVoters) {
+    const snap = await firestoreDb.collection('users').get();
+    users = snap.docs.map(doc => ({ id: doc.id, username: doc.data().username }));
+  } else if (includeVoters) {
+    users = readDb().users;
+  }
+
+  const trends = unplayedMatches.map(match => {
+    const matchPreds = predictions.filter(p => p.matchId === match.id);
+    const stats = {
+      L: { count: 0, users: [] },
+      E: { count: 0, users: [] },
+      V: { count: 0, users: [] }
+    };
+
+    matchPreds.forEach(p => {
+      if (p.prediction && p.prediction.winner) {
+        const outcome = p.prediction.winner; // 'L', 'E', 'V'
+        if (stats[outcome]) {
+          stats[outcome].count++;
+          if (includeVoters) {
+            const user = users.find(u => u.id === p.userId);
+            if (user) {
+              stats[outcome].users.push(`${user.username} (${p.prediction.team1Score}-${p.prediction.team2Score})`);
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      matchId: match.id,
+      team1: match.team1,
+      team2: match.team2,
+      jornada: match.jornada,
+      date: match.date,
+      stats
+    };
+  });
+
+  return trends;
+}
+
 module.exports = {
   initDb,
   getMatches,
@@ -356,5 +416,6 @@ module.exports = {
   savePredictions,
   getUserPredictionsDetail,
   getLeaderboard,
-  updateMatchResult
+  updateMatchResult,
+  getMatchTrends
 };

@@ -4238,8 +4238,191 @@ window.loadLigaMXLeaderboard = async function() {
     }).join('');
     
     body.innerHTML = html;
+    
+    // Load voting trends for Liga MX!
+    loadLigaMXVotingTrends();
   } catch (err) {
     console.error("Error loading Liga MX leaderboard:", err);
     body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">Error al cargar posiciones.</td></tr>`;
   }
+};
+
+window.checkLigaMXPredictionsComplete = function() {
+  if (state.currentUser && state.currentUser.isAdmin) {
+    return true;
+  }
+  if (!stateLigaMX.matches || stateLigaMX.matches.length === 0) {
+    return true;
+  }
+  const requiredMatches = stateLigaMX.matches.filter(m => m.result === null);
+  if (requiredMatches.length === 0) return true;
+  
+  for (const match of requiredMatches) {
+    if (!stateLigaMX.predictions[match.id]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+window.loadLigaMXVotingTrends = async function() {
+  const container = document.getElementById('ligamx-trends-container');
+  const grid = document.getElementById('ligamx-trends-grid');
+  if (!container || !grid) return;
+  
+  try {
+    const res = await fetch(`${API_URL}/ligamx/matches/trends`, {
+      headers: { 'x-user-id': state.currentUser.id }
+    });
+    if (!res.ok) throw new Error("Error fetching trends");
+    
+    const trends = await res.json();
+    window.ligamxTrendsData = trends;
+    
+    if (trends.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    container.style.display = 'block';
+    
+    const collapsed = localStorage.getItem('ligamx_trends_collapsed') === 'true';
+    grid.style.display = collapsed ? 'none' : 'grid';
+    const icon = document.getElementById('ligamx-trends-toggle-icon');
+    if (icon) {
+      icon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+    const title = container.querySelector('h3');
+    if (title) {
+      title.style.marginBottom = collapsed ? '0' : '0.55rem';
+    }
+    
+    // Render in Progol ticket format!
+    let html = `
+      <div style="display: grid; grid-template-columns: 30px 1fr 60px 1fr 30px; gap: 0.5rem; font-weight: 800; font-family: var(--font-title); font-size: 0.8rem; color: var(--gold); border-bottom: 2px solid rgba(229, 168, 35, 0.3); padding-bottom: 0.5rem; margin-bottom: 0.5rem; text-align: center; text-transform: uppercase;">
+        <span></span>
+        <span>Local</span>
+        <span>Empate</span>
+        <span>Visita</span>
+        <span></span>
+      </div>
+    `;
+    
+    html += trends.map((match, index) => {
+      const stats = match.stats;
+      const fav = (stats.L.count > stats.E.count && stats.L.count > stats.V.count) ? 'L' :
+                  (stats.V.count > stats.L.count && stats.V.count > stats.E.count) ? 'V' :
+                  (stats.E.count > stats.L.count && stats.E.count > stats.V.count) ? 'E' : '';
+      
+      const styleL = fav === 'L' 
+        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
+        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
+      const styleE = fav === 'E' 
+        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
+        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
+      const styleV = fav === 'V' 
+        ? 'background: var(--gold); color: #000; border-color: var(--gold);' 
+        : 'background: rgba(0,0,0,0.25); color: var(--color-text-main); border-color: var(--border-glass);';
+      
+      return `
+        <div class="mx-trend-row" style="display: grid; grid-template-columns: 30px 1fr 60px 1fr 30px; align-items: center; gap: 0.5rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+          <!-- Left number -->
+          <span style="font-weight: bold; color: var(--color-text-muted); text-align: center; font-size: 0.8rem;">${index + 1}</span>
+          
+          <!-- Local Side -->
+          <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: flex-start; min-width: 0;">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 48px; flex-shrink: 0; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleL}">
+              ${stats.L.count}
+            </div>
+            <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team1}">${match.team1}</span>
+          </div>
+          
+          <!-- Draw Side -->
+          <div style="display: flex; justify-content: center; flex-shrink: 0;">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'E')" style="width: 48px; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleE}">
+              ${stats.E.count}
+            </div>
+          </div>
+          
+          <!-- Visitor Side -->
+          <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: flex-end; min-width: 0;">
+            <span style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team2}">${match.team2}</span>
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 48px; flex-shrink: 0; border: 1px solid var(--border-glass); border-radius: 4px; padding: 0.3rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; ${styleV}">
+              ${stats.V.count}
+            </div>
+          </div>
+          
+          <!-- Right number -->
+          <span style="font-weight: bold; color: var(--color-text-muted); text-align: center; font-size: 0.8rem;">${index + 1}</span>
+        </div>
+      `;
+    }).join('');
+    
+    grid.innerHTML = html;
+  } catch (err) {
+    console.error("Error loading Liga MX trends:", err);
+    container.style.display = 'none';
+  }
+};
+
+window.toggleLigaMXTrendsGrid = function() {
+  const grid = document.getElementById('ligamx-trends-grid');
+  const icon = document.getElementById('ligamx-trends-toggle-icon');
+  const container = document.getElementById('ligamx-trends-container');
+  if (!grid || !icon || !container) return;
+  
+  const title = container.querySelector('h3');
+  
+  if (grid.style.display === 'none') {
+    grid.style.display = 'grid';
+    icon.style.transform = 'rotate(0deg)';
+    if (title) title.style.marginBottom = '0.55rem';
+    localStorage.setItem('ligamx_trends_collapsed', 'false');
+  } else {
+    grid.style.display = 'none';
+    icon.style.transform = 'rotate(180deg)';
+    if (title) title.style.marginBottom = '0';
+    localStorage.setItem('ligamx_trends_collapsed', 'true');
+  }
+};
+
+window.showLigaMXTrendsVoters = function(matchIdx, outcome) {
+  const trends = window.ligamxTrendsData;
+  if (!trends || !trends[matchIdx]) return;
+  const match = trends[matchIdx];
+  
+  if (!checkLigaMXPredictionsComplete()) {
+    showIncompletePredictionsModal("Solo lo podrás consultar al completar los pronósticos de la Liga MX.");
+    return;
+  }
+  
+  const list = match.stats[outcome].users || [];
+  
+  const modal = document.getElementById('trends-voters-modal');
+  const modalTitle = document.getElementById('trends-modal-title');
+  const modalSubtitle = document.getElementById('trends-modal-subtitle');
+  const votersList = document.getElementById('trends-voters-list');
+  
+  if (!modal || !votersList) return;
+  
+  modalTitle.textContent = `${match.team1} vs ${match.team2}`;
+  modalSubtitle.textContent = `Votos para ${outcome === 'L' ? 'Local' : (outcome === 'V' ? 'Visitante' : 'Empate')}`;
+  
+  if (list.length === 0) {
+    votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 1rem 0;">Ningún participante votó por esta opción.</li>`;
+  } else {
+    votersList.innerHTML = list.map(userLabel => {
+      const parts = userLabel.split(' ');
+      const username = parts[0];
+      const score = parts[1] || '';
+      return `
+        <li style="padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <span style="text-transform: capitalize;">${username}</span>
+          <span style="font-weight: 700; color: var(--gold);">${score}</span>
+        </li>
+      `;
+    }).join('');
+  }
+  
+  modal.style.display = 'flex';
 };

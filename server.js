@@ -122,6 +122,26 @@ async function requireAdminPhase2(req, res, next) {
   });
 }
 
+async function checkLigaMXPredictionsComplete(userId) {
+  try {
+    const matches = await dbHelperLigaMX.getMatches();
+    const predictions = await dbHelperLigaMX.getPredictionsByUser(userId);
+    const requiredMatches = matches.filter(m => m.result === null);
+    if (requiredMatches.length === 0) return true;
+
+    const predMatchIds = new Set(predictions.map(p => p.matchId));
+    for (const match of requiredMatches) {
+      if (!predMatchIds.has(match.id)) {
+        return false;
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("Error in checkLigaMXPredictionsComplete:", err);
+    return false;
+  }
+}
+
 async function checkPhase2PredictionsComplete(userId) {
   try {
     const matches = await dbHelperPhase2.getMatches();
@@ -1172,6 +1192,16 @@ app.get('/api/ligamx/leaderboard', authenticate, async (req, res) => {
   try {
     const lb = await dbHelperLigaMX.getLeaderboard();
     res.json(lb);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/ligamx/matches/trends', authenticate, async (req, res) => {
+  try {
+    const isComplete = await checkLigaMXPredictionsComplete(req.user.id);
+    const trends = await dbHelperLigaMX.getMatchTrends(isComplete);
+    res.json(trends);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
