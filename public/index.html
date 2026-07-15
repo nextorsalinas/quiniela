@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=4.90">
+  <link rel="stylesheet" href="styles.css?v=5.00">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -463,10 +463,18 @@
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
 
-          <!-- Button to navigate to Final predictions -->
-          <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.4rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); font-size: 0.9rem;">
-            <i class="fa-solid fa-square-poll-vertical"></i> Pronóstico Final
-          </button>
+          <!-- Action Buttons Container -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 0.25rem;">
+            <!-- Button to navigate to Final predictions -->
+            <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
+              <i class="fa-solid fa-square-poll-vertical"></i> Pronóstico Final
+            </button>
+
+            <!-- Button to navigate to Liga MX predictions -->
+            <button class="btn btn-primary" onclick="switchTab('ligamx')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
+              <i class="fa-solid fa-futbol"></i> Pronósticos Liga MX
+            </button>
+          </div>
 
           <!-- Stats Table -->
           <div style="width: 100%; overflow-x: auto; margin-top: 0.5rem;">
@@ -535,10 +543,7 @@
         <i class="fa-solid fa-trophy"></i>
         <span>Panel final</span>
       </button>
-      <button id="tab-ligamx" class="tab-btn" onclick="switchTab('ligamx')">
-        <i class="fa-solid fa-futbol"></i>
-        <span>Pronósticos MX</span>
-      </button>
+
       <button id="tab-panelmx" class="tab-btn" onclick="switchTab('panelmx')">
         <i class="fa-solid fa-trophy"></i>
         <span>Panel MX</span>
@@ -780,6 +785,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=4.90"></script>
+  <script src="app.js?v=5.00"></script>
 </body>
 </html>

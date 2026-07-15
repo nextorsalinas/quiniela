@@ -1181,6 +1181,15 @@ app.post('/api/ligamx/predictions', authenticate, async (req, res) => {
     return res.status(400).json({ error: "Predicciones inválidas." });
   }
   try {
+    const existing = await dbHelperLigaMX.getPredictionsByUser(req.user.id);
+    const existingIds = new Set(existing.map(p => p.matchId));
+    
+    for (const pred of predictions) {
+      if (existingIds.has(pred.matchId)) {
+        return res.status(403).json({ error: "Este pronóstico ya fue guardado y no se puede volver a editar." });
+      }
+    }
+    
     await dbHelperLigaMX.savePredictions(req.user.id, predictions);
     res.json({ message: "Pronósticos de Liga MX guardados con éxito." });
   } catch (error) {

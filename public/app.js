@@ -4010,7 +4010,8 @@ window.renderLigaMXMatchesGrid = function() {
     const selV = pred && pred.winner === 'V';
     
     const isCompleted = match.result !== null;
-    const disabled = isCompleted ? 'disabled' : '';
+    const hasSavedPred = (pred !== null);
+    const disabled = (isCompleted || hasSavedPred) ? 'disabled' : '';
     
     let resultBannerHtml = '';
     if (isCompleted) {
@@ -4079,7 +4080,7 @@ window.renderLigaMXMatchesGrid = function() {
         ${resultBannerHtml}
         
         <!-- Individual Save Button -->
-        ${!isCompleted ? `
+        ${(!isCompleted && !hasSavedPred) ? `
         <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
           <button id="btn-save-mx-${match.id}" class="btn btn-primary" onclick="submitSingleLigaMXPrediction('${match.id}')" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700;">
             <i class="fa-solid fa-floppy-disk"></i> Guardar
@@ -4089,7 +4090,6 @@ window.renderLigaMXMatchesGrid = function() {
       </div>
     `;
   }).join('');
-  
   container.innerHTML = html;
 };
 
