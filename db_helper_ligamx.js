@@ -258,14 +258,12 @@ function calculatePoints(matchResult, predValue) {
   const realWinner = matchResult.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
   const predWinner = predValue.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
   
-  // Choose outcome (L, E, V) points: 3 points
-  // Exact score bonus: 1 point
-  if (realWinner === predWinner) {
-    if (r1 === p1 && r2 === p2) return 4; // 3 + 1
-    return 3;
-  }
+  // 2 points for exact score, 1 point for correct outcome (L, E, V)
   if (r1 === p1 && r2 === p2) {
-    return 1; // Just exact score bonus despite wrong winner prediction (should rarely occur if winner matches math, but good for safety)
+    return 2; // Exact score (implicitly gets outcome correct)
+  }
+  if (realWinner === predWinner) {
+    return 1; // Correct outcome only
   }
   return 0;
 }
