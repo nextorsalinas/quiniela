@@ -4081,9 +4081,9 @@ window.renderLigaMXMatchesGrid = function() {
         if (realW === predW) {
           const isExact = (r1 === p1 && r2 === p2);
           if (isExact) {
-            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto! (Final: ${r1}-${r2})</span><strong>+4 pts</strong></div>`;
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto! (Final: ${r1}-${r2})</span><strong>+2 pts</strong></div>`;
           } else {
-            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); color: var(--success); border: 1px dashed var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-check"></i> Acertaste ganador (Final: ${r1}-${r2})</span><strong>+3 pts</strong></div>`;
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); color: var(--success); border: 1px dashed var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-check"></i> Acertaste ganador (Final: ${r1}-${r2})</span><strong>+1 pt</strong></div>`;
           }
         } else {
           resultBannerHtml = `<div class="real-result-banner incorrect" style="margin-top: 0.75rem; background: rgba(239, 68, 68, 0.08); color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste (Final: ${r1}-${r2}, Ganador: ${realW})</span><strong>0 pts</strong></div>`;
@@ -4275,7 +4275,7 @@ window.loadLigaMXLeaderboard = async function() {
     
     // Update Guaranteed Jackpot
     const activeUsersCount = leaderboard.length;
-    const totalJackpot = activeUsersCount * 25;
+    const totalJackpot = activeUsersCount * 50;
     const jackpotAmountEl = document.getElementById('ligamx-jackpot-amount');
     if (jackpotAmountEl) {
       jackpotAmountEl.textContent = `$${totalJackpot.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
