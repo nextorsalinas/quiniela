@@ -272,9 +272,9 @@ async function getLeaderboard() {
   let users = [];
   if (dbType === 'firestore') {
     const snap = await firestoreDb.collection('users').get();
-    users = snap.docs.map(doc => ({ id: doc.id, username: doc.data().username, isAdmin: doc.data().isAdmin }));
+    users = snap.docs.map(doc => ({ id: doc.id, username: doc.data().username, isAdmin: doc.data().isAdmin, profilePic: doc.data().profilePic || '' }));
   } else {
-    users = readDb().users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin }));
+    users = readDb().users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin, profilePic: u.profilePic || '' }));
   }
 
   const matches = await getMatches();
@@ -315,6 +315,7 @@ async function getLeaderboard() {
     return {
       userId: user.id,
       username: user.username,
+      profilePic: user.profilePic,
       points,
       hits,
       exacts,
