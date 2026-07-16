@@ -4456,9 +4456,13 @@ window.showLigaMXTrendsVoters = function(matchIdx, outcome) {
     votersList.innerHTML = `<li style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 1rem 0;">Ningún participante votó por esta opción.</li>`;
   } else {
     votersList.innerHTML = list.map(userLabel => {
-      const parts = userLabel.split(' ');
-      const username = parts[0];
-      const score = parts[1] || '';
+      let username = userLabel;
+      let score = '';
+      const rx = userLabel.match(/^(.*)\s+\(([^)]+)\)$/);
+      if (rx) {
+        username = rx[1];
+        score = rx[2];
+      }
       return `
         <li style="padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 0.85rem; color: var(--color-text-main); font-weight: 500; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
           <span style="text-transform: capitalize;">${username}</span>
