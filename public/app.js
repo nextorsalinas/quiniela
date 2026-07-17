@@ -4264,7 +4264,7 @@ window.submitSingleLigaMXPrediction = async function(matchId) {
 window.loadLigaMXLeaderboard = async function() {
   const body = document.getElementById('ligamx-leaderboard-body');
   if (!body) return;
-  body.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
+  body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
   
   try {
     const response = await fetch(`${API_URL}/ligamx/leaderboard`, {
@@ -4282,7 +4282,7 @@ window.loadLigaMXLeaderboard = async function() {
     }
     
     if (leaderboard.length === 0) {
-      body.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay posiciones registradas.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No hay posiciones registradas.</td></tr>`;
       return;
     }
     
@@ -4295,6 +4295,9 @@ window.loadLigaMXLeaderboard = async function() {
             <img src="${row.profilePic || 'avatar.png'}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--gold); display: block; margin: 0 auto; background: rgba(0,0,0,0.2);">
           </td>
           <td style="text-transform: capitalize; vertical-align: middle;">${row.username}</td>
+          <td style="text-align: center; vertical-align: middle; color: var(--color-text-muted); font-size: 0.8rem;">
+            ${row.predictionCount} / ${stateLigaMX.matches.length}
+          </td>
           <td style="text-align: center; font-weight: 700; color: var(--gold); vertical-align: middle;">${row.points} pts</td>
         </tr>
       `;
@@ -4306,7 +4309,7 @@ window.loadLigaMXLeaderboard = async function() {
     loadLigaMXVotingTrends();
   } catch (err) {
     console.error("Error loading Liga MX leaderboard:", err);
-    body.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--danger);">Error al cargar posiciones.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">Error al cargar posiciones.</td></tr>`;
   }
 };
 

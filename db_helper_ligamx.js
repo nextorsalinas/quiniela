@@ -352,10 +352,9 @@ async function updateMatchResult(matchId, result) {
 
 async function getMatchTrends(includeVoters) {
   const matches = await getMatches();
-  const unplayedMatches = matches.filter(m => m.result === null);
-  if (unplayedMatches.length === 0) return [];
+  if (matches.length === 0) return [];
 
-  const matchIds = unplayedMatches.map(m => m.id);
+  const matchIds = matches.map(m => m.id);
 
   let predictions = [];
   if (dbType === 'firestore') {
@@ -374,7 +373,7 @@ async function getMatchTrends(includeVoters) {
     users = readDb().users;
   }
 
-  const trends = unplayedMatches.map(match => {
+  const trends = matches.map(match => {
     const matchPreds = predictions.filter(p => p.matchId === match.id);
     const stats = {
       L: { count: 0, users: [] },
