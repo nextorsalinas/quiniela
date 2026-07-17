@@ -1557,7 +1557,21 @@ body {
   }
 }
 
+.hide-mobile {
+  display: inline-block;
+}
+.show-mobile {
+  display: none;
+}
+
 @media (max-width: 600px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .show-mobile {
+    display: inline-block !important;
+  }
+
   .matches-grid {
     grid-template-columns: 1fr;
   }
@@ -1622,8 +1636,41 @@ body {
   }
 
   .leaderboard-table th, .leaderboard-table td {
-    padding: 0.5rem 0.4rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.4rem 0.25rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .leaderboard-table th.col-pos, .leaderboard-table td:nth-child(1) {
+    width: 25px !important;
+    max-width: 25px !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    text-align: center !important;
+  }
+  .leaderboard-table th.col-foto, .leaderboard-table td:nth-child(2) {
+    width: 32px !important;
+    max-width: 32px !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
+    text-align: center !important;
+  }
+  .leaderboard-table th.col-pronos, .leaderboard-table td:nth-child(4) {
+    width: 65px !important;
+    max-width: 65px !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    text-align: center !important;
+  }
+  .leaderboard-table th.col-puntos, .leaderboard-table td:nth-child(5) {
+    width: 55px !important;
+    max-width: 55px !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+    text-align: center !important;
+  }
+  .leaderboard-table td img {
+    width: 22px !important;
+    height: 22px !important;
   }
   
   .rank-badge {
