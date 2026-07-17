@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=6.10">
+  <link rel="stylesheet" href="styles.css?v=6.20">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -286,6 +286,20 @@
           </div>
         </div>
 
+        <!-- Control Card for predictions pause/resume -->
+        <div class="glass-panel" style="margin-bottom: 1.5rem; padding: 1rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-glass); border-radius: var(--radius-lg); max-width: 800px;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-power-off" style="font-size: 1.25rem; color: var(--gold);"></i>
+            <div>
+              <h4 style="margin: 0; font-size: 0.9rem; font-family: var(--font-title); font-weight: 700; color: var(--color-text-main);">Estado de la Quiniela Liga MX</h4>
+              <p style="margin: 0.15rem 0 0 0; font-size: 0.72rem; color: var(--color-text-muted);" id="ligamx-admin-config-text">Cargando estado...</p>
+            </div>
+          </div>
+          <button id="btn-toggle-pause-ligamx" class="btn btn-warning" onclick="toggleLigaMXPredictionsPaused()" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...
+          </button>
+        </div>
+
         <!-- Admin Matches List -->
         <div id="admin-matches-list" class="admin-matches-list">
           <!-- Admin rows injected via JS -->
@@ -405,6 +419,12 @@
 
         <!-- Liga MX Predictions Sub-View -->
         <div id="ligamx-subview-play" class="ligamx-subview">
+          <!-- Locked predictions warning banner -->
+          <div id="ligamx-paused-banner" class="glass-panel" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0.75rem 1rem; border: 1px solid var(--red); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-lg); align-items: center; gap: 0.5rem; color: var(--red); font-weight: bold; font-size: 0.85rem;">
+            <i class="fa-solid fa-lock" style="font-size: 1.1rem;"></i>
+            <span>La quiniela de Liga MX está pausada. No se pueden realizar pronósticos por el momento.</span>
+          </div>
+
           <div id="ligamx-matches-container" class="matches-grid" style="max-width: 800px; margin: 0 auto;">
             <div class="loading-spinner">
               <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Liga MX...
@@ -858,6 +878,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=6.10"></script>
+  <script src="app.js?v=6.20"></script>
 </body>
 </html>

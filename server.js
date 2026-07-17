@@ -1215,6 +1215,11 @@ app.post('/api/ligamx/predictions', authenticate, async (req, res) => {
     return res.status(400).json({ error: "Predicciones inválidas." });
   }
   try {
+    const config = await dbHelperLigaMX.getConfig();
+    if (config && config.predictionsPaused) {
+      return res.status(403).json({ error: "El guardado de pronósticos está actualmente pausado por el administrador." });
+    }
+
     const existing = await dbHelperLigaMX.getPredictionsByUser(req.user.id);
     const existingIds = new Set(existing.map(p => p.matchId));
     
@@ -1226,6 +1231,24 @@ app.post('/api/ligamx/predictions', authenticate, async (req, res) => {
     
     await dbHelperLigaMX.savePredictions(req.user.id, predictions);
     res.json({ message: "Pronósticos de Liga MX guardados con éxito." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/ligamx/config', authenticate, async (req, res) => {
+  try {
+    const config = await dbHelperLigaMX.getConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/ligamx/config/toggle', requireAdmin, async (req, res) => {
+  try {
+    const config = await dbHelperLigaMX.togglePredictionsPaused();
+    res.json(config);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -409,6 +409,37 @@ async function getMatchTrends(includeVoters) {
   return trends;
 }
 
+async function getConfig() {
+  if (dbType === 'firestore') {
+    const doc = await firestoreDb.collection('ligamx_config').doc('global').get();
+    if (!doc.exists) {
+      await firestoreDb.collection('ligamx_config').doc('global').set({ predictionsPaused: false });
+      return { predictionsPaused: false };
+    }
+    return doc.data();
+  }
+  const db = readDb();
+  if (!db.ligamx_config) {
+    db.ligamx_config = { predictionsPaused: false };
+    writeDb(db);
+  }
+  return db.ligamx_config;
+}
+
+async function togglePredictionsPaused() {
+  const current = await getConfig();
+  const newVal = !current.predictionsPaused;
+  if (dbType === 'firestore') {
+    await firestoreDb.collection('ligamx_config').doc('global').set({ predictionsPaused: newVal });
+    return { predictionsPaused: newVal };
+  }
+  const db = readDb();
+  if (!db.ligamx_config) db.ligamx_config = {};
+  db.ligamx_config.predictionsPaused = newVal;
+  writeDb(db);
+  return db.ligamx_config;
+}
+
 module.exports = {
   initDb,
   getMatches,
@@ -417,5 +448,7 @@ module.exports = {
   getUserPredictionsDetail,
   getLeaderboard,
   updateMatchResult,
-  getMatchTrends
+  getMatchTrends,
+  getConfig,
+  togglePredictionsPaused
 };

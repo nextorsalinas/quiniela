@@ -121,6 +121,7 @@ let stateLigaMX = {
   matches: [],
   predictions: {}, // Key: matchId, Value: prediction object { team1Score, team2Score, winner }
   leaderboard: [],
+  config: { predictionsPaused: false },
   activeSubTab: 'play'
 };
 
@@ -1671,17 +1672,23 @@ async function loadAdminDashboard() {
   list.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos para administración...</div>`;
 
   try {
-    const response = await fetch(`${API_URL}/ligamx/matches`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
+    const [matchesRes, configRes] = await Promise.all([
+      fetch(`${API_URL}/ligamx/matches`, { headers: { 'x-user-id': state.currentUser.id } }),
+      fetch(`${API_URL}/ligamx/config`, { headers: { 'x-user-id': state.currentUser.id } })
+    ]);
     
-    stateLigaMX.matches = await response.json();
+    stateLigaMX.matches = await matchesRes.json();
+    stateLigaMX.config = await configRes.json();
+    
     stateLigaMX.matches.sort((a, b) => {
       if (a.jornada !== b.jornada) return a.jornada - b.jornada;
       const dtA = `${a.date || ''} ${a.time || ''}`;
       const dtB = `${b.date || ''} ${b.time || ''}`;
       return dtA.localeCompare(dtB);
     });
+
+    // Update Pause Toggle Button in Admin
+    updateLigaMXAdminConfigUI();
 
     renderAdminMatchesList();
 
@@ -1692,6 +1699,53 @@ async function loadAdminDashboard() {
     showToast("Error de conexión al cargar partidos", "error");
   }
 }
+
+function updateLigaMXAdminConfigUI() {
+  const textEl = document.getElementById('ligamx-admin-config-text');
+  const btnEl = document.getElementById('btn-toggle-pause-ligamx');
+  if (!textEl || !btnEl) return;
+
+  const isPaused = stateLigaMX.config && stateLigaMX.config.predictionsPaused;
+  if (isPaused) {
+    textEl.textContent = "El guardado de pronósticos está actualmente INHABILITADO para los usuarios.";
+    textEl.style.color = "var(--red)";
+    btnEl.innerHTML = '<i class="fa-solid fa-play"></i> Habilitar Quiniela';
+    btnEl.className = "btn btn-success";
+  } else {
+    textEl.textContent = "Los usuarios pueden guardar sus pronósticos de forma normal.";
+    textEl.style.color = "var(--color-text-muted)";
+    btnEl.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar Quiniela';
+    btnEl.className = "btn btn-warning";
+  }
+}
+
+window.toggleLigaMXPredictionsPaused = async function() {
+  const btnEl = document.getElementById('btn-toggle-pause-ligamx');
+  if (!btnEl) return;
+  const originalHtml = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
+
+  try {
+    const response = await fetch(`${API_URL}/ligamx/config/toggle`, {
+      method: 'POST',
+      headers: {
+        'x-user-id': state.currentUser.id
+      }
+    });
+    if (!response.ok) throw new Error("Error al cambiar estado");
+    
+    const config = await response.json();
+    stateLigaMX.config = config;
+    updateLigaMXAdminConfigUI();
+    showToast(config.predictionsPaused ? "Quiniela de Liga MX pausada." : "Quiniela de Liga MX habilitada.", "success");
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "Error al pausar/habilitar quiniela", "error");
+  } finally {
+    btnEl.disabled = false;
+  }
+};
 
 async function loadAdminUsers() {
   const tbody = document.getElementById('admin-users-body');
@@ -4017,10 +4071,13 @@ window.loadLigaMXDashboard = async function() {
   container.innerHTML = `<div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Liga MX...</div>`;
   
   try {
-    // 1. Fetch matches
-    const matchesRes = await fetch(`${API_URL}/ligamx/matches`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
+    // 1. Fetch matches, predictions, and config in parallel
+    const [matchesRes, predsRes, configRes] = await Promise.all([
+      fetch(`${API_URL}/ligamx/matches`, { headers: { 'x-user-id': state.currentUser.id } }),
+      fetch(`${API_URL}/ligamx/predictions`, { headers: { 'x-user-id': state.currentUser.id } }),
+      fetch(`${API_URL}/ligamx/config`, { headers: { 'x-user-id': state.currentUser.id } })
+    ]);
+
     const matches = await matchesRes.json();
     stateLigaMX.matches = matches.sort((a, b) => {
       if (a.jornada !== b.jornada) return a.jornada - b.jornada;
@@ -4029,15 +4086,13 @@ window.loadLigaMXDashboard = async function() {
       return dtA.localeCompare(dtB);
     });
     
-    // 2. Fetch predictions
-    const predsRes = await fetch(`${API_URL}/ligamx/predictions`, {
-      headers: { 'x-user-id': state.currentUser.id }
-    });
     const preds = await predsRes.json();
     stateLigaMX.predictions = {};
     preds.forEach(p => {
       stateLigaMX.predictions[p.matchId] = p.prediction;
     });
+
+    stateLigaMX.config = await configRes.json();
     
     renderLigaMXMatchesGrid();
   } catch (err) {
@@ -4054,6 +4109,12 @@ window.renderLigaMXMatchesGrid = function() {
     container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--color-text-muted);"><p>No hay partidos registrados de Liga MX.</p></div>`;
     return;
   }
+
+  const isPaused = stateLigaMX.config && stateLigaMX.config.predictionsPaused;
+  const pausedBanner = document.getElementById('ligamx-paused-banner');
+  if (pausedBanner) {
+    pausedBanner.style.display = isPaused ? 'flex' : 'none';
+  }
   
   const html = stateLigaMX.matches.map(match => {
     const pred = stateLigaMX.predictions[match.id] || null;
@@ -4065,7 +4126,7 @@ window.renderLigaMXMatchesGrid = function() {
     
     const isCompleted = match.result !== null;
     const hasSavedPred = (pred !== null);
-    const disabled = (isCompleted || hasSavedPred) ? 'disabled' : '';
+    const disabled = (isCompleted || hasSavedPred || isPaused) ? 'disabled' : '';
     
     let resultBannerHtml = '';
     if (isCompleted) {
@@ -4134,7 +4195,7 @@ window.renderLigaMXMatchesGrid = function() {
         ${resultBannerHtml}
         
         <!-- Individual Save Button -->
-        ${(!isCompleted && !hasSavedPred) ? `
+        ${(!isCompleted && !hasSavedPred && !isPaused) ? `
         <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
           <button id="btn-save-mx-${match.id}" class="btn btn-primary" onclick="submitSingleLigaMXPrediction('${match.id}')" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700;">
             <i class="fa-solid fa-floppy-disk"></i> Guardar
