@@ -4267,6 +4267,20 @@ window.loadLigaMXLeaderboard = async function() {
   body.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--color-text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando tabla de posiciones...</td></tr>`;
   
   try {
+    // Ensure matches are loaded so the total matches length is not 0
+    if (!stateLigaMX.matches || stateLigaMX.matches.length === 0) {
+      try {
+        const matchesRes = await fetch(`${API_URL}/ligamx/matches`, {
+          headers: { 'x-user-id': state.currentUser.id }
+        });
+        if (matchesRes.ok) {
+          stateLigaMX.matches = await matchesRes.json();
+        }
+      } catch (me) {
+        console.error("Error pre-loading matches for leaderboard:", me);
+      }
+    }
+
     const response = await fetch(`${API_URL}/ligamx/leaderboard`, {
       headers: { 'x-user-id': state.currentUser.id }
     });
