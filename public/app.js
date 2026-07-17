@@ -1835,11 +1835,11 @@ function renderAdminMatchesList() {
 
         <div class="admin-controls">
           ${!isCaptured ? `
-            <button class="btn btn-primary" onclick="saveAdminResult(${match.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
+            <button class="btn btn-primary" onclick="saveAdminResult('${match.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;">
               <i class="fa-solid fa-floppy-disk"></i> Guardar
             </button>
           ` : `
-            <button class="admin-clear-btn" onclick="clearAdminResult(${match.id})" title="Modificar resultado" style="padding: 0.4rem 0.6rem; color: var(--gold); border: 1px solid var(--gold); background: transparent; border-radius: 6px;">
+            <button class="admin-clear-btn" onclick="clearAdminResult('${match.id}')" title="Modificar resultado" style="padding: 0.4rem 0.6rem; color: var(--gold); border: 1px solid var(--gold); background: transparent; border-radius: 6px;">
               <i class="fa-solid fa-pen-to-square"></i> Modificar
             </button>
           `}
