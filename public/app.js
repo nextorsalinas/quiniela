@@ -4157,14 +4157,14 @@ window.renderLigaMXMatchesGrid = function() {
     }
     
     // Style outcome buttons
-    const styleL = selL ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
-    const styleE = selE ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
-    const styleV = selV ? 'background: var(--gold); color: #000;' : 'background: transparent; color: var(--color-text-main);';
+    const styleL = selL ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
+    const styleE = selE ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
+    const styleV = selV ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
     
     return `
-      <div class="match-card" id="mx-match-${match.id}" style="padding: 1.25rem; border-radius: var(--radius-lg); background: var(--bg-card); border: 1px solid var(--border-glass); margin-bottom: 0.85rem; transition: var(--transition-smooth); display: flex; flex-direction: column;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.4rem;">
-          <span style="font-weight: 700; color: var(--gold);">Liga MX - Jornada ${match.jornada}</span>
+      <div class="match-card" id="mx-match-${match.id}" style="padding: 1.25rem; border-radius: var(--radius-lg); background: rgba(249, 115, 22, 0.04); border: 1px solid rgba(249, 115, 22, 0.18); margin-bottom: 0.85rem; transition: var(--transition-smooth); display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(249, 115, 22, 0.1); padding-bottom: 0.4rem;">
+          <span style="font-weight: 700; color: #f97316;">Liga MX - Jornada ${match.jornada}</span>
           <span>${match.date} ${match.time && match.time !== 'TBD' ? '| ' + match.time : ''}</span>
         </div>
         
@@ -4221,14 +4221,17 @@ window.selectLigaMXOutcome = function(matchId, outcome) {
   const btnV = document.getElementById(`mx-btn-v-${matchId}`);
   
   if (btnL && btnE && btnV) {
-    btnL.style.background = outcome === 'L' ? 'var(--gold)' : 'transparent';
-    btnL.style.color = outcome === 'L' ? '#000' : 'var(--color-text-main)';
+    btnL.style.background = outcome === 'L' ? '#f97316' : 'transparent';
+    btnL.style.color = outcome === 'L' ? '#fff' : 'var(--color-text-main)';
+    btnL.style.boxShadow = outcome === 'L' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
     
-    btnE.style.background = outcome === 'E' ? 'var(--gold)' : 'transparent';
-    btnE.style.color = outcome === 'E' ? '#000' : 'var(--color-text-main)';
+    btnE.style.background = outcome === 'E' ? '#f97316' : 'transparent';
+    btnE.style.color = outcome === 'E' ? '#fff' : 'var(--color-text-main)';
+    btnE.style.boxShadow = outcome === 'E' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
     
-    btnV.style.background = outcome === 'V' ? 'var(--gold)' : 'transparent';
-    btnV.style.color = outcome === 'V' ? '#000' : 'var(--color-text-main)';
+    btnV.style.background = outcome === 'V' ? '#f97316' : 'transparent';
+    btnV.style.color = outcome === 'V' ? '#fff' : 'var(--color-text-main)';
+    btnV.style.boxShadow = outcome === 'V' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
   }
 };
 
