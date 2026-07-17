@@ -4142,54 +4142,54 @@ window.renderLigaMXMatchesGrid = function() {
         if (realW === predW) {
           const isExact = (r1 === p1 && r2 === p2);
           if (isExact) {
-            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto! (Final: ${r1}-${r2})</span><strong>+2 pts</strong></div>`;
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.12); color: #065f46; border: 1px solid #10b981; border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-star"></i> ¡Marcador Exacto! (Final: ${r1}-${r2})</span><strong>+2 pts</strong></div>`;
           } else {
-            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); color: var(--success); border: 1px dashed var(--success); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-check"></i> Acertaste ganador (Final: ${r1}-${r2})</span><strong>+1 pt</strong></div>`;
+            resultBannerHtml = `<div class="real-result-banner correct" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); color: #065f46; border: 1px dashed #10b981; border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-check"></i> Acertaste ganador (Final: ${r1}-${r2})</span><strong>+1 pt</strong></div>`;
           }
         } else {
-          resultBannerHtml = `<div class="real-result-banner incorrect" style="margin-top: 0.75rem; background: rgba(239, 68, 68, 0.08); color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste (Final: ${r1}-${r2}, Ganador: ${realW})</span><strong>0 pts</strong></div>`;
+          resultBannerHtml = `<div class="real-result-banner incorrect" style="margin-top: 0.75rem; background: rgba(239, 68, 68, 0.08); color: #991b1b; border: 1px solid #ef4444; border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-xmark"></i> Fallaste (Final: ${r1}-${r2}, Ganador: ${realW})</span><strong>0 pts</strong></div>`;
         }
       } else {
-        resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(255, 255, 255, 0.05); color: var(--color-text-muted); border: 1px solid var(--border-glass); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico (Final: ${r1}-${r2})</span><strong>0 pts</strong></div>`;
+        resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(0, 0, 0, 0.03); color: #4b5563; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-circle-minus"></i> Sin pronóstico (Final: ${r1}-${r2})</span><strong>0 pts</strong></div>`;
       }
     } else {
-      resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(229, 168, 35, 0.08); color: var(--gold); border: 1px solid var(--border-glass); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-clock"></i> Pendiente</span><span>-</span></div>`;
+      resultBannerHtml = `<div class="real-result-banner pending" style="margin-top: 0.75rem; background: rgba(217, 119, 6, 0.08); color: #b45309; border: 1px solid rgba(217,119,6,0.15); border-radius: 6px; padding: 0.4rem; font-size: 0.8rem; display: flex; justify-content: space-between;"><span><i class="fa-solid fa-clock"></i> Pendiente</span><span>-</span></div>`;
     }
     
     // Style outcome buttons
-    const styleL = selL ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
-    const styleE = selE ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
-    const styleV = selV ? 'background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);' : 'background: transparent; color: var(--color-text-main);';
+    const styleL = selL ? 'background: #ea580c; color: #fff; font-weight: 850; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);' : 'background: transparent; color: #4b5563;';
+    const styleE = selE ? 'background: #ea580c; color: #fff; font-weight: 850; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);' : 'background: transparent; color: #4b5563;';
+    const styleV = selV ? 'background: #ea580c; color: #fff; font-weight: 850; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);' : 'background: transparent; color: #4b5563;';
     
     return `
-      <div class="match-card" id="mx-match-${match.id}" style="padding: 1.25rem; border-radius: var(--radius-lg); background: rgba(249, 115, 22, 0.04); border: 1px solid rgba(249, 115, 22, 0.18); margin-bottom: 0.85rem; transition: var(--transition-smooth); display: flex; flex-direction: column;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(249, 115, 22, 0.1); padding-bottom: 0.4rem;">
-          <span style="font-weight: 700; color: #f97316;">Liga MX - Jornada ${match.jornada}</span>
+      <div class="match-card" id="mx-match-${match.id}" style="padding: 1rem 1.25rem; border-radius: var(--radius-md); background: #fdfaf2; border: 1.5px solid #d97706; margin-bottom: 0.75rem; transition: var(--transition-smooth); display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.06);">
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.65rem; border-bottom: 1px solid rgba(217, 119, 6, 0.15); padding-bottom: 0.35rem;">
+          <span style="font-weight: 800; color: #d97706;">Liga MX - Jornada ${match.jornada}</span>
           <span>${match.date} ${match.time && match.time !== 'TBD' ? '| ' + match.time : ''}</span>
         </div>
         
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
           <!-- Local -->
           <div style="flex: 1; min-width: 120px; display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">${match.team1}</span>
+            <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a;">${match.team1}</span>
           </div>
           
           <!-- Outcome & Score Input -->
           <div style="display: flex; align-items: center; gap: 0.55rem; justify-content: center; flex-wrap: nowrap;">
-            <input type="number" min="0" max="99" id="mx-score1-${match.id}" class="score-input" value="${val1}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
+            <input type="number" min="0" max="99" id="mx-score1-${match.id}" class="score-input" value="${val1}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid #d97706; background: #ffffff; color: #0f172a; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
             
-            <div style="display: flex; border-radius: 6px; background: rgba(0,0,0,0.25); padding: 0.15rem; border: 1px solid var(--border-glass);">
+            <div style="display: flex; border-radius: 6px; background: rgba(0, 0, 0, 0.05); padding: 0.15rem; border: 1px solid #d97706;">
               <button id="mx-btn-l-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'L')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleL}">L</button>
               <button id="mx-btn-e-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'E')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleE}">E</button>
               <button id="mx-btn-v-${match.id}" class="btn" onclick="selectLigaMXOutcome('${match.id}', 'V')" ${disabled} style="padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: none; min-width: 25px; transition: var(--transition-smooth); ${styleV}">V</button>
             </div>
             
-            <input type="number" min="0" max="99" id="mx-score2-${match.id}" class="score-input" value="${val2}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.3); color: white; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
+            <input type="number" min="0" max="99" id="mx-score2-${match.id}" class="score-input" value="${val2}" placeholder="-" ${disabled} oninput="autoSelectLigaMXOutcome('${match.id}')" style="width: 45px; text-align: center; border-radius: 6px; border: 1px solid #d97706; background: #ffffff; color: #0f172a; padding: 0.4rem; font-size: 1rem; font-weight: bold;">
           </div>
           
           <!-- Visitor -->
           <div style="flex: 1; min-width: 120px; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; text-align: right;">
-            <span style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">${match.team2}</span>
+            <span style="font-weight: 800; font-size: 0.92rem; color: #0f172a;">${match.team2}</span>
           </div>
         </div>
         ${resultBannerHtml}
@@ -4197,7 +4197,7 @@ window.renderLigaMXMatchesGrid = function() {
         <!-- Individual Save Button -->
         ${(!isCompleted && !hasSavedPred && !isPaused) ? `
         <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
-          <button id="btn-save-mx-${match.id}" class="btn btn-primary" onclick="submitSingleLigaMXPrediction('${match.id}')" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700;">
+          <button id="btn-save-mx-${match.id}" class="btn btn-primary" onclick="submitSingleLigaMXPrediction('${match.id}')" style="padding: 0.5rem 1.25rem; font-size: 0.85rem; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #d97706, #b45309); border-color: #b45309;">
             <i class="fa-solid fa-floppy-disk"></i> Guardar
           </button>
         </div>
@@ -4221,17 +4221,17 @@ window.selectLigaMXOutcome = function(matchId, outcome) {
   const btnV = document.getElementById(`mx-btn-v-${matchId}`);
   
   if (btnL && btnE && btnV) {
-    btnL.style.background = outcome === 'L' ? '#f97316' : 'transparent';
-    btnL.style.color = outcome === 'L' ? '#fff' : 'var(--color-text-main)';
-    btnL.style.boxShadow = outcome === 'L' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
+    btnL.style.background = outcome === 'L' ? '#ea580c' : 'transparent';
+    btnL.style.color = outcome === 'L' ? '#fff' : '#4b5563';
+    btnL.style.boxShadow = outcome === 'L' ? 'inset 0 1px 3px rgba(0,0,0,0.2)' : 'none';
     
-    btnE.style.background = outcome === 'E' ? '#f97316' : 'transparent';
-    btnE.style.color = outcome === 'E' ? '#fff' : 'var(--color-text-main)';
-    btnE.style.boxShadow = outcome === 'E' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
+    btnE.style.background = outcome === 'E' ? '#ea580c' : 'transparent';
+    btnE.style.color = outcome === 'E' ? '#fff' : '#4b5563';
+    btnE.style.boxShadow = outcome === 'E' ? 'inset 0 1px 3px rgba(0,0,0,0.2)' : 'none';
     
-    btnV.style.background = outcome === 'V' ? '#f97316' : 'transparent';
-    btnV.style.color = outcome === 'V' ? '#fff' : 'var(--color-text-main)';
-    btnV.style.boxShadow = outcome === 'V' ? '0 0 8px rgba(249, 115, 22, 0.4)' : 'none';
+    btnV.style.background = outcome === 'V' ? '#ea580c' : 'transparent';
+    btnV.style.color = outcome === 'V' ? '#fff' : '#4b5563';
+    btnV.style.boxShadow = outcome === 'V' ? 'inset 0 1px 3px rgba(0,0,0,0.2)' : 'none';
   }
 };
 

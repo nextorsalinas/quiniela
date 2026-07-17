@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=6.50">
+  <link rel="stylesheet" href="styles.css?v=6.60">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -418,14 +418,14 @@
         </div>
 
         <!-- Liga MX Predictions Sub-View -->
-        <div id="ligamx-subview-play" class="ligamx-subview">
+        <div id="ligamx-subview-play" class="ligamx-subview" style="max-width: 800px; margin: 0 auto; padding: 1.25rem; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: var(--radius-lg); border: 2px solid #c2410c; box-shadow: 0 8px 30px rgba(234, 88, 12, 0.35);">
           <!-- Locked predictions warning banner -->
-          <div id="ligamx-paused-banner" class="glass-panel" style="display: none; margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0.75rem 1rem; border: 1px solid var(--red); background: rgba(239, 68, 68, 0.1); border-radius: var(--radius-lg); align-items: center; gap: 0.5rem; color: var(--red); font-weight: bold; font-size: 0.85rem;">
-            <i class="fa-solid fa-lock" style="font-size: 1.1rem;"></i>
+          <div id="ligamx-paused-banner" class="glass-panel" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border: 1px solid #fff; background: rgba(0, 0, 0, 0.75); border-radius: var(--radius-md); align-items: center; gap: 0.5rem; color: #fff; font-weight: bold; font-size: 0.85rem;">
+            <i class="fa-solid fa-lock" style="font-size: 1.1rem; color: #f97316;"></i>
             <span>La quiniela de Liga MX está pausada. No se pueden realizar pronósticos por el momento.</span>
           </div>
 
-          <div id="ligamx-matches-container" class="matches-grid" style="max-width: 800px; margin: 0 auto;">
+          <div id="ligamx-matches-container" class="matches-grid">
             <div class="loading-spinner">
               <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando partidos de Liga MX...
             </div>
@@ -881,6 +881,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=6.50"></script>
+  <script src="app.js?v=6.60"></script>
 </body>
 </html>
