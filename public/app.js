@@ -4401,7 +4401,7 @@ window.loadLigaMXLeaderboard = async function() {
           </td>
           <td style="text-transform: capitalize; vertical-align: middle;">${row.username}</td>
           <td style="text-align: center; vertical-align: middle; color: var(--color-text-muted); font-size: 0.8rem;">
-            ${row.predictionCount} / ${stateLigaMX.matches.length}
+            ${row.predictionCount} / ${stateLigaMX.matches.filter(m => m.jornada === 2).length}
           </td>
           <td style="text-align: center; font-weight: 700; color: var(--gold); vertical-align: middle;">${row.points} pts</td>
         </tr>

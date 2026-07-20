@@ -290,7 +290,9 @@ async function getLeaderboard() {
   }
 
   const matches = await getMatches();
-  const playedMatches = matches.filter(m => m.result !== null);
+  const matchesJ2 = matches.filter(m => m.jornada === 2);
+  const matchIdsJ2 = matchesJ2.map(m => m.id);
+  const playedMatchesJ2 = matchesJ2.filter(m => m.result !== null);
 
   let allPredictions = [];
   if (dbType === 'firestore') {
@@ -300,14 +302,17 @@ async function getLeaderboard() {
     allPredictions = readDb().ligamx_predictions || [];
   }
 
+  // Filter predictions to only include those for Jornada 2
+  const predictionsJ2 = allPredictions.filter(p => matchIdsJ2.includes(p.matchId));
+
   const leaderboard = users.map(user => {
     let points = 0;
     let hits = 0; // Correct winner
     let exacts = 0; // Correct score
-    let totalPredictions = allPredictions.filter(p => p.userId === user.id).length;
+    let totalPredictionsJ2 = predictionsJ2.filter(p => p.userId === user.id).length;
 
-    playedMatches.forEach(match => {
-      const pred = allPredictions.find(p => p.userId === user.id && p.matchId === match.id);
+    playedMatchesJ2.forEach(match => {
+      const pred = predictionsJ2.find(p => p.userId === user.id && p.matchId === match.id);
       if (pred && pred.prediction) {
         const pts = calculatePoints(match.result, pred.prediction);
         points += pts;
@@ -331,7 +336,7 @@ async function getLeaderboard() {
       points,
       hits,
       exacts,
-      predictionCount: totalPredictions
+      predictionCount: totalPredictionsJ2
     };
   });
 
