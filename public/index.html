@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=6.80">
+  <link rel="stylesheet" href="styles.css?v=6.90">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -457,10 +457,10 @@
         </div>
 
         <!-- Voting Trends Section (Liga MX) -->
-        <div id="ligamx-trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1);">
-          <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none;">
-            <i class="fa-solid fa-chart-simple"></i> Tendencias de Votos
-            <i id="ligamx-trends-toggle-icon" class="fa-solid fa-chevron-up" style="margin-left: auto; font-size: 0.75rem; color: var(--color-text-muted); transition: transform 0.3s; transform: rotate(180deg);"></i>
+        <div id="ligamx-trends-container" class="trends-section" style="margin-bottom: 1.5rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1.25rem; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: var(--radius-lg); border: 2px solid #c2410c; box-shadow: 0 8px 30px rgba(234, 88, 12, 0.35);">
+          <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.95rem; font-family: var(--font-title); font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+            <i class="fa-solid fa-chart-simple" style="color: #fff;"></i> Tendencias de Votos
+            <i id="ligamx-trends-toggle-icon" class="fa-solid fa-chevron-up" style="margin-left: auto; font-size: 0.8rem; color: #fff; transition: transform 0.3s; transform: rotate(180deg);"></i>
           </h3>
           <div id="ligamx-trends-grid" class="trends-grid" style="display: none; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 0.55rem;">
             <!-- Injected dynamically via app.js -->
@@ -887,6 +887,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=6.80"></script>
+  <script src="app.js?v=6.90"></script>
 </body>
 </html>

@@ -4470,7 +4470,7 @@ window.loadLigaMXVotingTrends = async function() {
     
     // Render in Progol ticket format!
     let html = `
-      <div style="display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0.25rem; font-weight: 800; font-family: var(--font-title); font-size: 0.66rem; color: var(--gold); border-bottom: 2px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.3rem; margin-bottom: 0.3rem; text-align: center; text-transform: uppercase;">
+      <div style="display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0.25rem; font-weight: 900; font-family: var(--font-title); font-size: 0.75rem; color: #ffffff; border-bottom: 2px solid rgba(255, 255, 255, 0.4); padding-bottom: 0.4rem; margin-bottom: 0.6rem; text-align: center; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
         <span>Local</span>
         <span>Empate</span>
         <span>Visita</span>
@@ -4478,31 +4478,33 @@ window.loadLigaMXVotingTrends = async function() {
     `;
     
     html += trends.map((match, index) => {
+      if (match.jornada !== 2) return '';
+      
       const stats = match.stats;
-      const boxStyle = 'background: rgba(0,0,0,0.18); color: var(--color-text-main); border: 1px solid var(--border-glass);';
+      const boxStyle = 'background: #ffffff; color: #ea580c; border: 1.5px solid #d97706; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);';
       
       return `
-        <div class="mx-trend-row" style="display: grid; grid-template-columns: 1fr 34px 1fr; align-items: center; gap: 0.25rem; padding: 0.35rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+        <div class="mx-trend-row" style="display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; background: #fdfaf2; border: 1.5px solid #d97706; border-radius: var(--radius-md); margin-bottom: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); transition: var(--transition-smooth);">
           
           <!-- Local Side -->
-          <div style="display: flex; align-items: center; gap: 0.35rem; justify-content: flex-start; min-width: 0;">
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 30px; flex-shrink: 0; border-radius: 4px; padding: 0.15rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.72rem; ${boxStyle}">
+          <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; min-width: 0;">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 34px; flex-shrink: 0; border-radius: 6px; padding: 0.2rem 0; text-align: center; font-weight: 850; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; ${boxStyle}">
               ${stats.L.count}
             </div>
-            <span style="font-weight: 600; font-size: 0.64rem; text-transform: uppercase; color: var(--color-text-main); word-break: break-word; line-height: 1.15;">${match.team1}</span>
+            <span style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: #0f172a; word-break: break-word; line-height: 1.15;">${match.team1}</span>
           </div>
           
           <!-- Draw Side -->
           <div style="display: flex; justify-content: center; flex-shrink: 0;">
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'E')" style="width: 30px; border-radius: 4px; padding: 0.15rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.72rem; ${boxStyle}">
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'E')" style="width: 34px; border-radius: 6px; padding: 0.2rem 0; text-align: center; font-weight: 850; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; ${boxStyle}">
               ${stats.E.count}
             </div>
           </div>
           
           <!-- Visitor Side -->
-          <div style="display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; min-width: 0;">
-            <span style="font-weight: 600; font-size: 0.64rem; text-transform: uppercase; color: var(--color-text-main); text-align: right; word-break: break-word; line-height: 1.15;">${match.team2}</span>
-            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 30px; flex-shrink: 0; border-radius: 4px; padding: 0.15rem 0; text-align: center; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.72rem; ${boxStyle}">
+          <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; min-width: 0;">
+            <span style="font-weight: 800; font-size: 0.75rem; text-transform: uppercase; color: #0f172a; text-align: right; word-break: break-word; line-height: 1.15;">${match.team2}</span>
+            <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 34px; flex-shrink: 0; border-radius: 6px; padding: 0.2rem 0; text-align: center; font-weight: 850; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; ${boxStyle}">
               ${stats.V.count}
             </div>
           </div>
