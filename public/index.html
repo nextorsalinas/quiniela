@@ -15,10 +15,12 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=7.40">
+  <link rel="stylesheet" href="styles.css?v=7.50">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  <!-- Chart.js for profile statistics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Prevent FOUC/FOUI for views before external stylesheet loads -->
   <style>
     .tab-view { display: none; }
@@ -511,7 +513,15 @@
           <!-- Nickname Editing Group -->
           <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
             <label style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Nickname:</label>
-            <input type="text" id="input-profile-nickname" onblur="saveProfileNickname()" placeholder="Ingresa tu nickname..." style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 0.9rem;" maxlength="30" />
+            <input type="text" id="input-profile-nickname" onblur="saveProfileNickname()" placeholder="" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 0.9rem;" maxlength="30" />
+          </div>
+
+          <!-- Hits Line Chart Container -->
+          <div id="hits-chart-container" style="width: 100%; max-width: 360px; margin-top: 0.5rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 0.35rem;">
+            <span style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; display: block;">Rendimiento Aciertos:</span>
+            <div style="height: 150px; position: relative; width: 100%;">
+              <canvas id="profile-hits-chart"></canvas>
+            </div>
           </div>
 
           <!-- Action Buttons Container -->
@@ -522,7 +532,7 @@
             </button>
 
             <!-- Button to navigate to Liga MX predictions -->
-            <button class="btn btn-primary" onclick="switchTab('ligamx')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
+            <button id="btn-profile-ligamx" class="btn btn-primary" onclick="switchTab('ligamx')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
               <i class="fa-solid fa-futbol"></i> Pronósticos Liga MX
             </button>
           </div>
@@ -595,14 +605,14 @@
         <span>Panel final</span>
       </button>
 
-      <button id="tab-panelmx" class="tab-btn" onclick="switchTab('panelmx')">
-        <i class="fa-solid fa-trophy"></i>
-        <span>Panel MX</span>
-      </button>
-
       <button id="tab-ligamx" class="tab-btn" onclick="switchTab('ligamx')">
         <i class="fa-solid fa-pen-to-square"></i>
-        <span>Pronósticos</span>
+        <span>Haz tu pronóstico</span>
+      </button>
+
+      <button id="tab-panelmx" class="tab-btn" onclick="switchTab('panelmx')">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Panel</span>
       </button>
 
       <button id="tab-policies" class="tab-btn" style="display: none !important;" onclick="switchTab('policies')">
@@ -898,6 +908,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=7.40"></script>
+  <script src="app.js?v=7.50"></script>
 </body>
 </html>

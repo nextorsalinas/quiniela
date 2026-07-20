@@ -2071,18 +2071,7 @@ window.addEventListener('scroll', () => {
     }
   }
 
-  const bottomNav = document.getElementById('bottom-nav-bar');
-  if (bottomNav) {
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    if (scrollTop > lastScrollTop && scrollTop > 100) {
-      // Scrolling down -> hide bottom nav
-      bottomNav.classList.add('nav-hidden');
-    } else {
-      // Scrolling up -> show bottom nav
-      bottomNav.classList.remove('nav-hidden');
-    }
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-  }
+  // Bottom Nav is now permanently fixed without auto-hide on scroll.
 }, { passive: true });
 
 function scrollToTop() {
@@ -2792,7 +2781,7 @@ async function loadProfileDashboard() {
 
   try {
     // Fetches paralelos para tener todos los datos consistentes
-    const [matchesRes, predictionsRes, p2MatchesRes, p2PredictionsRes, probRes] = await Promise.all([
+    const [matchesRes, predictionsRes, p2MatchesRes, p2PredictionsRes, probRes, mxMatchesRes, mxPredictionsRes] = await Promise.all([
       // Fase 1 partidos y predicciones
       state.matches.length === 0 
         ? fetch(`${API_URL}/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
@@ -2806,7 +2795,11 @@ async function loadProfileDashboard() {
       fetch(`/api/phase2/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
 
       // Probabilidades de ganar
-      fetch(`${API_URL}/predictions/probability`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
+      fetch(`${API_URL}/predictions/probability`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+
+      // Liga MX partidos y predicciones
+      fetch(`${API_URL}/ligamx/matches`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json()),
+      fetch(`${API_URL}/ligamx/predictions`, { headers: { 'x-user-id': state.currentUser.id } }).then(r => r.json())
     ]);
 
     // Actualizar estados locales si es necesario
@@ -2820,6 +2813,12 @@ async function loadProfileDashboard() {
     statePhase2.predictions = {};
     p2PredictionsRes.forEach(p => {
       statePhase2.predictions[p.matchId] = p.prediction;
+    });
+
+    stateLigaMX.matches = mxMatchesRes;
+    stateLigaMX.predictions = {};
+    mxPredictionsRes.forEach(p => {
+      stateLigaMX.predictions[p.matchId] = p.prediction;
     });
 
     // --- CÁLCULOS (Solo Fase Final - 32 partidos, sin contemplar la primera fase de 72 partidos) ---
@@ -2942,6 +2941,92 @@ async function loadProfileDashboard() {
     // Actualizar puntos en el header
     const headerPoints = document.getElementById('user-display-points');
     if (headerPoints) headerPoints.textContent = `${totalPoints} pts`;
+
+    // Dynamic label for the profile Liga MX button
+    const profileLigaMXBtn = document.getElementById('btn-profile-ligamx');
+    if (profileLigaMXBtn) {
+      const activeJornada = stateLigaMX.selectedJornada || 2;
+      profileLigaMXBtn.innerHTML = `<i class="fa-solid fa-futbol"></i> Pronóstico Jornada ${activeJornada}`;
+    }
+
+    // Calculate hits by jornada for the line chart
+    const hitsByJornada = { 1: 0, 2: 0 };
+    if (stateLigaMX.matches && stateLigaMX.predictions) {
+      stateLigaMX.matches.forEach(match => {
+        if (match.result !== null) {
+          const pred = stateLigaMX.predictions[match.id];
+          if (pred) {
+            const r1 = parseInt(match.result.team1Score);
+            const r2 = parseInt(match.result.team2Score);
+            const p1 = parseInt(pred.team1Score);
+            const p2 = parseInt(pred.team2Score);
+            const realWinner = match.result.winner || (r1 > r2 ? 'L' : (r1 < r2 ? 'V' : 'E'));
+            const predWinner = pred.winner || (p1 > p2 ? 'L' : (p1 < p2 ? 'V' : 'E'));
+            
+            if (realWinner === predWinner) {
+              const j = match.jornada || 1;
+              hitsByJornada[j] = (hitsByJornada[j] || 0) + 1;
+            }
+          }
+        }
+      });
+    }
+
+    // Render Chart.js Line Chart
+    const ctx = document.getElementById('profile-hits-chart');
+    if (ctx && typeof Chart !== 'undefined') {
+      if (window.profileHitsChartInstance) {
+        window.profileHitsChartInstance.destroy();
+      }
+      
+      const labels = ['Jornada 1', 'Jornada 2'];
+      const dataValues = [hitsByJornada[1], hitsByJornada[2]];
+      
+      window.profileHitsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Aciertos',
+            data: dataValues,
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.15)',
+            borderWidth: 3,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#ea580c',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#f97316',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1, color: 'rgba(255,255,255,0.5)', font: { size: 9 } },
+              grid: { color: 'rgba(255,255,255,0.06)' }
+            },
+            x: {
+              ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
 
   } catch (err) {
     console.error("Error al cargar el dashboard del perfil:", err);
