@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=7.70">
+  <link rel="stylesheet" href="styles.css?v=7.80">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -496,56 +496,56 @@
       <!-- View 9: Perfil -->
       <section id="view-profile" class="tab-view">
         <!-- Spacer -->
-        <div style="margin-top: 1.5rem;"></div>
+        <div style="margin-top: 0.25rem;"></div>
 
-        <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
+        <div class="table-card glass-panel" style="padding: 0.6rem 1rem; max-width: 500px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem;">
 
-          <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);">
+          <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 65px; height: 65px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); box-shadow: 0 3px 10px rgba(255, 215, 0, 0.15);">
 
-          <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
+          <h4 id="profile-username" style="margin: 0; font-size: 1rem; color: white; text-transform: capitalize;">Alias</h4>
 
           <!-- Horizontal Avatar Carousel Selector -->
-          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
-            <label style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Selecciona tu avatar:</label>
-            <div style="display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.35rem 0.2rem; width: 100%; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
-              <img onclick="selectCarouselAvatar('avatar.png')" src="avatar.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="avatar.png">
-              <img onclick="selectCarouselAvatar('perfil/1.png')" src="perfil/1.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/1.png">
-              <img onclick="selectCarouselAvatar('perfil/2.png')" src="perfil/2.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/2.png">
-              <img onclick="selectCarouselAvatar('perfil/3.png')" src="perfil/3.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/3.png">
-              <img onclick="selectCarouselAvatar('perfil/4.png')" src="perfil/4.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/4.png">
-              <img onclick="selectCarouselAvatar('perfil/america.png')" src="perfil/america.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/america.png">
-              <img onclick="selectCarouselAvatar('perfil/chivas.png')" src="perfil/chivas.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/chivas.png">
-              <img onclick="selectCarouselAvatar('perfil/crua azul.png')" src="perfil/crua azul.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/crua azul.png">
-              <img onclick="selectCarouselAvatar('perfil/pumas.png')" src="perfil/pumas.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/pumas.png">
-              <img onclick="selectCarouselAvatar('perfil/real.png')" src="perfil/real.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/real.png">
-              <img onclick="selectCarouselAvatar('perfil/tigres.png')" src="perfil/tigres.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/tigres.png">
-              <img onclick="selectCarouselAvatar('perfil/Atlante FC.png')" src="perfil/Atlante FC.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/Atlante FC.png">
+          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.1rem;">
+            <label style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Selecciona tu avatar:</label>
+            <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.2rem 0.1rem; width: 100%; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
+              <img onclick="selectCarouselAvatar('avatar.png')" src="avatar.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="avatar.png">
+              <img onclick="selectCarouselAvatar('perfil/1.png')" src="perfil/1.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/1.png">
+              <img onclick="selectCarouselAvatar('perfil/2.png')" src="perfil/2.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/2.png">
+              <img onclick="selectCarouselAvatar('perfil/3.png')" src="perfil/3.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/3.png">
+              <img onclick="selectCarouselAvatar('perfil/4.png')" src="perfil/4.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/4.png">
+              <img onclick="selectCarouselAvatar('perfil/america.png')" src="perfil/america.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/america.png">
+              <img onclick="selectCarouselAvatar('perfil/chivas.png')" src="perfil/chivas.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/chivas.png">
+              <img onclick="selectCarouselAvatar('perfil/crua azul.png')" src="perfil/crua azul.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/crua azul.png">
+              <img onclick="selectCarouselAvatar('perfil/pumas.png')" src="perfil/pumas.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/pumas.png">
+              <img onclick="selectCarouselAvatar('perfil/real.png')" src="perfil/real.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/real.png">
+              <img onclick="selectCarouselAvatar('perfil/tigres.png')" src="perfil/tigres.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/tigres.png">
+              <img onclick="selectCarouselAvatar('perfil/Atlante FC.png')" src="perfil/Atlante FC.png" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/Atlante FC.png">
             </div>
           </div>
 
           <!-- Nickname Editing Group -->
-          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
-            <label style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Nickname:</label>
-            <input type="text" id="input-profile-nickname" onblur="saveProfileNickname()" placeholder="" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 0.9rem;" maxlength="30" />
+          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.1rem;">
+            <label style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Nickname:</label>
+            <input type="text" id="input-profile-nickname" onblur="saveProfileNickname()" placeholder="" style="width: 100%; padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 0.85rem;" maxlength="30" />
           </div>
 
           <!-- Hits Line Chart Container -->
-          <div id="hits-chart-container" style="width: 100%; max-width: 360px; margin-top: 0.5rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 0.35rem;">
-            <span style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; display: block;">Rendimiento Aciertos:</span>
-            <div style="height: 150px; position: relative; width: 100%;">
+          <div id="hits-chart-container" style="width: 100%; max-width: 360px; margin-top: 0.2rem; padding: 0.45rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; flex-direction: column; gap: 0.2rem;">
+            <span style="font-size: 0.65rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; display: block;">Rendimiento Aciertos:</span>
+            <div style="height: 100px; position: relative; width: 100%;">
               <canvas id="profile-hits-chart"></canvas>
             </div>
           </div>
 
           <!-- Action Buttons Container -->
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 0.25rem;">
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 0.2rem;">
             <!-- Button to navigate to Final predictions -->
             <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="display: none !important; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
               <i class="fa-solid fa-square-poll-vertical"></i> Pronóstico Final
             </button>
 
             <!-- Button to navigate to Liga MX predictions -->
-            <button id="btn-profile-ligamx" class="btn btn-primary" onclick="switchTab('ligamx')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
+            <button id="btn-profile-ligamx" class="btn btn-primary" onclick="switchTab('ligamx')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.8rem;">
               <i class="fa-solid fa-futbol"></i> Pronósticos Liga MX
             </button>
           </div>
@@ -921,6 +921,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=7.70"></script>
+  <script src="app.js?v=7.80"></script>
 </body>
 </html>
