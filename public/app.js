@@ -4094,11 +4094,20 @@ window.loadLigaMXDashboard = async function() {
 
     stateLigaMX.config = await configRes.json();
     
+    if (stateLigaMX.selectedJornada === undefined) {
+      stateLigaMX.selectedJornada = 2;
+    }
+    
     renderLigaMXMatchesGrid();
   } catch (err) {
     console.error("Error loading Liga MX dashboard:", err);
     container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--danger);"><p>Error al cargar partidos de Liga MX.</p></div>`;
   }
+};
+
+window.filterLigaMXJornada = function(jornada) {
+  stateLigaMX.selectedJornada = jornada;
+  renderLigaMXMatchesGrid();
 };
 
 window.renderLigaMXMatchesGrid = function() {
@@ -4110,13 +4119,31 @@ window.renderLigaMXMatchesGrid = function() {
     return;
   }
 
+  const currentJornada = stateLigaMX.selectedJornada || 2;
+  const filteredMatches = stateLigaMX.matches.filter(m => m.jornada === currentJornada);
+  
+  if (filteredMatches.length === 0) {
+    container.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--color-text-muted); background: #fdfaf2; border: 1.5px solid #d97706;"><p style="color: #374151; font-weight: bold; margin: 0;">No hay partidos registrados para la Jornada ${currentJornada}.</p></div>`;
+    return;
+  }
+
+  // Update active state of selector buttons
+  const btn1 = document.getElementById('filter-jornada-1');
+  const btn2 = document.getElementById('filter-jornada-2');
+  if (btn1 && btn2) {
+    btn1.style.background = currentJornada === 1 ? '#fff' : 'transparent';
+    btn1.style.color = currentJornada === 1 ? '#ea580c' : '#fff';
+    btn2.style.background = currentJornada === 2 ? '#fff' : 'transparent';
+    btn2.style.color = currentJornada === 2 ? '#ea580c' : '#fff';
+  }
+
   const isPaused = stateLigaMX.config && stateLigaMX.config.predictionsPaused;
   const pausedBanner = document.getElementById('ligamx-paused-banner');
   if (pausedBanner) {
     pausedBanner.style.display = isPaused ? 'flex' : 'none';
   }
   
-  const html = stateLigaMX.matches.map(match => {
+  const html = filteredMatches.map(match => {
     const pred = stateLigaMX.predictions[match.id] || null;
     const val1 = pred ? pred.team1Score : '';
     const val2 = pred ? pred.team2Score : '';
