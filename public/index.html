@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=7.60">
+  <link rel="stylesheet" href="styles.css?v=7.70">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -500,22 +500,28 @@
 
         <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
 
-          <!-- Mini Carousel Profile Image Container -->
-          <div style="display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-top: 0.25rem; width: 100%;">
-            <!-- Left Arrow -->
-            <button onclick="prevProfilePic()" class="btn" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); background: rgba(255,215,0,0.15); color: var(--gold); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; padding: 0;">
-              <i class="fa-solid fa-chevron-left"></i>
-            </button>
-            
-            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.35);">
-            
-            <!-- Right Arrow -->
-            <button onclick="nextProfilePic()" class="btn" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); background: rgba(255,215,0,0.15); color: var(--gold); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; padding: 0;">
-              <i class="fa-solid fa-chevron-right"></i>
-            </button>
-          </div>
+          <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);">
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
+
+          <!-- Horizontal Avatar Carousel Selector -->
+          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
+            <label style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Selecciona tu avatar:</label>
+            <div style="display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.35rem 0.2rem; width: 100%; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
+              <img onclick="selectCarouselAvatar('avatar.png')" src="avatar.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="avatar.png">
+              <img onclick="selectCarouselAvatar('perfil/1.png')" src="perfil/1.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/1.png">
+              <img onclick="selectCarouselAvatar('perfil/2.png')" src="perfil/2.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/2.png">
+              <img onclick="selectCarouselAvatar('perfil/3.png')" src="perfil/3.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/3.png">
+              <img onclick="selectCarouselAvatar('perfil/4.png')" src="perfil/4.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/4.png">
+              <img onclick="selectCarouselAvatar('perfil/america.png')" src="perfil/america.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/america.png">
+              <img onclick="selectCarouselAvatar('perfil/chivas.png')" src="perfil/chivas.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/chivas.png">
+              <img onclick="selectCarouselAvatar('perfil/crua azul.png')" src="perfil/crua azul.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/crua azul.png">
+              <img onclick="selectCarouselAvatar('perfil/pumas.png')" src="perfil/pumas.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/pumas.png">
+              <img onclick="selectCarouselAvatar('perfil/real.png')" src="perfil/real.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/real.png">
+              <img onclick="selectCarouselAvatar('perfil/tigres.png')" src="perfil/tigres.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/tigres.png">
+              <img onclick="selectCarouselAvatar('perfil/Atlante FC.png')" src="perfil/Atlante FC.png" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s;" class="carousel-avatar-item" data-pic="perfil/Atlante FC.png">
+            </div>
+          </div>
 
           <!-- Nickname Editing Group -->
           <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
@@ -915,6 +921,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=7.60"></script>
+  <script src="app.js?v=7.70"></script>
 </body>
 </html>

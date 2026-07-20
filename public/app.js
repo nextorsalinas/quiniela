@@ -2767,6 +2767,21 @@ async function loadProfileDashboard() {
     nicknameInput.value = state.currentUser.nickname || '';
   }
 
+  // Highlight active avatar item in horizontal carousel
+  const activePic = state.currentUser.profilePic || 'avatar.png';
+  const carouselItems = document.querySelectorAll('.carousel-avatar-item');
+  carouselItems.forEach(img => {
+    if (img.getAttribute('data-pic') === activePic) {
+      img.style.borderColor = 'var(--gold)';
+      img.style.transform = 'scale(1.1)';
+      img.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.4)';
+    } else {
+      img.style.borderColor = 'transparent';
+      img.style.transform = 'scale(1)';
+      img.style.boxShadow = 'none';
+    }
+  });
+
   // Mostrar spinners de carga temporalmente en la tabla
   const loader = `<i class="fa-solid fa-spinner fa-spin"></i>`;
   if (predictionsEl) predictionsEl.innerHTML = loader;
@@ -4770,24 +4785,22 @@ const presetAvatars = [
   'perfil/Atlante FC.png'
 ];
 
-window.nextProfilePic = async function() {
-  const currentPic = state.currentUser.profilePic || 'avatar.png';
-  let idx = presetAvatars.indexOf(currentPic);
-  if (idx === -1) {
-    idx = 0;
-  }
-  const nextIdx = (idx + 1) % presetAvatars.length;
-  await updateProfilePicAndUI(presetAvatars[nextIdx]);
-};
-
-window.prevProfilePic = async function() {
-  const currentPic = state.currentUser.profilePic || 'avatar.png';
-  let idx = presetAvatars.indexOf(currentPic);
-  if (idx === -1) {
-    idx = 0;
-  }
-  const prevIdx = (idx - 1 + presetAvatars.length) % presetAvatars.length;
-  await updateProfilePicAndUI(presetAvatars[prevIdx]);
+window.selectCarouselAvatar = async function(path) {
+  await updateProfilePicAndUI(path);
+  
+  // Highlight active avatar item in horizontal carousel
+  const items = document.querySelectorAll('.carousel-avatar-item');
+  items.forEach(img => {
+    if (img.getAttribute('data-pic') === path) {
+      img.style.borderColor = 'var(--gold)';
+      img.style.transform = 'scale(1.1)';
+      img.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.4)';
+    } else {
+      img.style.borderColor = 'transparent';
+      img.style.transform = 'scale(1)';
+      img.style.boxShadow = 'none';
+    }
+  });
 };
 
 async function updateProfilePicAndUI(path) {
