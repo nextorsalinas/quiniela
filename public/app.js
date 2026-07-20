@@ -4614,7 +4614,7 @@ window.loadLigaMXVotingTrends = async function() {
             <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'L')" style="width: 26px; flex-shrink: 0; border-radius: 4px; padding: 0.08rem 0; text-align: center; font-weight: 850; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; ${boxStyle}">
               ${stats.L.count}
             </div>
-            <span style="font-weight: 700; font-size: 0.8rem; text-transform: uppercase; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team1}">${match.team1}</span>
+            <span style="font-weight: 500; font-size: 0.85rem; text-transform: capitalize; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team1}">${match.team1}</span>
           </div>
           
           <!-- Draw Side -->
@@ -4626,7 +4626,7 @@ window.loadLigaMXVotingTrends = async function() {
           
           <!-- Visitor Side -->
           <div style="display: flex; align-items: center; gap: 0.3rem; justify-content: flex-end; min-width: 0; overflow: hidden;">
-            <span style="font-weight: 700; font-size: 0.8rem; text-transform: uppercase; color: #0f172a; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team2}">${match.team2}</span>
+            <span style="font-weight: 500; font-size: 0.85rem; text-transform: capitalize; color: #0f172a; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${match.team2}">${match.team2}</span>
             <div class="mx-trend-box" onclick="showLigaMXTrendsVoters(${index}, 'V')" style="width: 26px; flex-shrink: 0; border-radius: 4px; padding: 0.08rem 0; text-align: center; font-weight: 850; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; ${boxStyle}">
               ${stats.V.count}
             </div>
