@@ -4448,6 +4448,21 @@ window.loadLigaMXVotingTrends = async function() {
     if (!res.ok) throw new Error("Error fetching trends");
     
     const trends = await res.json();
+    
+    // Sort trends by date and time (chronological)
+    trends.sort((a, b) => {
+      if (a.jornada !== b.jornada) return a.jornada - b.jornada;
+      const parseDate = (dStr) => {
+        if (!dStr) return 0;
+        const [dPart, tPart] = dStr.split(' ');
+        if (!dPart) return 0;
+        const [day, month, year] = dPart.split('/').map(Number);
+        const [hour, min] = (tPart || '00:00').split(':').map(Number);
+        return new Date(year, month - 1, day, hour, min).getTime();
+      };
+      return parseDate(a.date) - parseDate(b.date);
+    });
+
     window.ligamxTrendsData = trends;
     
     if (trends.length === 0) {
