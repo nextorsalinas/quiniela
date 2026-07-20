@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=7.50">
+  <link rel="stylesheet" href="styles.css?v=7.60">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -500,12 +500,19 @@
 
         <div class="table-card glass-panel" style="padding: 1.5rem 2rem; max-width: 500px; margin: 0 auto 1.5rem auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
 
-          <!-- Interactive Profile Image Container -->
-          <div style="position: relative; display: inline-block; cursor: pointer;" onclick="openAvatarPickerModal()">
-            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="position: absolute; bottom: 0; right: 0; background: var(--gold); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-main); box-shadow: 0 2px 8px rgba(0,0,0,0.3); color: black; font-size: 0.75rem;">
-              <i class="fa-solid fa-pen"></i>
-            </div>
+          <!-- Mini Carousel Profile Image Container -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-top: 0.25rem; width: 100%;">
+            <!-- Left Arrow -->
+            <button onclick="prevProfilePic()" class="btn" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); background: rgba(255,215,0,0.15); color: var(--gold); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; padding: 0;">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            
+            <img id="profile-pic-display" src="avatar.png" alt="Foto de perfil" style="width: 95px; height: 95px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.35);">
+            
+            <!-- Right Arrow -->
+            <button onclick="nextProfilePic()" class="btn" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--gold); background: rgba(255,215,0,0.15); color: var(--gold); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; padding: 0;">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
           </div>
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
@@ -908,6 +915,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=7.50"></script>
+  <script src="app.js?v=7.60"></script>
 </body>
 </html>

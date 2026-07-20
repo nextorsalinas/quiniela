@@ -4754,3 +4754,70 @@ window.saveProfileNickname = async function() {
     showToast(err.message || "Error al actualizar el nickname", "error");
   }
 };
+
+const presetAvatars = [
+  'avatar.png',
+  'perfil/1.png',
+  'perfil/2.png',
+  'perfil/3.png',
+  'perfil/4.png',
+  'perfil/america.png',
+  'perfil/chivas.png',
+  'perfil/crua azul.png',
+  'perfil/pumas.png',
+  'perfil/real.png',
+  'perfil/tigres.png',
+  'perfil/Atlante FC.png'
+];
+
+window.nextProfilePic = async function() {
+  const currentPic = state.currentUser.profilePic || 'avatar.png';
+  let idx = presetAvatars.indexOf(currentPic);
+  if (idx === -1) {
+    idx = 0;
+  }
+  const nextIdx = (idx + 1) % presetAvatars.length;
+  await updateProfilePicAndUI(presetAvatars[nextIdx]);
+};
+
+window.prevProfilePic = async function() {
+  const currentPic = state.currentUser.profilePic || 'avatar.png';
+  let idx = presetAvatars.indexOf(currentPic);
+  if (idx === -1) {
+    idx = 0;
+  }
+  const prevIdx = (idx - 1 + presetAvatars.length) % presetAvatars.length;
+  await updateProfilePicAndUI(presetAvatars[prevIdx]);
+};
+
+async function updateProfilePicAndUI(path) {
+  const picDisplay = document.getElementById('profile-pic-display');
+  if (picDisplay) picDisplay.src = path;
+  
+  try {
+    const response = await fetch('/api/user/profile-pic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ profilePic: path })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error || "Error al actualizar la foto de perfil", "error");
+      if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+      return;
+    }
+
+    // Actualizar estado local
+    state.currentUser.profilePic = path;
+    localStorage.setItem('user', JSON.stringify(state.currentUser));
+    showToast("Foto de perfil actualizada", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Error de red al actualizar la foto", "error");
+    if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+  }
+}
