@@ -603,17 +603,7 @@ app.post('/api/user/nickname', authenticate, async (req, res) => {
   const cleanNickname = String(nickname || '').trim().slice(0, 30);
 
   try {
-    if (dbType === 'firestore') {
-      await firestoreDb.collection('users').doc(req.user.id).update({ nickname: cleanNickname });
-    } else {
-      const db = readDb();
-      const user = db.users.find(u => u.id === req.user.id);
-      if (user) {
-        user.nickname = cleanNickname;
-        writeDb(db);
-      }
-    }
-
+    await dbHelper.updateNickname(req.user.id, cleanNickname);
     res.json({ message: "Nickname actualizado con éxito.", nickname: cleanNickname });
   } catch (error) {
     console.error("Error al actualizar el nickname:", error);

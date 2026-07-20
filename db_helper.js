@@ -1685,6 +1685,23 @@ async function updateProfilePic(userId, profilePic) {
   }
 }
 
+async function updateNickname(userId, nickname) {
+  if (dbType === 'firestore') {
+    const userRef = firestoreDb.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) throw new Error("Usuario no encontrado.");
+    
+    await userRef.update({ nickname });
+  } else {
+    const db = readDb();
+    const userIndex = db.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) throw new Error("Usuario no encontrado.");
+    
+    db.users[userIndex].nickname = nickname;
+    writeDb(db);
+  }
+}
+
 module.exports = {
   initDb,
   getUsers: async () => {
@@ -1718,5 +1735,6 @@ module.exports = {
   calculateWinningProbabilities,
   resetUserPassword,
   updateProfilePic,
+  updateNickname,
   getDbType: () => dbType
 };

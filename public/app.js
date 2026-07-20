@@ -4623,12 +4623,10 @@ window.saveProfileNickname = async function() {
   if (!input) return;
   
   const nicknameValue = input.value.trim();
-  const btn = document.querySelector('button[onclick="saveProfileNickname()"]');
-  const originalHtml = btn ? btn.innerHTML : '';
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-  }
+  
+  // Highlight border while saving
+  const originalBorder = input.style.borderColor;
+  input.style.borderColor = "#ea580c";
   
   try {
     const res = await fetch(`${API_URL}/user/nickname`, {
@@ -4654,14 +4652,20 @@ window.saveProfileNickname = async function() {
       usernameEl.textContent = data.nickname || state.currentUser.username;
     }
     
-    showToast("¡Apodo guardado correctamente!", "success");
+    // Success border glow flash
+    input.style.borderColor = "var(--success)";
+    setTimeout(() => {
+      input.style.borderColor = originalBorder;
+    }, 1000);
+    
+    showToast("¡Nickname guardado!", "success");
   } catch (err) {
     console.error(err);
-    showToast(err.message || "Error al actualizar el apodo", "error");
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = originalHtml;
-    }
+    // Error border glow flash
+    input.style.borderColor = "var(--danger)";
+    setTimeout(() => {
+      input.style.borderColor = originalBorder;
+    }, 1500);
+    showToast(err.message || "Error al actualizar el nickname", "error");
   }
 };
