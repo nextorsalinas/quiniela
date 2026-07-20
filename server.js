@@ -597,6 +597,30 @@ app.post('/api/user/profile-pic', authenticate, async (req, res) => {
   }
 });
 
+// Update profile nickname
+app.post('/api/user/nickname', authenticate, async (req, res) => {
+  const { nickname } = req.body;
+  const cleanNickname = String(nickname || '').trim().slice(0, 30);
+
+  try {
+    if (dbType === 'firestore') {
+      await firestoreDb.collection('users').doc(req.user.id).update({ nickname: cleanNickname });
+    } else {
+      const db = readDb();
+      const user = db.users.find(u => u.id === req.user.id);
+      if (user) {
+        user.nickname = cleanNickname;
+        writeDb(db);
+      }
+    }
+
+    res.json({ message: "Nickname actualizado con éxito.", nickname: cleanNickname });
+  } catch (error) {
+    console.error("Error al actualizar el nickname:", error);
+    res.status(500).json({ error: "Error al guardar el nickname en el servidor: " + error.message });
+  }
+});
+
 // Get all users (Admin only)
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
   try {

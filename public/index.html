@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=7.20">
+  <link rel="stylesheet" href="styles.css?v=7.30">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -508,6 +508,17 @@
 
           <h4 id="profile-username" style="margin: 0; font-size: 1.2rem; color: white; text-transform: capitalize;">Alias</h4>
 
+          <!-- Nickname Editing Group -->
+          <div style="width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
+            <label style="font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04rem; text-align: left; width: 100%;">Apodo para Tabla de Posiciones:</label>
+            <div style="display: flex; gap: 0.5rem; width: 100%;">
+              <input type="text" id="input-profile-nickname" placeholder="Ingresa tu apodo..." style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 0.85rem;" maxlength="30" />
+              <button onclick="saveProfileNickname()" class="btn btn-primary" style="padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; background: linear-gradient(135deg, #d97706, #b45309); border: none; cursor: pointer;">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar
+              </button>
+            </div>
+          </div>
+
           <!-- Action Buttons Container -->
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 0.25rem;">
             <!-- Button to navigate to Final predictions -->
@@ -592,6 +603,11 @@
       <button id="tab-panelmx" class="tab-btn" onclick="switchTab('panelmx')">
         <i class="fa-solid fa-trophy"></i>
         <span>Panel MX</span>
+      </button>
+
+      <button id="tab-ligamx" class="tab-btn" onclick="switchTab('ligamx')">
+        <i class="fa-solid fa-pen-to-square"></i>
+        <span>Pronósticos</span>
       </button>
 
       <button id="tab-policies" class="tab-btn" style="display: none !important;" onclick="switchTab('policies')">
@@ -887,6 +903,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=7.20"></script>
+  <script src="app.js?v=7.30"></script>
 </body>
 </html>

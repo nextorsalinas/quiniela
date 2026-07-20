@@ -2768,8 +2768,15 @@ async function loadProfileDashboard() {
   const usernameEl = document.getElementById('profile-username');
   const picDisplay = document.getElementById('profile-pic-display');
 
-  if (usernameEl) usernameEl.textContent = state.currentUser.username;
+  if (usernameEl) {
+    usernameEl.textContent = state.currentUser.nickname || state.currentUser.username;
+  }
   if (picDisplay) picDisplay.src = state.currentUser.profilePic || 'avatar.png';
+
+  const nicknameInput = document.getElementById('input-profile-nickname');
+  if (nicknameInput) {
+    nicknameInput.value = state.currentUser.nickname || '';
+  }
 
   // Mostrar spinners de carga temporalmente en la tabla
   const loader = `<i class="fa-solid fa-spinner fa-spin"></i>`;
@@ -4418,14 +4425,15 @@ window.loadLigaMXLeaderboard = async function() {
   }
 };
 
-window.checkLigaMXPredictionsComplete = function() {
+window.checkLigaMXPredictionsComplete = function(jornada) {
   if (state.currentUser && state.currentUser.isAdmin) {
     return true;
   }
   if (!stateLigaMX.matches || stateLigaMX.matches.length === 0) {
     return true;
   }
-  const requiredMatches = stateLigaMX.matches.filter(m => m.result === null);
+  const targetJornada = jornada || stateLigaMX.selectedJornada || 2;
+  const requiredMatches = stateLigaMX.matches.filter(m => m.jornada === targetJornada && m.result === null);
   if (requiredMatches.length === 0) return true;
   
   for (const match of requiredMatches) {
@@ -4560,8 +4568,8 @@ window.showLigaMXTrendsVoters = function(matchIdx, outcome) {
   if (!trends || !trends[matchIdx]) return;
   const match = trends[matchIdx];
   
-  if (!checkLigaMXPredictionsComplete()) {
-    showIncompletePredictionsModal("Solo lo podrás consultar al completar los pronósticos de la Liga MX.");
+  if (!checkLigaMXPredictionsComplete(match.jornada)) {
+    showIncompletePredictionsModal(`Solo lo podrás consultar al completar los pronósticos de la Jornada ${match.jornada}.`);
     return;
   }
   
@@ -4608,4 +4616,52 @@ window.openAvatarPickerModal = function() {
 window.closeAvatarPickerModal = function() {
   const modal = document.getElementById('avatar-picker-modal');
   if (modal) modal.style.display = 'none';
+};
+
+window.saveProfileNickname = async function() {
+  const input = document.getElementById('input-profile-nickname');
+  if (!input) return;
+  
+  const nicknameValue = input.value.trim();
+  const btn = document.querySelector('button[onclick="saveProfileNickname()"]');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  }
+  
+  try {
+    const res = await fetch(`${API_URL}/user/nickname`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': state.currentUser.id
+      },
+      body: JSON.stringify({ nickname: nicknameValue })
+    });
+    
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || "Error al guardar el apodo");
+    }
+    
+    const data = await res.json();
+    state.currentUser.nickname = data.nickname;
+    localStorage.setItem('user', JSON.stringify(state.currentUser));
+    
+    const usernameEl = document.getElementById('profile-username');
+    if (usernameEl) {
+      usernameEl.textContent = data.nickname || state.currentUser.username;
+    }
+    
+    showToast("¡Apodo guardado correctamente!", "success");
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "Error al actualizar el apodo", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
 };
