@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=6.60">
+  <link rel="stylesheet" href="styles.css?v=6.70">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -413,7 +413,7 @@
             <h3 style="margin: 0; font-family: var(--font-title); font-weight: 800; font-size: 1.4rem; color: #f97316; display: flex; align-items: center; gap: 0.5rem; text-shadow: 0 0 10px rgba(249, 115, 22, 0.2);">
               <i class="fa-solid fa-futbol" style="color: #f97316;"></i> Pronósticos Liga MX
             </h3>
-            <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Apertura 2026 - Pronostica los resultados de la Jornada 1</p>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Apertura 2026 - Registra tus marcadores y aciertos</p>
           </div>
         </div>
 
@@ -453,7 +453,7 @@
         <!-- Voting Trends Section (Liga MX) -->
         <div id="ligamx-trends-container" class="trends-section glass-panel" style="margin-bottom: 1rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.1);">
           <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.85rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none;">
-            <i class="fa-solid fa-chart-simple"></i> Quiniela Jornada 1
+            <i class="fa-solid fa-chart-simple"></i> Tendencias de Votos
             <i id="ligamx-trends-toggle-icon" class="fa-solid fa-chevron-up" style="margin-left: auto; font-size: 0.75rem; color: var(--color-text-muted); transition: transform 0.3s; transform: rotate(180deg);"></i>
           </h3>
           <div id="ligamx-trends-grid" class="trends-grid" style="display: none; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 0.55rem;">
@@ -505,7 +505,7 @@
           <!-- Action Buttons Container -->
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; width: 100%; margin-top: 0.25rem;">
             <!-- Button to navigate to Final predictions -->
-            <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
+            <button class="btn btn-primary" onclick="switchTab('final-predictions')" style="display: none !important; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.7rem 1.2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); font-size: 0.85rem;">
               <i class="fa-solid fa-square-poll-vertical"></i> Pronóstico Final
             </button>
 
@@ -516,7 +516,7 @@
           </div>
 
           <!-- Stats Table -->
-          <div style="width: 100%; overflow-x: auto; margin-top: 0.5rem;">
+          <div style="width: 100%; overflow-x: auto; margin-top: 0.5rem; display: none !important;">
             <table class="leaderboard-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
               <thead>
                 <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
@@ -578,7 +578,7 @@
         <span>Posición</span>
       </button>
 
-      <button id="tab-new-panel" class="tab-btn" onclick="switchTab('new-panel')">
+      <button id="tab-new-panel" class="tab-btn" style="display: none !important;" onclick="switchTab('new-panel')">
         <i class="fa-solid fa-trophy"></i>
         <span>Panel final</span>
       </button>
@@ -881,6 +881,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=6.60"></script>
+  <script src="app.js?v=6.70"></script>
 </body>
 </html>

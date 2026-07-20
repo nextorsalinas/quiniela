@@ -87,7 +87,19 @@ function parseExcelMatches() {
 
       const local = row[localKey] || 'TBD';
       const visitante = row[visitanteKey] || 'TBD';
-      const date = row[fechaKey] || 'TBD';
+      let date = row[fechaKey] || 'TBD';
+      
+      if (typeof date === 'number' || !isNaN(Number(date))) {
+        const num = Number(date);
+        if (num > 40000) {
+          const jsDate = new Date((num - 25569) * 86400 * 1000);
+          const day = String(jsDate.getUTCDate()).padStart(2, '0');
+          const month = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
+          const year = jsDate.getUTCFullYear();
+          date = `${day}/${month}/${year}`;
+        }
+      }
+      
       const time = row[horaKey] || 'TBD';
       const jornada = parseInt(row[jornadaKey]) || 1;
 
