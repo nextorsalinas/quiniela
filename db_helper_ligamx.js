@@ -284,19 +284,25 @@ async function getLeaderboard() {
   let users = [];
   if (dbType === 'firestore') {
     const snap = await firestoreDb.collection('users').get();
-    users = snap.docs.map(doc => ({
-      id: doc.id,
-      username: doc.data().nickname || doc.data().username,
-      isAdmin: doc.data().isAdmin,
-      profilePic: doc.data().profilePic || ''
-    }));
+    users = snap.docs
+      .map(doc => ({
+        id: doc.id,
+        username: doc.data().nickname || doc.data().username,
+        rawUsername: doc.data().username,
+        isAdmin: doc.data().isAdmin,
+        profilePic: doc.data().profilePic || ''
+      }))
+      .filter(u => u.rawUsername !== 'invitado');
   } else {
-    users = readDb().users.map(u => ({
-      id: u.id,
-      username: u.nickname || u.username,
-      isAdmin: u.isAdmin,
-      profilePic: u.profilePic || ''
-    }));
+    users = readDb().users
+      .map(u => ({
+        id: u.id,
+        username: u.nickname || u.username,
+        rawUsername: u.username,
+        isAdmin: u.isAdmin,
+        profilePic: u.profilePic || ''
+      }))
+      .filter(u => u.rawUsername !== 'invitado');
   }
 
   const matches = await getMatches();
@@ -391,13 +397,26 @@ async function getMatchTrends(includeVoters) {
     predictions = (readDb().ligamx_predictions || []).filter(p => matchIds.includes(p.matchId));
   }
 
-  // Get usernames
+  // Get users to filter out guest 'invitado' and map usernames/nicknames
   let users = [];
-  if (dbType === 'firestore' && includeVoters) {
+  if (dbType === 'firestore') {
     const snap = await firestoreDb.collection('users').get();
-    users = snap.docs.map(doc => ({ id: doc.id, username: doc.data().username }));
-  } else if (includeVoters) {
+    users = snap.docs.map(doc => ({
+      id: doc.id,
+      username: doc.data().username,
+      nickname: doc.data().nickname
+    }));
+  } else {
     users = readDb().users;
+  }
+
+  // Identify guest user 'invitado'
+  const guestUser = users.find(u => u.username === 'invitado');
+  const guestUserId = guestUser ? guestUser.id : null;
+
+  // Filter out predictions made by the guest user
+  if (guestUserId) {
+    predictions = predictions.filter(p => p.userId !== guestUserId);
   }
 
   const trends = matches.map(match => {
@@ -416,7 +435,8 @@ async function getMatchTrends(includeVoters) {
           if (includeVoters) {
             const user = users.find(u => u.id === p.userId);
             if (user) {
-              stats[outcome].users.push(`${user.username} (${p.prediction.team1Score}-${p.prediction.team2Score})`);
+              const displayName = user.nickname || user.username;
+              stats[outcome].users.push(`${displayName} (${p.prediction.team1Score}-${p.prediction.team2Score})`);
             }
           }
         }
