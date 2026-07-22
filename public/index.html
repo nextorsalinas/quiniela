@@ -15,7 +15,7 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=8.00">
+  <link rel="stylesheet" href="styles.css?v=8.10">
   <!-- Cropper.js for profile image cropping -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
@@ -443,35 +443,22 @@
 
       <!-- View: Panel MX (Liga MX Leaderboard) -->
       <section id="view-panelmx" class="tab-view">
-        <div style="margin-top: 1.5rem;"></div>
+        <div style="margin-top: 1rem;"></div>
         
-        <!-- Guaranteed Jackpot Card -->
-        <div id="ligamx-jackpot-container" class="glass-panel" style="margin-bottom: 1rem; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1rem; border: 1px solid rgba(255, 215, 0, 0.25); text-align: center; border-radius: var(--radius-lg); background: linear-gradient(135deg, rgba(138, 0, 46, 0.2), rgba(0, 0, 0, 0.4));">
-          <span style="font-family: var(--font-title); font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05rem; display: block; margin-bottom: 0.25rem;">
-            Bolsa Simulada
-          </span>
-          <div id="ligamx-jackpot-amount" style="font-family: var(--font-title); font-size: 1.1rem; font-weight: 800; color: var(--gold); text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); line-height: 1;">
-            $0 MXN
+        <!-- Guaranteed Jackpot Card (Single Line, Informative) -->
+        <div id="ligamx-jackpot-container" style="margin: 0.25rem auto 0.75rem auto; max-width: 800px; padding: 0.4rem 0.75rem; border: 1px solid rgba(255, 215, 0, 0.15); border-radius: 8px; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+          <div style="font-size: 0.78rem; color: var(--color-text-muted); font-weight: 600;">
+            Bolsa Simulada: <span id="ligamx-jackpot-amount" style="font-weight: 800; color: var(--gold); font-size: 0.85rem;">$0 MXN</span>
           </div>
-          <span id="ligamx-jackpot-players" style="font-size: 0.72rem; color: var(--color-text-muted); display: block; margin-top: 0.35rem;">
+          <div id="ligamx-jackpot-players" style="font-size: 0.68rem; color: var(--color-text-muted); font-style: italic;">
             Nota: ¡¡¡La próxima semana iniciamos!!!!
-          </span>
-        </div>
-
-        <!-- Voting Trends Section (Liga MX) -->
-        <div id="ligamx-trends-container" class="trends-section" style="margin-bottom: 1.5rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1.25rem; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: var(--radius-lg); border: 2px solid #c2410c; box-shadow: 0 8px 30px rgba(234, 88, 12, 0.35);">
-          <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.95rem; font-family: var(--font-title); font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
-            <i class="fa-solid fa-chart-simple" style="color: #fff;"></i> Tendencias
-            <i id="ligamx-trends-toggle-icon" class="fa-solid fa-chevron-up" style="margin-left: auto; font-size: 0.8rem; color: #fff; transition: transform 0.3s; transform: rotate(180deg);"></i>
-          </h3>
-          <div id="ligamx-trends-grid" class="trends-grid" style="display: none; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 0.55rem;">
-            <!-- Injected dynamically via app.js -->
           </div>
         </div>
 
-        <div class="table-card glass-panel" style="padding: 1rem 0 0 0; max-width: 800px; margin: 0 auto 1.5rem auto;">
-          <h3 style="margin: 0 1.5rem 1rem 1.5rem; font-size: 0.95rem; font-family: var(--font-title); font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 0.4rem;">
-            <i class="fa-solid fa-trophy"></i> Tabla de Posiciones - Liga MX
+        <!-- Leaderboard Table Card -->
+        <div class="table-card glass-panel" style="padding: 1rem 0 0 0; max-width: 800px; margin: 0 auto 1rem auto;">
+          <h3 id="ligamx-leaderboard-title" style="margin: 0 1.5rem 1rem 1.5rem; font-size: 0.95rem; font-family: var(--font-title); font-weight: 700; color: var(--gold);">
+            Posiciones - Jornada 2
           </h3>
           <table class="leaderboard-table">
             <thead>
@@ -490,6 +477,17 @@
               <!-- Injected dynamically -->
             </tbody>
           </table>
+        </div>
+
+        <!-- Voting Trends Section (Liga MX) - Yellow Theme -->
+        <div id="ligamx-trends-container" class="trends-section" style="margin-bottom: 1.5rem; display: none; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1rem; background: linear-gradient(135deg, #facc15 0%, #eab308 100%); border-radius: var(--radius-lg); border: 2px solid #ca8a04; box-shadow: 0 6px 20px rgba(234, 179, 8, 0.25);">
+          <h3 onclick="toggleLigaMXTrendsGrid()" style="margin: 0; font-size: 0.95rem; font-family: var(--font-title); font-weight: 850; color: #1e293b; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; user-select: none;">
+            <i class="fa-solid fa-chart-simple" style="color: #1e293b;"></i> Tendencias
+            <i id="ligamx-trends-toggle-icon" class="fa-solid fa-chevron-up" style="margin-left: auto; font-size: 0.8rem; color: #1e293b; transition: transform 0.3s; transform: rotate(180deg);"></i>
+          </h3>
+          <div id="ligamx-trends-grid" class="trends-grid" style="display: none; grid-template-columns: 1fr; gap: 0.75rem; margin-top: 0.55rem;">
+            <!-- Injected dynamically via app.js -->
+          </div>
         </div>
       </section>
 
@@ -921,6 +919,6 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=8.00"></script>
+  <script src="app.js?v=8.10"></script>
 </body>
 </html>

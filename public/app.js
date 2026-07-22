@@ -355,7 +355,7 @@ function showAppDashboard() {
 
 
   // Initial data fetch
-  switchTab(state.currentUser.isAdmin ? 'admin' : 'profile');
+  switchTab(state.currentUser.isAdmin ? 'admin' : 'panelmx');
   checkAnnouncementModal();
 
   // Notifications init
@@ -4484,6 +4484,13 @@ window.loadLigaMXLeaderboard = async function() {
     });
     const leaderboard = await response.json();
     stateLigaMX.leaderboard = leaderboard;
+
+    // Dynamically set Positions title round number
+    const titleEl = document.getElementById('ligamx-leaderboard-title');
+    if (titleEl) {
+      const j = stateLigaMX.selectedJornada || 2;
+      titleEl.textContent = `Posiciones - Jornada ${j}`;
+    }
     
     // Update Guaranteed Jackpot
     const activeUsersCount = leaderboard.length;
@@ -4593,7 +4600,7 @@ window.loadLigaMXVotingTrends = async function() {
     
     // Render in Progol ticket format!
     let html = `
-      <div style="display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0.15rem; font-weight: 900; font-family: var(--font-title); font-size: 0.8rem; color: #ffffff; border-bottom: 2px solid rgba(255, 255, 255, 0.4); padding-bottom: 0.2rem; margin-bottom: 0.35rem; text-align: center; text-transform: uppercase; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+      <div style="display: grid; grid-template-columns: 1fr 34px 1fr; gap: 0.15rem; font-weight: 900; font-family: var(--font-title); font-size: 0.8rem; color: #1e293b; border-bottom: 2px solid rgba(30, 41, 59, 0.25); padding-bottom: 0.2rem; margin-bottom: 0.35rem; text-align: center; text-transform: uppercase;">
         <span>Local</span>
         <span>Empate</span>
         <span>Visita</span>
@@ -4604,10 +4611,10 @@ window.loadLigaMXVotingTrends = async function() {
       if (match.jornada !== 2) return '';
       
       const stats = match.stats;
-      const boxStyle = 'background: #ffffff; color: #ea580c; border: 1px solid #d97706; box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);';
+      const boxStyle = 'background: #ffffff; color: #ca8a04; border: 1px solid #eab308; box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);';
       
       return `
-        <div class="mx-trend-row" style="display: grid; grid-template-columns: 1fr 34px 1fr; align-items: center; gap: 0.15rem; padding: 0.15rem 0.3rem; background: #fdfaf2; border: 1px solid #d97706; border-radius: var(--radius-sm); margin-bottom: 0.05rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: var(--transition-smooth);">
+        <div class="mx-trend-row" style="display: grid; grid-template-columns: 1fr 34px 1fr; align-items: center; gap: 0.15rem; padding: 0.15rem 0.3rem; background: #fefce8; border: 1px solid #eab308; border-radius: var(--radius-sm); margin-bottom: 0.05rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: var(--transition-smooth);">
           
           <!-- Local Side -->
           <div style="display: flex; align-items: center; gap: 0.3rem; justify-content: flex-start; min-width: 0; overflow: hidden;">
